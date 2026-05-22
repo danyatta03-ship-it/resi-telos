@@ -1,0 +1,24 @@
+{
+  "name": "Reparto Resi Telos",
+  "short_name": "Resi Telos",
+  "description": "Gestione resi automotive - Telos SPA",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#07090f",
+  "theme_color": "#07090f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%2307090f'/><rect x='20' y='20' width='152' height='152' rx='20' fill='%23061510' stroke='%230d3d28' stroke-width='2'/><text x='96' y='115' font-size='80' text-anchor='middle' fill='%232ecc8a'>&#128203;</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%2307090f'/><rect x='40' y='40' width='432' height='432' rx='60' fill='%23061510' stroke='%230d3d28' stroke-width='4'/><text x='256' y='310' font-size='220' text-anchor='middle' fill='%232ecc8a'>&#128203;</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
