@@ -6,7 +6,7 @@ import { contact } from "@/content/site";
 export const metadata: Metadata = {
   title: "Contatti",
   description:
-    "Contatta Cavaliere.store via email, WhatsApp, Instagram o TikTok, oppure scrivici tramite il modulo di contatto.",
+    "Contatta Cavaliere.store via email, Instagram o TikTok, oppure scrivici tramite il modulo di contatto.",
 };
 
 export default function ContattiPage() {
@@ -35,22 +35,12 @@ export default function ContattiPage() {
               </li>
               <li>
                 <a
-                  href={contact.whatsapp}
+                  href={contact.instagramDm}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-white/80 hover:text-white"
                 >
-                  WhatsApp
-                </a>
-              </li>
-              <li>
-                <a
-                  href={contact.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-white/80 hover:text-white"
-                >
-                  Instagram
+                  Instagram (DM diretto)
                 </a>
               </li>
               <li>

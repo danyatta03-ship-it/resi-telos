@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { Bungee, Permanent_Marker } from "next/font/google";
 import "./globals.css";
-import WhatsAppButton from "@/components/WhatsAppButton";
+import InstagramButton from "@/components/InstagramButton";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -88,7 +88,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[--color-bg] text-[--color-fg]">
         {children}
-        <WhatsAppButton />
+        <InstagramButton />
       </body>
     </html>
   );

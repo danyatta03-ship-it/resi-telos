@@ -28,46 +28,32 @@ export type WorkItem = {
 
 export const works: WorkItem[] = [
   {
-    id: "ricamo-oro",
-    title: "Ricamo Oro Vintage",
-    description: "Ricamo a filo pieno su tela premium, ispirazione old-school.",
-    image: "/lavori/ricamo-oro.svg",
+    id: "kassimi",
+    title: "CAVALIERE.STORE X KASSIMI",
+    description: "Ricamo custom in strass oro e rosa su base nera effetto vissuto.",
+    image: "/lavori/kassimi.jpg",
     accent: "#caa24a",
   },
   {
-    id: "patch-urban",
-    title: "Patch Urban Edition",
-    description: "Patch in gomma 3D cucita a mano su visiera piatta.",
-    image: "/lavori/patch-urban.svg",
+    id: "yuneslagrintaa",
+    title: "CAVALIERE.STORE X YUNESLAGRINTAA",
+    description: "Logo NY in strass bianco e azzurro su cappellino nero distressed.",
+    image: "/lavori/yuneslagrintaa.jpg",
+    accent: "#40c4ff",
+  },
+  {
+    id: "ny-cross",
+    title: "NY Cross Custom",
+    description: "Logo NY in strass con croci decorative dipinte a mano.",
+    image: "/lavori/ny-cross.jpg",
     accent: "#e04b3f",
   },
   {
-    id: "stampa-street",
-    title: "Stampa Street Custom",
-    description: "Serigrafia artigianale multistrato, colori acceso.",
-    image: "/lavori/stampa-street.svg",
-    accent: "#3f8ee0",
-  },
-  {
-    id: "logo-brand",
-    title: "Logo Brand su Misura",
-    description: "Digitalizzazione e ricamo del tuo logo aziendale.",
-    image: "/lavori/logo-brand.svg",
+    id: "as-verde",
+    title: "A's Velluto Verde",
+    description: "Monogramma in velluto ricamato con strass, base crema.",
+    image: "/lavori/as-verde.jpg",
     accent: "#37b06c",
-  },
-  {
-    id: "edizione-limitata",
-    title: "Edizione Limitata",
-    description: "Pezzo unico numerato, materiali selezionati a mano.",
-    image: "/lavori/edizione-limitata.svg",
-    accent: "#9b5de5",
-  },
-  {
-    id: "cliente-nike-style",
-    title: "Custom Cliente",
-    description: "Progetto realizzato su richiesta per un cliente privato.",
-    image: "/lavori/cliente-custom.svg",
-    accent: "#f2a90c",
   },
 ];
 
@@ -78,10 +64,10 @@ export const pricing = {
 
 export const contact = {
   email: "info@cavaliere.store",
-  instagram: "https://instagram.com/cavaliere.store",
+  instagram: "https://instagram.com/cavalieree.11",
+  // Apre direttamente una chat nei DM Instagram
+  instagramDm: "https://ig.me/m/cavalieree.11",
   tiktok: "https://tiktok.com/@cavaliere.store",
-  // Sostituisci con il numero WhatsApp reale in formato internazionale senza "+" o spazi
-  whatsapp: "https://wa.me/390000000000",
   // Sostituisci con l'indirizzo reale per mostrare la mappa corretta in Contatti
   mapQuery: "",
 };
