@@ -62,6 +62,13 @@ export const pricing = {
   currency: "EUR",
 };
 
+export const configuratorOptions = {
+  colors: ["Nero", "Bianco", "Beige", "Verde militare", "Blu navy"],
+  models: ["Snapback", "Dad Hat", "Trucker", "Flat Brim"],
+  sizes: ["Regolabile (consigliata)", "S/M", "L/XL"],
+  workTypes: ["Ricamo", "Stampa", "Patch", "Altro"],
+};
+
 export const contact = {
   email: "info@cavaliere.store",
   instagram: "https://instagram.com/cavalieree.11",
