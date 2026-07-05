@@ -1,38 +1,29 @@
 import type { Metadata } from "next";
 import PageShell from "@/components/PageShell";
-import { pricing, contact } from "@/content/site";
+import ConfiguratorePurchase from "@/components/ConfiguratorePurchase";
+import { pricing } from "@/content/site";
 
 export const metadata: Metadata = {
   title: "Crea il tuo cappellino",
   description:
-    "Configura il tuo cappellino su misura: colore, modello, taglia, ricamo o stampa personalizzata.",
+    "Configura e acquista il tuo cappellino su misura: ricamo o stampa personalizzata, pagamento sicuro con Stripe.",
 };
 
 export default function ConfiguratorePage() {
   return (
     <PageShell
       title="Crea il tuo cappellino"
-      subtitle={`A partire da ${pricing.basePrice}€ — realizzato completamente a mano`}
+      subtitle={`${pricing.basePrice}€ a pezzo — realizzato completamente a mano`}
     >
       <p>
-        Il configuratore completo (scelta colore, modello, taglia, quantità,
-        upload di loghi e bozze, ricamo/stampa/patch e checkout Stripe) è in
-        fase di sviluppo e sarà collegato a questa pagina nella prossima fase
-        del progetto.
+        Il configuratore visuale completo (colore, modello, taglia, upload di
+        loghi e bozze) è in fase di sviluppo. Nel frattempo puoi già
+        prenotare e pagare il tuo cappellino qui sotto: nel checkout Stripe
+        potrai indicare il testo da ricamare/stampare e delle note, e dopo il
+        pagamento ti chiederemo via Instagram le immagini di riferimento e i
+        dettagli finali.
       </p>
-      <p>
-        Nel frattempo, per richiedere un cappellino personalizzato scrivici
-        direttamente: raccontaci colore, modello, testo da ricamare o
-        stampare e allega le immagini di riferimento.
-      </p>
-      <a
-        href={contact.instagramDm}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center justify-center rounded-full bg-[var(--color-accent)] px-8 py-4 text-sm font-bold uppercase tracking-wider text-black transition-transform hover:scale-105"
-      >
-        Scrivici su Instagram
-      </a>
+      <ConfiguratorePurchase />
     </PageShell>
   );
 }
