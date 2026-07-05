@@ -67,7 +67,7 @@ export const contact = {
   instagram: "https://instagram.com/cavalieree.11",
   // Apre direttamente una chat nei DM Instagram
   instagramDm: "https://ig.me/m/cavalieree.11",
-  tiktok: "https://tiktok.com/@cavaliere.store",
+  tiktok: "https://tiktok.com/@cavalieree11",
   // Sostituisci con l'indirizzo reale per mostrare la mappa corretta in Contatti
   mapQuery: "",
 };
