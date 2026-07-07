@@ -31,6 +31,19 @@ export type WorkItem = {
 
 export const works: WorkItem[] = [
   {
+    id: "la-dodgers",
+    title: "LA Dodgers Custom",
+    description: "Logo LA in strass su base grigio tortora effetto vissuto. Trascina per vederlo a 360°.",
+    image: "/lavori/la-front.jpg",
+    accent: "#9aa0a6",
+    images360: [
+      "/lavori/la-front.jpg",
+      "/lavori/la-right.jpg",
+      "/lavori/la-back.jpg",
+      "/lavori/la-left.jpg",
+    ],
+  },
+  {
     id: "kassimi",
     title: "CAVALIERE.STORE X KASSIMI",
     description: "Ricamo custom in strass oro e rosa su base nera effetto vissuto.",
@@ -43,19 +56,6 @@ export const works: WorkItem[] = [
     description: "Logo NY in strass bianco e azzurro su cappellino nero distressed.",
     image: "/lavori/yuneslagrintaa.jpg",
     accent: "#40c4ff",
-  },
-  {
-    id: "la-dodgers",
-    title: "LA Dodgers Custom",
-    description: "Logo LA in strass su base grigio tortora effetto vissuto. Trascina per vederlo a 360°.",
-    image: "/lavori/la-front.jpg",
-    accent: "#9aa0a6",
-    images360: [
-      "/lavori/la-front.jpg",
-      "/lavori/la-right.jpg",
-      "/lavori/la-back.jpg",
-      "/lavori/la-left.jpg",
-    ],
   },
 ];
 

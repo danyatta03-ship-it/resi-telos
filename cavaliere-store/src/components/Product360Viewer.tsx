@@ -45,7 +45,7 @@ export default function Product360Viewer({
   }
 
   return (
-    <div className="group relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-[var(--color-line)] bg-white select-none">
+    <div className="group relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg-alt)] select-none">
       <div
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -63,7 +63,7 @@ export default function Product360Viewer({
             unoptimized
             draggable={false}
             sizes="(max-width: 640px) 78vw, 320px"
-            className="object-contain p-6 pointer-events-none"
+            className="object-cover pointer-events-none"
             style={{ opacity: i === index ? 1 : 0, transition: dragging ? "none" : "opacity 120ms ease" }}
             priority={i === 0}
           />
@@ -74,7 +74,7 @@ export default function Product360Viewer({
         {images.map((_, i) => (
           <span
             key={i}
-            className={`h-1.5 w-1.5 rounded-full ${i === index ? "bg-[var(--color-accent)]" : "bg-black/20"}`}
+            className={`h-1.5 w-1.5 rounded-full ${i === index ? "bg-[var(--color-accent)]" : "bg-white/30"}`}
           />
         ))}
       </div>
@@ -83,7 +83,7 @@ export default function Product360Viewer({
         type="button"
         aria-label="Ruota a sinistra"
         onClick={() => step(-1)}
-        className="absolute left-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/10 text-black/60 hover:bg-black/20"
+        className="absolute left-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/30 text-white hover:bg-black/50"
       >
         ‹
       </button>
@@ -91,13 +91,13 @@ export default function Product360Viewer({
         type="button"
         aria-label="Ruota a destra"
         onClick={() => step(1)}
-        className="absolute right-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/10 text-black/60 hover:bg-black/20"
+        className="absolute right-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/30 text-white hover:bg-black/50"
       >
         ›
       </button>
 
       {!hasInteracted && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-16 flex items-center justify-center gap-2 text-xs font-medium uppercase tracking-wider text-black/50">
+        <div className="pointer-events-none absolute inset-x-0 bottom-16 flex items-center justify-center gap-2 text-xs font-medium uppercase tracking-wider text-white/70">
           <span>↔</span>
           <span>360°</span>
         </div>
