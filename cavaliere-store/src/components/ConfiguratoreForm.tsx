@@ -14,6 +14,7 @@ function buildSummary(form: HTMLFormElement) {
   return [
     "Richiesta cappellino personalizzato — Cavaliere.store",
     `Nome: ${get("nome")}`,
+    `Cognome: ${get("cognome")}`,
     `Email: ${get("email")}`,
     `Telefono: ${get("telefono")}`,
     `Colore: ${get("colore")}`,
@@ -127,6 +128,10 @@ export default function ConfiguratoreForm() {
           <label className={labelClass}>
             Nome
             <input type="text" name="nome" required className={inputClass} />
+          </label>
+          <label className={labelClass}>
+            Cognome
+            <input type="text" name="cognome" required className={inputClass} />
           </label>
           <label className={labelClass}>
             Email

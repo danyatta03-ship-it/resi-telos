@@ -2,6 +2,9 @@
   command = "npm run build"
   publish = "out"
 
+[functions]
+  directory = "netlify/functions"
+
 [[headers]]
   for = "/*"
   [headers.values]
