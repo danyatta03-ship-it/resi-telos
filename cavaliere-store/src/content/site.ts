@@ -67,8 +67,18 @@ export const pricing = {
 };
 
 export const configuratorOptions = {
-  colors: ["Nero", "Bianco", "Beige", "Verde militare", "Blu navy"],
-  models: ["Visiera piatta"],
+  colors: [
+    "Nero",
+    "Bianco",
+    "Grigio",
+    "Beige",
+    "Blu navy",
+    "Verde militare",
+    "Rosso",
+    "Bordeaux",
+    "Marrone",
+  ],
+  models: ["Visiera piatta", "Visiera a becco"],
   sizes: ["Regolabile (consigliata)", "S/M", "L/XL"],
 };
 
