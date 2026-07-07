@@ -41,21 +41,26 @@ export const works: WorkItem[] = [
     image: "/lavori/yuneslagrintaa.jpg",
     accent: "#40c4ff",
   },
-  {
-    id: "ny-cross",
-    title: "NY Cross Custom",
-    description: "Logo NY in strass con croci decorative dipinte a mano.",
-    image: "/lavori/ny-cross.jpg",
-    accent: "#e04b3f",
-  },
-  {
-    id: "as-verde",
-    title: "A's Velluto Verde",
-    description: "Monogramma in velluto ricamato con strass, base crema.",
-    image: "/lavori/as-verde.jpg",
-    accent: "#37b06c",
-  },
 ];
+
+export type Product360 = {
+  id: string;
+  title: string;
+  description: string;
+  images: string[]; // sequenza di foto scattate girando intorno al cappellino
+};
+
+export const product360: Product360 = {
+  id: "la-dodgers",
+  title: "LA Dodgers Custom",
+  description: "Logo LA in strass su base grigio tortora effetto vissuto.",
+  images: [
+    "/lavori/la-front.jpg",
+    "/lavori/la-right.jpg",
+    "/lavori/la-back.jpg",
+    "/lavori/la-left.jpg",
+  ],
+};
 
 export const pricing = {
   basePrice: 55,

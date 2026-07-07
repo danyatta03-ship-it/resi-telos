@@ -7,12 +7,8 @@ import { works } from "@/content/site";
 const categories = ["Tutti", "Ricami", "Streetwear", "Personalizzati", "Brand", "Clienti"] as const;
 
 const categoryByWorkId: Record<string, (typeof categories)[number]> = {
-  "ricamo-oro": "Ricami",
-  "patch-urban": "Streetwear",
-  "stampa-street": "Streetwear",
-  "logo-brand": "Brand",
-  "edizione-limitata": "Personalizzati",
-  "cliente-nike-style": "Clienti",
+  kassimi: "Clienti",
+  yuneslagrintaa: "Clienti",
 };
 
 export default function GalleryGrid() {
