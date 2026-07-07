@@ -46,16 +46,18 @@ export const works: WorkItem[] = [
   {
     id: "kassimi",
     title: "CAVALIERE.STORE X KASSIMI",
-    description: "Ricamo custom in strass oro e rosa su base nera effetto vissuto.",
-    image: "/lavori/kassimi.jpg",
+    description: "Ricamo custom in strass oro e rosa su base nera effetto vissuto. Trascina per vedere entrambi i lati.",
+    image: "/lavori/kassimi-front.jpg",
     accent: "#caa24a",
+    images360: ["/lavori/kassimi-front.jpg", "/lavori/kassimi-back.jpg"],
   },
   {
     id: "yuneslagrintaa",
     title: "CAVALIERE.STORE X YUNESLAGRINTAA",
-    description: "Logo NY in strass bianco e azzurro su cappellino nero distressed.",
-    image: "/lavori/yuneslagrintaa.jpg",
+    description: "Logo NY in strass bianco e azzurro su cappellino nero distressed. Trascina per vedere entrambi i lati.",
+    image: "/lavori/yunes-front.jpg",
     accent: "#40c4ff",
+    images360: ["/lavori/yunes-front.jpg", "/lavori/yunes-back.jpg"],
   },
 ];
 
