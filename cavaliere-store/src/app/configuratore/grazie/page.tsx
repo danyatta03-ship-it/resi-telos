@@ -17,8 +17,11 @@ export default function ConfiguratoreGraziePage() {
         personalizzazione.
       </p>
       <p>
-        Per accelerare i tempi, puoi anche scriverci direttamente su
-        Instagram citando la richiesta appena inviata.
+        Dovrebbe essersi aperta una nuova scheda di Instagram con il
+        riepilogo della richiesta già copiato: incollalo nel messaggio
+        (Ctrl+V, o tieni premuto e incolla da smartphone) e inviacelo per
+        accelerare i tempi. Se la scheda non si è aperta, usa il pulsante
+        qui sotto.
       </p>
       <a
         href={contact.instagramDm}
