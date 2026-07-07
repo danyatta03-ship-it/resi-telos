@@ -20,7 +20,6 @@ function buildSummary(form: HTMLFormElement) {
     `Modello: ${get("modello")}`,
     `Taglia: ${get("taglia")}`,
     `Quantità: ${get("quantita")}`,
-    `Tipo di personalizzazione: ${get("tipo_lavorazione")}`,
     `Testo da ricamare/stampare: ${get("testo_personalizzazione")}`,
     `Descrizione: ${get("descrizione")}`,
     `Note finali: ${get("note_finali")}`,
@@ -116,27 +115,6 @@ export default function ConfiguratoreForm() {
               className={inputClass}
             />
           </label>
-        </div>
-
-        <div>
-          <span className="mb-2 block text-xs uppercase tracking-wider text-[var(--color-fg-muted)]">
-            Tipo di personalizzazione
-          </span>
-          <div className="flex flex-wrap gap-4">
-            {configuratorOptions.workTypes.map((w, i) => (
-              <label key={w} className="flex items-center gap-2 text-sm text-white/80">
-                <input
-                  type="radio"
-                  name="tipo_lavorazione"
-                  value={w}
-                  required
-                  defaultChecked={i === 0}
-                  className="accent-[var(--color-accent)]"
-                />
-                {w}
-              </label>
-            ))}
-          </div>
         </div>
       </fieldset>
 

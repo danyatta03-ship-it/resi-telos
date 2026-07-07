@@ -68,7 +68,6 @@ export const configuratorOptions = {
   colors: ["Nero", "Bianco", "Beige", "Verde militare", "Blu navy"],
   models: ["Visiera piatta"],
   sizes: ["Regolabile (consigliata)", "S/M", "L/XL"],
-  workTypes: ["Ricamo", "Stampa", "Patch", "Altro"],
 };
 
 export const contact = {
