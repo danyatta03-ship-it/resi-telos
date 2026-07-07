@@ -8,9 +8,11 @@ const DRAG_SENSITIVITY = 45; // px di trascinamento per ogni scatto di rotazione
 export default function Product360Viewer({
   images,
   title,
+  description,
 }: {
   images: string[];
   title: string;
+  description?: string;
 }) {
   const [index, setIndex] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -43,15 +45,14 @@ export default function Product360Viewer({
   }
 
   return (
-    <div className="select-none">
+    <div className="group relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-[var(--color-line)] bg-white select-none">
       <div
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
         onPointerLeave={endDrag}
-        className={`relative aspect-square w-full overflow-hidden rounded-2xl border border-[var(--color-line)] bg-white ${
-          dragging ? "cursor-grabbing" : "cursor-grab"
-        }`}
+        style={{ touchAction: "none" }}
+        className={`absolute inset-0 ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
         {images.map((src, i) => (
           <Image
@@ -61,48 +62,54 @@ export default function Product360Viewer({
             fill
             unoptimized
             draggable={false}
-            sizes="(max-width: 640px) 90vw, 480px"
+            sizes="(max-width: 640px) 78vw, 320px"
             className="object-contain p-6 pointer-events-none"
             style={{ opacity: i === index ? 1 : 0, transition: dragging ? "none" : "opacity 120ms ease" }}
             priority={i === 0}
           />
         ))}
-
-        {!hasInteracted && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-4 flex items-center justify-center gap-2 text-xs font-medium uppercase tracking-wider text-black/50">
-            <span>↔</span>
-            <span>Trascina per ruotare</span>
-          </div>
-        )}
       </div>
 
-      <div className="mt-4 flex items-center justify-center gap-4">
-        <button
-          type="button"
-          aria-label="Ruota a sinistra"
-          onClick={() => step(-1)}
-          className="h-9 w-9 rounded-full border border-[var(--color-line)] text-white hover:border-[var(--color-accent)]"
-        >
-          ‹
-        </button>
-        <div className="flex gap-1.5">
-          {images.map((_, i) => (
-            <span
-              key={i}
-              className={`h-1.5 w-1.5 rounded-full ${
-                i === index ? "bg-[var(--color-accent)]" : "bg-[var(--color-line)]"
-              }`}
-            />
-          ))}
+      <div className="pointer-events-none absolute inset-x-0 top-3 flex items-center justify-center gap-1.5">
+        {images.map((_, i) => (
+          <span
+            key={i}
+            className={`h-1.5 w-1.5 rounded-full ${i === index ? "bg-[var(--color-accent)]" : "bg-black/20"}`}
+          />
+        ))}
+      </div>
+
+      <button
+        type="button"
+        aria-label="Ruota a sinistra"
+        onClick={() => step(-1)}
+        className="absolute left-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/10 text-black/60 hover:bg-black/20"
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        aria-label="Ruota a destra"
+        onClick={() => step(1)}
+        className="absolute right-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/10 text-black/60 hover:bg-black/20"
+      >
+        ›
+      </button>
+
+      {!hasInteracted && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-16 flex items-center justify-center gap-2 text-xs font-medium uppercase tracking-wider text-black/50">
+          <span>↔</span>
+          <span>360°</span>
         </div>
-        <button
-          type="button"
-          aria-label="Ruota a destra"
-          onClick={() => step(1)}
-          className="h-9 w-9 rounded-full border border-[var(--color-line)] text-white hover:border-[var(--color-accent)]"
-        >
-          ›
-        </button>
+      )}
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent p-5">
+        <h3 className="font-[family-name:var(--font-display)] text-lg text-white">{title}</h3>
+        {description && (
+          <p className="mt-2 text-xs leading-relaxed text-white/70 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+            {description}
+          </p>
+        )}
       </div>
     </div>
   );

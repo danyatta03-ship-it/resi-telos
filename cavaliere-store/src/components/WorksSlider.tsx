@@ -4,6 +4,7 @@ import { useRef } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { works } from "@/content/site";
+import Product360Viewer from "@/components/Product360Viewer";
 
 export default function WorksSlider() {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -57,29 +58,37 @@ export default function WorksSlider() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.5, delay: (i % 3) * 0.08 }}
-            className="group relative w-[78vw] max-w-[320px] shrink-0 snap-start overflow-hidden rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg-alt)]"
+            className="w-[78vw] max-w-[320px] shrink-0 snap-start"
           >
-            <div className="relative aspect-[4/5] overflow-hidden">
-              <Image
-                src={work.image}
-                alt={work.title}
-                fill
-                unoptimized
-                sizes="(max-width: 640px) 78vw, 320px"
-                className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+            {work.images360 ? (
+              <Product360Viewer
+                images={work.images360}
+                title={work.title}
+                description={work.description}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-70 transition-opacity duration-500 group-hover:opacity-90" />
-              <div
-                className="absolute inset-x-0 bottom-0 translate-y-2 p-5 transition-transform duration-500 group-hover:translate-y-0"
-              >
-                <h3 className="font-[family-name:var(--font-display)] text-lg text-white">
-                  {work.title}
-                </h3>
-                <p className="mt-2 text-xs leading-relaxed text-white/70 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
-                  {work.description}
-                </p>
+            ) : (
+              <div className="group relative overflow-hidden rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg-alt)]">
+                <div className="relative aspect-[4/5] overflow-hidden">
+                  <Image
+                    src={work.image}
+                    alt={work.title}
+                    fill
+                    unoptimized
+                    sizes="(max-width: 640px) 78vw, 320px"
+                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-70 transition-opacity duration-500 group-hover:opacity-90" />
+                  <div className="absolute inset-x-0 bottom-0 translate-y-2 p-5 transition-transform duration-500 group-hover:translate-y-0">
+                    <h3 className="font-[family-name:var(--font-display)] text-lg text-white">
+                      {work.title}
+                    </h3>
+                    <p className="mt-2 text-xs leading-relaxed text-white/70 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+                      {work.description}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </motion.article>
         ))}
       </div>

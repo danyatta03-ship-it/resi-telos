@@ -9,6 +9,7 @@ const categories = ["Tutti", "Ricami", "Streetwear", "Personalizzati", "Brand", 
 const categoryByWorkId: Record<string, (typeof categories)[number]> = {
   kassimi: "Clienti",
   yuneslagrintaa: "Clienti",
+  "la-dodgers": "Personalizzati",
 };
 
 export default function GalleryGrid() {

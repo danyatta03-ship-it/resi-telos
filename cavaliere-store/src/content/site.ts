@@ -24,6 +24,9 @@ export type WorkItem = {
   description: string;
   image: string; // percorso in /public — sostituibile con una foto reale
   accent: string; // colore d'accento per il placeholder grafico
+  // opzionale: se presente, la card mostra un visualizzatore 360° trascinabile
+  // invece della singola immagine (foto scattate girando intorno al cappellino)
+  images360?: string[];
 };
 
 export const works: WorkItem[] = [
@@ -41,26 +44,20 @@ export const works: WorkItem[] = [
     image: "/lavori/yuneslagrintaa.jpg",
     accent: "#40c4ff",
   },
+  {
+    id: "la-dodgers",
+    title: "LA Dodgers Custom",
+    description: "Logo LA in strass su base grigio tortora effetto vissuto. Trascina per vederlo a 360°.",
+    image: "/lavori/la-front.jpg",
+    accent: "#9aa0a6",
+    images360: [
+      "/lavori/la-front.jpg",
+      "/lavori/la-right.jpg",
+      "/lavori/la-back.jpg",
+      "/lavori/la-left.jpg",
+    ],
+  },
 ];
-
-export type Product360 = {
-  id: string;
-  title: string;
-  description: string;
-  images: string[]; // sequenza di foto scattate girando intorno al cappellino
-};
-
-export const product360: Product360 = {
-  id: "la-dodgers",
-  title: "LA Dodgers Custom",
-  description: "Logo LA in strass su base grigio tortora effetto vissuto.",
-  images: [
-    "/lavori/la-front.jpg",
-    "/lavori/la-right.jpg",
-    "/lavori/la-back.jpg",
-    "/lavori/la-left.jpg",
-  ],
-};
 
 export const pricing = {
   basePrice: 55,
