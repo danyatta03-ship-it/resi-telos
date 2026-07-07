@@ -79,10 +79,12 @@ export default function ConfiguratoreForm() {
 
           <label className={labelClass}>
             Modello
-            <select name="modello" required className={inputClass} defaultValue="">
-              <option value="" disabled>
-                Scegli un modello
-              </option>
+            <select
+              name="modello"
+              required
+              className={inputClass}
+              defaultValue={configuratorOptions.models[0]}
+            >
               {configuratorOptions.models.map((m) => (
                 <option key={m} value={m}>
                   {m}
