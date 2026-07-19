@@ -6390,25 +6390,109 @@ function ocrDocument(inputEl){
   inputEl.value='';
   if(ocrLoading){ toast('OCR in corso\u2026','b'); return; }
   ocrLoading=true;
-  ocrShowLoading('Lettura bolla\u2026');
   var rd=new FileReader();
   rd.onload=function(e){
-    var dataUrl=e.target.result;
-    // 1) AI vision se configurata
-    var aiWasConfigured = !!ocrAIConfig();
-    ocrViaAI(dataUrl, function(aiRes){
-      if(aiRes){ ocrLoading=false; ocrHideLoading(); showOcrConfirm(aiRes, dataUrl, 'ai'); return; }
-      // 2) Tesseract offline su immagine pre-elaborata
-      ocrPreprocess(dataUrl, function(proc){
-        ocrRunTesseract(proc, function(res){
-          ocrLoading=false; ocrHideLoading();
-          showOcrConfirm(res, dataUrl, aiWasConfigured ? 'offline-fallback' : 'offline');
+    // Ritaglio guidato: agende, tastiere e altri fogli intorno alla bolla
+    // restano fuori dall'OCR (inquinavano la lettura)
+    ocrCropShow(e.target.result, function(dataUrl){
+      if(!dataUrl){ ocrLoading=false; return; }
+      ocrShowLoading('Lettura bolla\u2026');
+      // 1) AI vision se configurata
+      var aiWasConfigured = !!ocrAIConfig();
+      ocrViaAI(dataUrl, function(aiRes){
+        if(aiRes){ ocrLoading=false; ocrHideLoading(); showOcrConfirm(aiRes, dataUrl, 'ai'); return; }
+        // 2) Tesseract offline su immagine pre-elaborata
+        ocrPreprocess(dataUrl, function(proc){
+          ocrRunTesseract(proc, function(res){
+            ocrLoading=false; ocrHideLoading();
+            showOcrConfirm(res, dataUrl, aiWasConfigured ? 'offline-fallback' : 'offline');
+          });
         });
       });
     });
   };
   rd.onerror=function(){ ocrLoading=false; ocrHideLoading(); toast('Errore lettura file','r'); };
   rd.readAsDataURL(file);
+}
+
+// \u2500\u2500 Ritaglio guidato prima dell'OCR \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+function ocrCropShow(dataUrl, cb){
+  var old=document.getElementById('ocrCropOv'); if(old) old.remove();
+  var ov=document.createElement('div'); ov.id='ocrCropOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:1420;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;gap:10px';
+  ov.innerHTML=
+    '<div style="color:#3B9FD4;font-size:13px;font-weight:800">\u2702\ufe0f Ritaglia la bolla</div>'+
+    '<div style="color:#888;font-size:11px;text-align:center;max-width:440px">Stringi il riquadro sulla bolla: quello che resta fuori (agende, tastiera, altri fogli) non disturba la lettura.</div>'+
+    '<div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;max-width:100%">'+
+      '<div id="ocrCropWrap" style="position:relative;display:inline-block;max-width:100%;max-height:100%">'+
+        '<img id="ocrCropImg" style="max-width:100%;max-height:62vh;display:block;border-radius:6px">'+
+        '<div id="ocrCropRect" style="position:absolute;display:none;border:2px solid #3B9FD4;box-shadow:0 0 0 9999px rgba(0,0,0,.55);cursor:move;touch-action:none;border-radius:4px"></div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;width:100%;max-width:440px">'+
+      '<button id="ocrCropGo" style="flex:2;background:#3B9FD4;color:#fff;border:none;padding:13px;font-size:14px;font-weight:800;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit">\u2702\ufe0f RITAGLIA E LEGGI</button>'+
+      '<button id="ocrCropAll" style="flex:1;background:#13212f;color:#3B9FD4;border:1px solid #2980B9;padding:13px;font-size:12px;font-weight:700;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit">Tutta la foto</button>'+
+    '</div>'+
+    '<button id="ocrCropCanc" style="background:none;color:#666;border:none;padding:6px;font-size:13px;cursor:pointer;-webkit-appearance:none;font-family:inherit">\u2715 Annulla</button>';
+  document.body.appendChild(ov);
+  var img=document.getElementById('ocrCropImg'), rect=document.getElementById('ocrCropRect');
+  var hs=['nw','ne','sw','se'];
+  for(var i=0;i<hs.length;i++){
+    var hd=document.createElement('div');
+    hd.dataset.h=hs[i];
+    hd.style.cssText='position:absolute;width:28px;height:28px;background:#3B9FD4;border:2px solid #0a0a0a;border-radius:50%;opacity:.9;touch-action:none;'+
+      (hs[i].charAt(0)==='n'?'top:-15px;':'bottom:-15px;')+(hs[i].charAt(1)==='w'?'left:-15px;':'right:-15px;');
+    rect.appendChild(hd);
+  }
+  var R={x:0,y:0,w:0,h:0}, IW=0, IH=0, drag=null;
+  function layout(){ rect.style.left=R.x+'px'; rect.style.top=R.y+'px'; rect.style.width=R.w+'px'; rect.style.height=R.h+'px'; }
+  img.onload=function(){
+    IW=img.clientWidth; IH=img.clientHeight;
+    R={x:IW*0.06, y:IH*0.06, w:IW*0.88, h:IH*0.88};
+    rect.style.display='block';
+    layout();
+  };
+  rect.addEventListener('pointerdown',function(e){
+    var h=e.target.dataset?e.target.dataset.h:null;
+    drag={h:h||'move', sx:e.clientX, sy:e.clientY, o:{x:R.x,y:R.y,w:R.w,h:R.h}};
+    try{ e.target.setPointerCapture(e.pointerId); }catch(ex){}
+    e.preventDefault();
+  });
+  ov.addEventListener('pointermove',function(e){
+    if(!drag) return;
+    var dx=e.clientX-drag.sx, dy=e.clientY-drag.sy, o=drag.o, min=46;
+    if(drag.h==='move'){
+      R.x=Math.min(Math.max(0,o.x+dx),IW-o.w);
+      R.y=Math.min(Math.max(0,o.y+dy),IH-o.h);
+    } else {
+      var x1=o.x, y1=o.y, x2=o.x+o.w, y2=o.y+o.h;
+      if(drag.h.indexOf('w')>=0) x1=Math.min(Math.max(0,x1+dx),x2-min);
+      if(drag.h.indexOf('e')>=0) x2=Math.max(Math.min(IW,x2+dx),x1+min);
+      if(drag.h.indexOf('n')>=0) y1=Math.min(Math.max(0,y1+dy),y2-min);
+      if(drag.h.indexOf('s')>=0) y2=Math.max(Math.min(IH,y2+dy),y1+min);
+      R.x=x1; R.y=y1; R.w=x2-x1; R.h=y2-y1;
+    }
+    layout(); e.preventDefault();
+  });
+  ov.addEventListener('pointerup',function(){ drag=null; });
+  ov.addEventListener('pointercancel',function(){ drag=null; });
+  document.getElementById('ocrCropGo').onclick=function(){
+    var nat=new Image();
+    nat.onload=function(){
+      try{
+        var sx=nat.width/IW, sy=nat.height/IH;
+        var cv=document.createElement('canvas');
+        cv.width=Math.max(1,Math.round(R.w*sx)); cv.height=Math.max(1,Math.round(R.h*sy));
+        cv.getContext('2d').drawImage(nat, Math.round(R.x*sx), Math.round(R.y*sy), cv.width, cv.height, 0, 0, cv.width, cv.height);
+        ov.remove(); cb(cv.toDataURL('image/jpeg',0.92));
+      }catch(e){ ov.remove(); cb(dataUrl); }
+    };
+    nat.onerror=function(){ ov.remove(); cb(dataUrl); };
+    nat.src=dataUrl;
+  };
+  document.getElementById('ocrCropAll').onclick=function(){ ov.remove(); cb(dataUrl); };
+  document.getElementById('ocrCropCanc').onclick=function(){ ov.remove(); cb(null); };
+  img.src=dataUrl;
 }
 
 // \u2500\u2500 Overlay di caricamento OCR \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -6465,7 +6549,7 @@ function ocrViaAI(dataUrl, cb){
   var cfg=ocrAIConfig();
   if(!cfg||!cfg.endpoint){ cb(null); return; }
   ocrSetLoading('AI: analisi bolla\u2026');
-  var prompt='Sei un assistente che legge bolle/DDT italiani di reso merce. L\'azienda stampata in ALTO (mittente) è il CLIENTE che restituisce il pezzo: mettila in "soggetto". Il destinatario è sempre TELOS: ignoralo. Leggi con la massima attenzione il CODICE ARTICOLO anche se è cerchiato o annotato a penna. Rispondi SOLO con JSON valido, senza testo extra, con chiavi: numero_documento, data (formato GG/MM/AAAA), soggetto, vettore, causale, articoli (array di oggetti {pre, codice, descrizione, quantita, prezzo}). I campi mancanti devono essere stringa vuota.';
+  var prompt='Sei un esperto nella lettura di bolle/DDT italiani di reso merce, spesso COMPILATI A MANO IN CORSIVO (a volte con righe evidenziate). L\'azienda stampata in ALTO (mittente) è il CLIENTE che restituisce i pezzi: mettila in "soggetto". Il destinatario è sempre TELOS: ignoralo. REGOLE FONDAMENTALI: 1) La bolla contiene quasi sempre PIÙ ARTICOLI, uno per blocco di righe: estraili TUTTI, nessuno escluso, nell\'ordine in cui compaiono; non fermarti mai al primo. 2) Ogni articolo di solito ha: quantità (es. "1" oppure "Ø1"), descrizione, sigla marca (es. NGK, BIR, FAU, VAL) e un CODICE tra parentesi o accanto alla descrizione: quello è il codice articolo. 3) Le righe che iniziano con "RIF." / "RIF.BL" / "RIF.BOLLA" seguite da numero e data sono il RIFERIMENTO alla bolla di consegna originaria dell\'articolo che le precede: mettile nel campo "riferimento" di QUELL\'articolo, NON sono codici articolo. 4) Sul corsivo ambiguo scegli l\'interpretazione più plausibile per un codice ricambi (cifre e lettere maiuscole). Rispondi SOLO con JSON valido, senza testo extra, con chiavi: numero_documento, data (formato GG/MM/AAAA), soggetto, vettore, causale, articoli (array di oggetti {pre, codice, descrizione, quantita, prezzo, riferimento}). I campi mancanti devono essere stringa vuota.';
   aiComplete([{type:'text',text:prompt},{type:'image_url',image_url:{url:dataUrl}}], function(content,err){
     if(!content){ cb(null); return; }
     var obj=ocrSafeJSON(content);
@@ -6484,7 +6568,10 @@ function normalizeAIResult(o){
       // se manca il PRE ma il codice è tipo FEB18904 / BOS3397014095 → separa brand e numero
       if(!pre){ var sp=cod.match(/^([A-Z]{2,4})[\s\-]?(\d[A-Z0-9\-]*)$/); if(sp){ pre=sp[1]; cod=sp[2]; } }
       var qty=(a.quantita||a.qty||'1').toString().replace(/[.,]0+$/,'').replace(/[^0-9]/g,'')||'1';
-      arts.push({pre:pre, cod:cod, qty:qty, prc:(a.prezzo||a.prc||'').toString().replace(',','.'), desc:(a.descrizione||a.desc||'').toString()});
+      var rif=(a.riferimento||a.rif||'').toString().trim();
+      var desc=(a.descrizione||a.desc||'').toString();
+      if(rif) desc=(desc?desc+' \u00b7 ':'')+'RIF '+rif;
+      arts.push({pre:pre, cod:cod, qty:qty, prc:(a.prezzo||a.prc||'').toString().replace(',','.'), desc:desc});
     }
   }
   return {
