@@ -29,16 +29,43 @@ function getTodayFile() {
   return path.join(DATA_DIR, getTodayKey() + '.json');
 }
 
-function loadRows() {
-  var file = getTodayFile();
+function loadRowsFrom(file) {
   if (!fs.existsSync(file)) return {};
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
   catch(e) { console.error('Errore lettura dati:', e.message); return {}; }
 }
 
-function saveRows(rows) {
-  try { fs.writeFileSync(getTodayFile(), JSON.stringify(rows, null, 2), 'utf8'); }
+function loadRows() { return loadRowsFrom(getTodayFile()); }
+
+function saveRowsTo(file, rows) {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+    fs.writeFileSync(file, JSON.stringify(rows, null, 2), 'utf8');
+  }
   catch(e) { console.error('Errore salvataggio dati:', e.message); }
+}
+
+function saveRows(rows) { saveRowsTo(getTodayFile(), rows); }
+
+// Trova il file giornaliero che contiene la riga: se il giorno è cambiato
+// a sessione aperta, le modifiche vanno sul file del giorno giusto invece
+// di essere scartate in silenzio.
+function findRowsForKey(key) {
+  var today = getTodayFile();
+  var rows = loadRowsFrom(today);
+  if (rows[key]) return { file: today, rows: rows };
+  try {
+    var files = fs.readdirSync(DATA_DIR)
+      .filter(function(f) { return f.endsWith('.json'); })
+      .sort().reverse().slice(0, 7);
+    for (var i = 0; i < files.length; i++) {
+      var fp = path.join(DATA_DIR, files[i]);
+      if (fp === today) continue;
+      var r = loadRowsFrom(fp);
+      if (r[key]) return { file: fp, rows: r };
+    }
+  } catch(e) {}
+  return { file: today, rows: rows };
 }
 
 // ── PRESENZA UTENTI ────────────────────────────────────
@@ -88,6 +115,7 @@ app.get('/api/clients', function(req, res) {
 // Import dati DB esistente (trimestre)
 app.get('/api/db-import', function(req, res) {
   var file = path.join(__dirname, 'db_import.json');
+  if (!fs.existsSync(file)) file = path.join(__dirname, 'db import.json');
   if (!fs.existsSync(file)) { res.json([]); return; }
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.sendFile(file);
@@ -112,30 +140,32 @@ wss.on('connection', function(ws, req) {
 
       if (m.type === 'add') {
         rows = loadRows();
-        var key = 'r' + Date.now() + Math.random().toString(36).slice(2, 5);
+        // Riusa la chiave generata dal client: tutti i dispositivi (incluso
+        // chi ha inserito) devono condividere la stessa chiave della riga.
+        var key = m.row._key || ('r' + Date.now() + Math.random().toString(36).slice(2, 5));
         m.row._key = key;
-        m.row._ts = Date.now();
+        if (!m.row._ts) m.row._ts = Date.now();
         rows[key] = m.row;
         saveRows(rows);
         broadcast({ type: 'add', key: key, row: m.row }, clientId);
         console.log('[+] Aggiunto: ' + m.row.cod + ' da ' + (m.row._who || '?'));
 
       } else if (m.type === 'update') {
-        rows = loadRows();
-        if (rows[m.key]) {
+        var loc = findRowsForKey(m.key);
+        if (loc.rows[m.key]) {
           var k;
-          for (k in m.changes) rows[m.key][k] = m.changes[k];
-          saveRows(rows);
+          for (k in m.changes) loc.rows[m.key][k] = m.changes[k];
+          saveRowsTo(loc.file, loc.rows);
           broadcast({ type: 'update', key: m.key, changes: m.changes }, clientId);
           console.log('[~] Aggiornato: ' + m.key);
         }
 
       } else if (m.type === 'remove') {
-        rows = loadRows();
-        if (rows[m.key]) {
-          var cod = rows[m.key].cod;
-          delete rows[m.key];
-          saveRows(rows);
+        var locR = findRowsForKey(m.key);
+        if (locR.rows[m.key]) {
+          var cod = locR.rows[m.key].cod;
+          delete locR.rows[m.key];
+          saveRowsTo(locR.file, locR.rows);
           broadcast({ type: 'remove', key: m.key }, clientId);
           console.log('[-] Eliminato: ' + cod);
         }
