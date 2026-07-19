@@ -305,10 +305,10 @@ select option {
 </style>
 <script async src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" id="fbAppSdk"></script>
 <script async src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js" id="fbDbSdk"></script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script src="html5-qrcode.min.js" onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';document.head.appendChild(s);})()"></script>
+<script src="zxing.min.js" onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';document.head.appendChild(s);})()"></script>
 <script src="ocr-config.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="qrcode-lib.min.js" onerror="(function(){var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';document.head.appendChild(s);})()"></script>
 <script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
