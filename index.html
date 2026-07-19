@@ -6856,23 +6856,56 @@ function decodeBarcodeFromImage(dataUrl, cb) {
 }
 
 function tryZxingImage(dataUrl, cb) {
-  // Decodifica un codice a barre da un'immagine con ZXing; se fallisce passa all'OCR
+  // Decodifica un codice a barre da un'immagine con ZXing (modalità TRY_HARDER:
+  // legge anche barcode piccoli/inclinati). Se la prima passata fallisce riprova
+  // su varianti ingrandite e ruotate; solo alla fine passa all'OCR.
   if(typeof ZXing === 'undefined' || !ZXing.BrowserMultiFormatReader) { runTesseractScan(dataUrl, cb); return; }
-  try {
-    var reader = new ZXing.BrowserMultiFormatReader();
-    reader.decodeFromImageUrl(dataUrl).then(function(res){
+  var hints = null;
+  try { hints = new Map(); hints.set(ZXing.DecodeHintType.TRY_HARDER, true); } catch(e) { hints = null; }
+  function decodeUrl(url, okCb, koCb){
+    var reader;
+    try { reader = hints ? new ZXing.BrowserMultiFormatReader(hints) : new ZXing.BrowserMultiFormatReader(); }
+    catch(e) { koCb(); return; }
+    reader.decodeFromImageUrl(url).then(function(res){
       var code = res && (res.getText ? res.getText() : res.text) || '';
       try{ reader.reset(); }catch(e){}
-      if(code){
-        toast('✅ Codice: ' + code, 'b');
-        var parsed = parseScanCode(code);
-        cb(parsed.pre, parsed.cod);
-      } else { runTesseractScan(dataUrl, cb); }
+      if(code) okCb(code); else koCb();
     }).catch(function(){
       try{ reader.reset(); }catch(e){}
-      runTesseractScan(dataUrl, cb);
+      koCb();
     });
-  } catch(e) { runTesseractScan(dataUrl, cb); }
+  }
+  function found(code){
+    toast('\u2705 Codice: ' + code, 'b');
+    var parsed = parseScanCode(code);
+    cb(parsed.pre, parsed.cod);
+  }
+  var img = new Image();
+  img.onerror = function(){ runTesseractScan(dataUrl, cb); };
+  img.onload = function(){
+    // varianti: [scala, rotazione] — originale prima, poi ingrandita e ruotata
+    var variants = [[1,0],[2,0],[2,90],[2,270],[3,0],[2,180]];
+    var vi = 0;
+    function next(){
+      if(vi >= variants.length){ runTesseractScan(dataUrl, cb); return; }
+      var v = variants[vi++], scale = v[0], rot = v[1];
+      if(scale === 1 && rot === 0){ decodeUrl(dataUrl, found, next); return; }
+      try {
+        var w = Math.round(img.width*scale), h = Math.round(img.height*scale);
+        if(w*h > 16e6){ next(); return; }
+        var cv = document.createElement('canvas');
+        var rotated = (rot === 90 || rot === 270);
+        cv.width = rotated ? h : w; cv.height = rotated ? w : h;
+        var cx = cv.getContext('2d');
+        cx.translate(cv.width/2, cv.height/2);
+        cx.rotate(rot*Math.PI/180);
+        cx.drawImage(img, -w/2, -h/2, w, h);
+        decodeUrl(cv.toDataURL('image/png'), found, next);
+      } catch(e) { next(); }
+    }
+    next();
+  };
+  img.src = dataUrl;
 }
 
 function runTesseractScan(dataUrl, cb) {
