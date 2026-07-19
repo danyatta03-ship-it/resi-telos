@@ -3,7 +3,7 @@
 // App shell: network-first (aggiornamenti subito, offline dal cache)
 // Dati anagrafica/storico: cache-first con refresh in background
 // ═══════════════════════════════════════════════════════
-var CACHE = 'resi-telos-v2';
+var CACHE = 'resi-telos-v3';
 var PRECACHE = [
   './',
   './index.html',
@@ -11,7 +11,9 @@ var PRECACHE = [
   './icon-192.png',
   './icon-512.png',
   './clients.json',
-  './db_import.json'
+  './db_import.json',
+  './jsqr.js',
+  './qrcode.min.js'
 ];
 
 self.addEventListener('install', function(e) {

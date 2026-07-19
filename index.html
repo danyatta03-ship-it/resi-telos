@@ -242,6 +242,16 @@ textarea{resize:none;min-height:52px}
 .sel-all-row{display:flex;align-items:center;gap:8px;padding:7px 0;margin-bottom:5px;font-size:11px;color:var(--txt2)}
 
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ETICHETTE QR UBICAZIONI */
+.ubi-lbl{background:#fff;color:#000;padding:10px 10px 6px;border-radius:8px;text-align:center;display:inline-block}
+.ubi-lbl svg{display:block;margin:0 auto}
+.ubi-txt{font-weight:700;font-family:monospace;font-size:14px;color:#000;margin-top:4px}
+@media print{
+  body.qrprint *{visibility:hidden}
+  body.qrprint #ubiOut,body.qrprint #ubiOut *{visibility:visible}
+  body.qrprint #ubiOut{position:absolute;left:0;top:0;width:100%}
+}
 .spin{animation:spin .7s linear infinite}
 </style>
 </head>
@@ -302,7 +312,7 @@ textarea{resize:none;min-height:52px}
     <video id="scanVideo" class="scan-video" autoplay playsinline muted></video>
     <div class="scan-frame" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)"></div>
   </div>
-  <div style="margin-top:16px;font-size:13px;color:#888;text-align:center">Inquadra il codice a barre / QR</div>
+  <div id="scanHint" style="margin-top:16px;font-size:13px;color:#888;text-align:center">Inquadra il codice a barre / QR</div>
   <div style="display:flex;gap:10px;margin-top:12px">
     <input id="scanManual" placeholder="O digita il codice..." style="flex:1;background:#111;color:#e8e8e8;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:inherit">
     <button onclick="scanManualConfirm()" style="background:rgba(0,230,118,.1);color:#00e676;border:1px solid rgba(0,230,118,.3);border-radius:8px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">OK</button>
@@ -560,6 +570,7 @@ textarea{resize:none;min-height:52px}
   <div id="bulkBar" style="display:none" class="bulk-bar">
     <input type="checkbox" id="selAll" onchange="toggleSelAll()" style="accent-color:var(--blu)">
     <div class="bulk-info" id="bulkInfo">0 selezionati</div>
+    <button class="sb sp" onclick="bulkUbica()" style="padding:6px 10px">📍 Ubica</button>
     <button class="sb sy" onclick="bulkExport()" style="padding:6px 10px">📥 XLS</button>
     <button class="sb ssb" onclick="bulkEditState()" style="padding:6px 10px">✎ Stato</button>
     <button class="sb sr" onclick="bulkDelete()" style="padding:6px 10px">✕ Elim.</button>
@@ -628,6 +639,14 @@ textarea{resize:none;min-height:52px}
       <button class="sb sg" onclick="addSupplier()" style="padding:7px 11px">＋ Aggiungi</button>
     </div>
     <div id="supList"></div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--txt);margin:18px 0 6px;padding-top:12px;border-top:1px solid var(--brd)">ETICHETTE QR UBICAZIONI</div>
+    <div style="font-size:10px;color:var(--txt2);margin-bottom:8px;line-height:1.5">Scrivi le ubicazioni separate da virgola (es. A-01-01, A-01-02), stampa le etichette e incollale sugli scaffali. Poi da LISTA: selezione multipla ☑ → 📍 Ubica → scansiona il QR dello scaffale.</div>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <input id="ubiList" placeholder="A-01-01, A-01-02, B-03-01..." style="flex:1">
+      <button class="sb ssb" onclick="genUbiQR()" style="padding:8px 12px;flex-shrink:0">🔳 GENERA</button>
+    </div>
+    <div id="ubiOut"></div>
   </div>
 
   <div id="hPanExp" style="display:none">
@@ -686,7 +705,7 @@ var AUTO_STATO = {
   'FINALE':'NOTA CREDITO'
 };
 
-var HDR = ['Data Listato','Vettore Ricevimento','Data Elaborazione','Soggetto','Pre','Codice','Quantita','Fornitore','Prezzo','Vettore Uscita','Tipo flusso','Causale','Anomalia','Tipo documento','FASE','STATO','Data stato','RMA','Contatto','Data contatto','Agente','Doc Ricevuti','Data Ric.Doc','Note','Foto','Inserito da'];
+var HDR = ['Data Listato','Vettore Ricevimento','Data Elaborazione','Soggetto','Pre','Codice','Quantita','Fornitore','Prezzo','Vettore Uscita','Tipo flusso','Causale','Anomalia','Tipo documento','FASE','STATO','Data stato','RMA','Contatto','Data contatto','Agente','Doc Ricevuti','Data Ric.Doc','Note','Foto','Inserito da','Ubicazione'];
 var CAULIST = ['ERRATO ORDINE','CARCASSA','GARANZIA','GARANZIA MANODOPERA','GARANZIA DANNI E MANODOPERA','ERRATO CONFEZIONAMENTO','DANNEGGIATO','PERVENUTO MONTATO AL CLIENTE',"QUANTITA' MANCANTE",'RIFIUTATO FORNITORE','INCOMPLETO','RNC FILIALE IN TRANSITO','TRR/01D','DIVERSO DA OE/INCOMPATIBILE','SOSTITUZIONE/RIPARAZIONE','PROFORMA'];
 
 // ══════════════════════════════════════════════════
@@ -1183,7 +1202,7 @@ function getFiltered(){
     if(filterState.flusso && r.flusso!==filterState.flusso) return false;
     if(filterState.stato && r.stato!==filterState.stato) return false;
     if(filterState.vet && r.vetRic!==filterState.vet) return false;
-    if(filterState.q && (r.cod+(r.sogg||'')+(r.causale||'')+(r.forn||'')).toLowerCase().indexOf(filterState.q)<0) return false;
+    if(filterState.q && (r.cod+(r.sogg||'')+(r.causale||'')+(r.forn||'')+(r.ubic||'')).toLowerCase().indexOf(filterState.q)<0) return false;
     if(filterState.da && r.datArr && r.datArr<filterState.da) return false;
     if(filterState.a && r.datArr && r.datArr>filterState.a) return false;
     return true;
@@ -1289,7 +1308,7 @@ function renderQueue(){
     var canEdit = canEditRow(r);
     html+='<div class="fu">';
     html+='<div class="fu-cod">'+(r.pre?'<span style="color:var(--ora);margin-right:4px">'+xe(r.pre)+'</span>':'')+xe(r.cod)+(r.photo?' 📷':'')+'</div>';
-    html+='<div class="fu-sogg">'+xe(r.sogg||'—')+' · '+fd(r.datArr)+'</div>';
+    html+='<div class="fu-sogg">'+xe(r.sogg||'—')+' · '+fd(r.datArr)+(r.ubic?' · \ud83d\udccd '+xe(r.ubic):'')+'</div>';
     if(r.causale)html+='<div style="font-size:10px;color:var(--txt2);margin-bottom:6px;font-family:monospace">'+xe(r.causale)+'</div>';
     if(canEdit){
       html+='<div class="sti">';
@@ -1374,6 +1393,7 @@ function renderList(){
     if(r.anomalia)html+='<span class="chip cr">'+xe(r.anomalia)+'</span>';
     if(r.stato)html+='<span class="chip cy">'+xe(r.stato)+'</span>';
     if(r.rma)html+='<span class="chip cn">'+xe(r.rma)+'</span>';
+    if(r.ubic)html+='<span class="chip cp">\ud83d\udccd '+xe(r.ubic)+'</span>';
     if(r.vetUsc)html+='<span class="chip cb">→ '+xe(r.vetUsc)+'</span>';
     html+='</div>';
     html+='<div class="ac-acts">';
@@ -1609,7 +1629,7 @@ function dlRow2(r){
 
 function mkRow(r){
   var s=fSt(r.flusso||'STANDARD');
-  return [{v:fd(r.datArr),s:s},{v:r.vetRic,s:s},{v:fd(r.datElab),s:s},{v:r.sogg,s:s},{v:r.pre,s:s},{v:r.cod,s:s},{v:parseInt(r.qty)||1,s:s},{v:r.forn,s:s},{v:parseFloat(r.prc)||0,s:s},{v:r.vetUsc,s:s},{v:r.flusso,s:s},{v:r.causale,s:s},{v:r.anomalia,s:s},{v:r.tipoDoc,s:s},{v:r.fase,s:s},{v:r.stato,s:s},{v:fd(r.datSta),s:s},{v:r.rma,s:s},{v:r.contatto,s:s},{v:fd(r.datCon),s:s},{v:r.agente,s:s},{v:r.docRic,s:s},{v:fd(r.datDoc),s:s},{v:r.note,s:s},{v:r.photo||'',s:s},{v:r._who||'',s:s}];
+  return [{v:fd(r.datArr),s:s},{v:r.vetRic,s:s},{v:fd(r.datElab),s:s},{v:r.sogg,s:s},{v:r.pre,s:s},{v:r.cod,s:s},{v:parseInt(r.qty)||1,s:s},{v:r.forn,s:s},{v:parseFloat(r.prc)||0,s:s},{v:r.vetUsc,s:s},{v:r.flusso,s:s},{v:r.causale,s:s},{v:r.anomalia,s:s},{v:r.tipoDoc,s:s},{v:r.fase,s:s},{v:r.stato,s:s},{v:fd(r.datSta),s:s},{v:r.rma,s:s},{v:r.contatto,s:s},{v:fd(r.datCon),s:s},{v:r.agente,s:s},{v:r.docRic,s:s},{v:fd(r.datDoc),s:s},{v:r.note,s:s},{v:r.photo||'',s:s},{v:r._who||'',s:s},{v:r.ubic||'',s:s}];
 }
 
 // ══════════════════════════════════════════════════
@@ -1713,7 +1733,7 @@ function editRow(key){
     html+='<div style="background:rgba(255,202,40,.04);border:1px solid rgba(255,202,40,.1);border-radius:var(--rad2);padding:9px;font-size:11px;color:var(--yel);margin-bottom:9px">🔒 Non puoi modificare la fase in questo ruolo ('+ROLE+').</div>';
   }
   html+='<div class="r2">'+fld('VETTORE USCITA',sl('vetUsc',['CIPI/PIEMME','CITYLINE','MITTENTE/DESTINATARIO','INTERCOMPANY','NAZ/INT','CATI','UPS','GLS','BRT','DHL'],r.vetUsc))+fld('DATA STATO',inp('datSta',r.datSta,'','date'))+'</div>';
-  html+=fld('RMA/RNC',inp('rma',r.rma));
+  html+='<div class="r2">'+fld('RMA/RNC',inp('rma',r.rma))+fld('UBICAZIONE',inp('ubic',r.ubic))+'</div>';
   html+='<div class="sh-section">VETTORE RICEVIMENTO</div>';
   html+=fld('VETTORE RIC.',sl('vetRic',['PIEMME','CIPI','AGENTE','COLLEGA','AD','DIEMME','GLS','VINCA','BANCO','PIENNE','BRT','UPS','DHL','TNT','LGT','CITYLINE','NUOVA DEMOS'],r.vetRic));
   html+='<div class="sh-section">NOTE</div>';
@@ -1746,7 +1766,7 @@ function svEdit(key){
     qty:parseInt(gei('qty'))||1,prc:parseFloat(gei('prc'))||0,
     forn:gei('forn').toUpperCase(),sogg:gei('sogg').toUpperCase(),
     causale:gei('causale'),flusso:gei('flusso'),tipoDoc:gei('tipoDoc'),
-    fase:gei('fase'),stato:gei('stato'),rma:gei('rma'),vetRic:gei('vetRic'),
+    fase:gei('fase'),stato:gei('stato'),rma:gei('rma'),ubic:gei('ubic').toUpperCase(),vetRic:gei('vetRic'),
     vetUsc:gei('vetUsc'),datSta:gei('datSta'),
     note:document.getElementById('ei_note')?document.getElementById('ei_note').value.trim():'',
     _lastEdit:deviceName,_lastEditTs:Date.now(),_lastEditRole:ROLE
@@ -1758,32 +1778,33 @@ function svEdit(key){
 function csht(e){if(e&&e.target!==document.getElementById('ov'))return;document.getElementById('ov').classList.remove('on');document.getElementById('sh').classList.remove('on');}
 
 // ══════════════════════════════════════════════════
-// SCANNER (BarcodeDetector API)
+// SCANNER · BarcodeDetector (Android/Chrome) + jsQR locale (iOS/desktop)
 // ══════════════════════════════════════════════════
 var barcodeDetector=null;
 var scanInterval=null;
+var scanTarget='cod';
+var scanDone=false;
+var scanCanvas=null,scanCtx=null;
 
-function openScan(){
+function loadScript(s,cb){var e=document.createElement('script');e.src=s;e.onload=function(){cb(null);};e.onerror=function(){cb(new Error(s));};document.head.appendChild(e);}
+function ensureJsQR(cb){if(typeof jsQR!=='undefined'){cb(null);return;}loadScript('jsqr.js',cb);}
+function ensureQRGen(cb){if(typeof qrcode!=='undefined'){cb(null);return;}loadScript('qrcode.min.js',cb);}
+
+function openScan(target){
+  scanTarget=target||'cod';scanDone=false;
   var el=document.getElementById('scanOverlay');el.style.display='flex';
+  var hint=document.getElementById('scanHint');
+  if(hint)hint.textContent=scanTarget==='ubic'?'Inquadra il QR della UBICAZIONE':'Inquadra il codice a barre / QR';
+  barcodeDetector=null;
   if('BarcodeDetector' in window){
-    barcodeDetector=new window.BarcodeDetector({formats:['code_128','ean_13','ean_8','code_39','qr_code','upc_a','upc_e','itf','codabar']});
+    try{barcodeDetector=new window.BarcodeDetector({formats:['code_128','ean_13','ean_8','code_39','qr_code','upc_a','upc_e','itf','codabar']});}catch(e){}
   }
+  ensureJsQR(function(){});
   navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}})
     .then(function(stream){
       scanStream=stream;
       var vid=document.getElementById('scanVideo');vid.srcObject=stream;
-      if(barcodeDetector){
-        scanInterval=setInterval(function(){
-          if(vid.readyState===vid.HAVE_ENOUGH_DATA){
-            barcodeDetector.detect(vid).then(function(codes){
-              if(codes.length>0){
-                var code=codes[0].rawValue.trim().toUpperCase();
-                if(code) { handleScanResult(code); }
-              }
-            }).catch(function(){});
-          }
-        },300);
-      }
+      scanInterval=setInterval(function(){scanTick(vid);},250);
     })
     .catch(function(e){
       toast('Fotocamera non disponibile','r');
@@ -1791,12 +1812,99 @@ function openScan(){
     });
 }
 
+function scanTick(vid){
+  if(scanDone||vid.readyState!==vid.HAVE_ENOUGH_DATA)return;
+  // Motore 1: BarcodeDetector nativo (barcode 1D + QR, dove supportato)
+  if(barcodeDetector){
+    barcodeDetector.detect(vid).then(function(codes){
+      if(!scanDone&&codes.length>0){
+        var code=String(codes[0].rawValue||'').trim().toUpperCase();
+        if(code)handleScanResult(code);
+      }
+    }).catch(function(){});
+  }
+  // Motore 2: jsQR su canvas (QR ovunque, incluso iPhone/iPad)
+  if(typeof jsQR!=='undefined'){
+    var w=vid.videoWidth,h=vid.videoHeight;
+    if(!w||!h)return;
+    if(!scanCanvas){scanCanvas=document.createElement('canvas');scanCtx=scanCanvas.getContext('2d',{willReadFrequently:true});}
+    var sc=Math.min(1,640/w);
+    scanCanvas.width=Math.round(w*sc);scanCanvas.height=Math.round(h*sc);
+    scanCtx.drawImage(vid,0,0,scanCanvas.width,scanCanvas.height);
+    try{
+      var im=scanCtx.getImageData(0,0,scanCanvas.width,scanCanvas.height);
+      var q=jsQR(im.data,im.width,im.height);
+      if(!scanDone&&q&&q.data){
+        var code2=String(q.data).trim().toUpperCase();
+        if(code2)handleScanResult(code2);
+      }
+    }catch(e){}
+  }
+}
+
+function normUbic(c){
+  c=String(c).trim().toUpperCase();
+  if(c.indexOf('UBI:')===0)c=c.slice(4);
+  else if(c.indexOf('LOC:')===0)c=c.slice(4);
+  return c.trim();
+}
+
 function handleScanResult(code){
+  if(scanDone)return;scanDone=true;
   closeScan();
+  if(scanTarget==='ubic'){applyUbic(code);return;}
+  if(code.indexOf('UBI:')===0){toast('Questo \u00e8 un QR ubicazione: da LISTA usa \u2611 e \ud83d\udccd Ubica','y');return;}
   var isR=mode==='r';
   var el=document.getElementById(isR?'rCod':'cCod');
   if(el){el.value=code;ce(el);}
   toast('\ud83d\udcf8 Scansionato: '+code,'g');
+}
+
+function applyUbic(code){
+  var u=normUbic(code);
+  if(!u){toast('QR ubicazione non valido','r');return;}
+  var sel=Object.keys(bulkSel);
+  if(!sel.length){toast('Nessun articolo selezionato','y');return;}
+  for(var i=0;i<sel.length;i++){
+    sendMsg({type:'update',key:sel[i],changes:{ubic:u,_lastEdit:deviceName}});
+  }
+  bulkSel={};bulkMode=false;
+  document.getElementById('bulkBar').style.display='none';
+  var bt=document.getElementById('bulkToggle');if(bt)bt.classList.remove('on');
+  renderList();
+  toast('\ud83d\udccd '+sel.length+' articoli ubicati in '+u,'g');
+}
+
+function bulkUbica(){
+  var sel=Object.keys(bulkSel);
+  if(!sel.length){toast('Seleziona almeno un articolo','y');return;}
+  openScan('ubic');
+}
+
+function genUbiQR(){
+  var v=gv('ubiList');if(!v){toast('Inserisci almeno una ubicazione','y');return;}
+  var codes=v.split(',').map(function(s){return s.trim().toUpperCase();}).filter(Boolean);
+  if(!codes.length)return;
+  ensureQRGen(function(err){
+    if(err){toast('Generatore QR non disponibile','r');return;}
+    var out=document.getElementById('ubiOut');
+    var html='<div style="display:flex;flex-wrap:wrap;gap:10px">';
+    for(var i=0;i<codes.length;i++){
+      var q=qrcode(0,'M');q.addData('UBI:'+codes[i]);q.make();
+      html+='<div class="ubi-lbl">'+q.createSvgTag({cellSize:4,margin:6})+'<div class="ubi-txt">'+xe(codes[i])+'</div></div>';
+    }
+    html+='</div><button class="sb sg" onclick="printUbi()" style="margin-top:10px;padding:8px 14px">\ud83d\udda8 STAMPA ETICHETTE</button>';
+    out.innerHTML=html;
+    toast(codes.length+' etichette generate','g');
+  });
+}
+
+function printUbi(){
+  document.body.classList.add('qrprint');
+  setTimeout(function(){
+    window.print();
+    setTimeout(function(){document.body.classList.remove('qrprint');},500);
+  },50);
 }
 
 function scanManualConfirm(){
@@ -1869,7 +1977,7 @@ function cl(n){var s='';n++;while(n>0){n--;s=String.fromCharCode(65+(n%26))+s;n=
 function xx(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function bsh(data,cw){var rx='';for(var ri=0;ri<data.length;ri++){var row=data[ri],cells='';for(var ci=0;ci<row.length;ci++){var cell=row[ci];if(cell===null||cell===undefined||cell==='')continue;var ref=cl(ci)+(ri+1),s=0,v=cell;if(typeof cell==='object'&&cell!==null){v=cell.v;s=cell.s||0;}if(typeof v==='number')cells+='<c r="'+ref+'" t="n" s="'+s+'"><v>'+v+'</v></c>';else cells+='<c r="'+ref+'" t="inlineStr" s="'+s+'"><is><t>'+xx(String(v))+'</t></is></c>';}rx+='<row r="'+(ri+1)+'">'+cells+'</row>';}return'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+(cw||'')+'<sheetData>'+rx+'</sheetData></worksheet>';}
 var STY='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="10"/><name val="Calibri"/></font><font><sz val="10"/><name val="Calibri"/><b/><color rgb="FFFFFFFF"/></font><font><sz val="12"/><name val="Calibri"/><b/><color rgb="FF00e676"/></font></fonts><fills count="8"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF001a40"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF002010"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFe8f5e9"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFffebee"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFfffde7"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFe3f2fd"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FF333333"/></left><right style="thin"><color rgb="FF333333"/></right><top style="thin"><color rgb="FF333333"/></top><bottom style="thin"><color rgb="FF333333"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="7" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/></cellXfs></styleSheet>';
-var CW1='<cols><col min="1" max="1" width="12" customWidth="1"/><col min="2" max="2" width="14" customWidth="1"/><col min="3" max="3" width="12" customWidth="1"/><col min="4" max="4" width="20" customWidth="1"/><col min="5" max="5" width="7" customWidth="1"/><col min="6" max="6" width="16" customWidth="1"/><col min="7" max="7" width="7" customWidth="1"/><col min="8" max="8" width="18" customWidth="1"/><col min="9" max="9" width="10" customWidth="1"/><col min="10" max="10" width="18" customWidth="1"/><col min="11" max="11" width="14" customWidth="1"/><col min="12" max="12" width="22" customWidth="1"/><col min="13" max="13" width="26" customWidth="1"/><col min="14" max="14" width="13" customWidth="1"/><col min="15" max="15" width="13" customWidth="1"/><col min="16" max="16" width="24" customWidth="1"/><col min="17" max="17" width="11" customWidth="1"/><col min="18" max="18" width="16" customWidth="1"/><col min="19" max="19" width="10" customWidth="1"/><col min="20" max="20" width="11" customWidth="1"/><col min="21" max="21" width="16" customWidth="1"/><col min="22" max="22" width="9" customWidth="1"/><col min="23" max="23" width="11" customWidth="1"/><col min="24" max="24" width="28" customWidth="1"/><col min="25" max="25" width="22" customWidth="1"/><col min="26" max="26" width="14" customWidth="1"/></cols>';
+var CW1='<cols><col min="1" max="1" width="12" customWidth="1"/><col min="2" max="2" width="14" customWidth="1"/><col min="3" max="3" width="12" customWidth="1"/><col min="4" max="4" width="20" customWidth="1"/><col min="5" max="5" width="7" customWidth="1"/><col min="6" max="6" width="16" customWidth="1"/><col min="7" max="7" width="7" customWidth="1"/><col min="8" max="8" width="18" customWidth="1"/><col min="9" max="9" width="10" customWidth="1"/><col min="10" max="10" width="18" customWidth="1"/><col min="11" max="11" width="14" customWidth="1"/><col min="12" max="12" width="22" customWidth="1"/><col min="13" max="13" width="26" customWidth="1"/><col min="14" max="14" width="13" customWidth="1"/><col min="15" max="15" width="13" customWidth="1"/><col min="16" max="16" width="24" customWidth="1"/><col min="17" max="17" width="11" customWidth="1"/><col min="18" max="18" width="16" customWidth="1"/><col min="19" max="19" width="10" customWidth="1"/><col min="20" max="20" width="11" customWidth="1"/><col min="21" max="21" width="16" customWidth="1"/><col min="22" max="22" width="9" customWidth="1"/><col min="23" max="23" width="11" customWidth="1"/><col min="24" max="24" width="28" customWidth="1"/><col min="25" max="25" width="22" customWidth="1"/><col min="26" max="26" width="14" customWidth="1"/><col min="27" max="27" width="12" customWidth="1"/></cols>';
 var LOG_HDR=['Timestamp','Utente','Ruolo','Azione','Campo','Valore Da','Valore A'];
 
 function makeXLSX(dbData,sumData){
@@ -1974,7 +2082,7 @@ function expCSV(){
   var lines=[HDR.join(';')];
   for(var i=0;i<ar.length;i++){
     var r=ar[i];
-    lines.push([fd(r.datArr),r.vetRic,fd(r.datElab),r.sogg,r.pre,r.cod,r.qty,r.forn,r.prc,r.vetUsc,r.flusso,r.causale,r.anomalia,r.tipoDoc,r.fase,r.stato,fd(r.datSta),r.rma,r.contatto,fd(r.datCon),r.agente,r.docRic,fd(r.datDoc),r.note,r.photo||'',r._who||'']
+    lines.push([fd(r.datArr),r.vetRic,fd(r.datElab),r.sogg,r.pre,r.cod,r.qty,r.forn,r.prc,r.vetUsc,r.flusso,r.causale,r.anomalia,r.tipoDoc,r.fase,r.stato,fd(r.datSta),r.rma,r.contatto,fd(r.datCon),r.agente,r.docRic,fd(r.datDoc),r.note,r.photo||'',r._who||'',r.ubic||'']
       .map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(';'));
   }
   dlFb(new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}), 'Resi_'+new Date().toISOString().slice(0,10)+'.csv', function(){toast('CSV generato','g');});
@@ -2022,7 +2130,7 @@ function renderHist(){
 }
 
 function ries(i){try{var h=JSON.parse(localStorage.getItem('th')||'[]')[i];if(!h||!h.snap)return;dlFb(new Blob([makeFullXLSX(h.snap)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),h.fn,function(){toast('Riesportato (con log)','g');});}catch(e){toast('Errore','r');}}
-function riesC(i){try{var h=JSON.parse(localStorage.getItem('th')||'[]')[i];if(!h||!h.snap)return;var lines=[HDR.join(';')];for(var j=0;j<h.snap.length;j++){var r=h.snap[j];lines.push([fd(r.datArr),r.vetRic,fd(r.datElab),r.sogg,r.pre,r.cod,r.qty,r.forn,r.prc,r.vetUsc,r.flusso,r.causale,r.anomalia,r.tipoDoc,r.fase,r.stato,fd(r.datSta),r.rma,r.contatto,fd(r.datCon),r.agente,r.docRic,fd(r.datDoc),r.note,r.photo||'',r._who||''].map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(';'));}dlFb(new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}),h.fn.replace('.xlsx','.csv'),function(){toast('CSV','g');});}catch(e){}}
+function riesC(i){try{var h=JSON.parse(localStorage.getItem('th')||'[]')[i];if(!h||!h.snap)return;var lines=[HDR.join(';')];for(var j=0;j<h.snap.length;j++){var r=h.snap[j];lines.push([fd(r.datArr),r.vetRic,fd(r.datElab),r.sogg,r.pre,r.cod,r.qty,r.forn,r.prc,r.vetUsc,r.flusso,r.causale,r.anomalia,r.tipoDoc,r.fase,r.stato,fd(r.datSta),r.rma,r.contatto,fd(r.datCon),r.agente,r.docRic,fd(r.datDoc),r.note,r.photo||'',r._who||'',r.ubic||''].map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(';'));}dlFb(new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}),h.fn.replace('.xlsx','.csv'),function(){toast('CSV','g');});}catch(e){}}
 function delH(i){try{var h=JSON.parse(localStorage.getItem('th')||'[]');h.splice(i,1);localStorage.setItem('th',JSON.stringify(h));renderHist();}catch(e){}}
 
 // ══════════════════════════════════════════════════
