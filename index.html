@@ -381,7 +381,7 @@ textarea{resize:none;min-height:52px}
           <div class="f"><label><span>PREZZO €</span></label><input type="number" id="rPrc" value="0" step="0.01" min="0" inputmode="decimal"></div>
         </div>
         <div class="f"><label><span>FORNITORE <span class="req">✱</span></span></label>
-          <input id="rFor" list="lFor" placeholder="es. BOSCH" autocomplete="off" oninput="uv(this)" class="err" onchange="ce(this)">
+          <input id="rFor" list="lFor" placeholder="es. BOSCH o codice forn." autocomplete="off" oninput="uv(this);onForn(this)" class="err" onchange="ce(this)">
           <datalist id="lFor"></datalist>
         </div>
         <div class="r2">
@@ -426,7 +426,7 @@ textarea{resize:none;min-height:52px}
           <div class="f"><label><span>PREZZO €</span></label><input type="number" id="cPrc" value="0" step="0.01" min="0" inputmode="decimal"></div>
         </div>
         <div class="f"><label><span>FORNITORE <span class="req">✱</span></span></label>
-          <input id="cFor" list="lFor" placeholder="es. BOSCH" autocomplete="off" oninput="uv(this)" class="err" onchange="ce(this)">
+          <input id="cFor" list="lFor" placeholder="es. BOSCH o codice forn." autocomplete="off" oninput="uv(this);onForn(this)" class="err" onchange="ce(this)">
         </div>
       </div>
     </div>
@@ -577,7 +577,8 @@ textarea{resize:none;min-height:52px}
   </div>
 
   <div style="display:flex;gap:6px;margin-bottom:8px">
-    <input class="srch" id="srch" placeholder="Codice, soggetto, causale..." oninput="applyFilters()" style="margin-bottom:0;flex:1">
+    <input class="srch" id="srch" placeholder="Codice, soggetto, ubicazione..." oninput="applyFilters()" style="margin-bottom:0;flex:1">
+    <button class="bflt" onclick="openScan('find')" style="flex-shrink:0" title="Scansiona per trovare">📷</button>
     <button class="bflt" id="fltToggle" onclick="togFilters()" style="flex-shrink:0">⚙ Filtri</button>
   </div>
 
@@ -713,11 +714,12 @@ var CAULIST = ['ERRATO ORDINE','CARCASSA','GARANZIA','GARANZIA MANODOPERA','GARA
 // ══════════════════════════════════════════════════
 var rows={}, arch={}, mode='r', chartVis=false, STANDALONE=false;
 var ws=null, wsOk=false, wsRT=null, wsA=0, appShown=false;
-var photoDH=null, pendBlob=null, pendName=null;
+var photoDH=null, pendBlob=null, pendName=null, pendThumb=null;
 var forn=[], sogg=[], MEM={vetRic:'',flusso:'STANDARD',causale:'',tipoDoc:'VENDITA',fase:'',stato:''};
 var ROLE='RIC', deviceId='d'+Math.random().toString(36).slice(2,9), deviceName='';
 var filterState={fase:'',flusso:'',stato:'',vet:'',da:'',a:'',q:''};
 var bulkMode=false, bulkSel={};
+var insCount=0;
 var scanStream=null;
 var dbPage=1, dbPP=50;
 var supDb = [];
@@ -800,6 +802,8 @@ function startApp() {
 function launchApp() {
   initConn();
   autoFB();
+  setInterval(checkReminder,60000);
+  setTimeout(checkReminder,5000);
   rdl();
   initPF();
   applyMB();
@@ -824,20 +828,48 @@ function applyRoleUI() {
   for(var i=0;i<dels.length;i++) dels[i].style.display=p.canDelete?'':'none';
 }
 
+var setRoleSel='';
 function showSettings() {
-  // Simple role change
-  var nm = prompt('Nome operatore:', deviceName);
-  if(nm) { deviceName=nm.toUpperCase(); try{sessionStorage.setItem('devname',deviceName);}catch(e){} }
-  var rn = prompt('Ruolo (RIC/UFF/MAG/ADM):', ROLE);
-  if(rn && ROLE_PERMS[rn.toUpperCase()]) {
-    ROLE=rn.toUpperCase();
+  setRoleSel=ROLE;
+  var rem='';try{rem=localStorage.getItem('tremind')||'';}catch(e){}
+  function rc(r,ico,nome){return '<button id="setr_'+r+'" onclick="selSetRole(\''+r+'\')" class="sb '+(r===ROLE?'sg':'sn')+'" style="padding:10px 6px;text-align:center;width:100%">'+ico+'<br>'+nome+'</button>';}
+  document.getElementById('shTtl').textContent='IMPOSTAZIONI';
+  document.getElementById('shBdy').innerHTML=
+    '<div class="sh-section">OPERATORE</div>'+
+    '<input id="set_name" value="'+xe(deviceName)+'" placeholder="Nome operatore" style="margin-bottom:10px">'+
+    '<div class="sh-section">RUOLO</div>'+
+    '<div class="r2" style="margin-bottom:10px">'+rc('RIC','\ud83d\udce5','RICEZIONE')+rc('UFF','\ud83c\udfe2','UFFICIO')+rc('MAG','\ud83d\udce6','MAGAZZINO')+rc('ADM','\ud83d\udd11','ADMIN')+'</div>'+
+    '<div class="sh-section">PROMEMORIA FINE GIORNATA</div>'+
+    '<div style="font-size:10px;color:var(--txt2);margin-bottom:6px;line-height:1.5">A quest\'ora l\'app propone di esportare e svuotare (vuoto = disattivato).</div>'+
+    '<input id="set_rem" type="time" value="'+xe(rem)+'" style="margin-bottom:10px">'+
+    '<button onclick="saveSettings()" style="width:100%;background:linear-gradient(135deg,#002010,#004020);color:var(--grn);border:1px solid rgba(0,230,118,.3);padding:13px;font-size:15px;font-weight:700;border-radius:var(--rad);cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:4px">\u2713 SALVA</button>'+
+    '<button onclick="csht()" style="width:100%;background:none;color:var(--txt3);border:none;padding:11px;font-size:13px;cursor:pointer;font-family:inherit">Annulla</button>';
+  document.getElementById('ov').classList.add('on');
+  document.getElementById('sh').classList.add('on');
+}
+
+function selSetRole(r){
+  setRoleSel=r;
+  var all=['RIC','UFF','MAG','ADM'];
+  for(var i=0;i<all.length;i++){var b=document.getElementById('setr_'+all[i]);if(b)b.className='sb '+(all[i]===r?'sg':'sn');}
+}
+
+function saveSettings(){
+  var nm=gv('set_name');
+  if(nm){deviceName=nm.toUpperCase();try{sessionStorage.setItem('devname',deviceName);}catch(e){}}
+  if(setRoleSel&&ROLE_PERMS[setRoleSel]){
+    ROLE=setRoleSel;
     try{sessionStorage.setItem('devrole',ROLE);}catch(e){}
     var el=document.getElementById('rolePill');
     var rn2={RIC:'\ud83d\udce5 RIC',UFF:'\ud83c\udfe2 UFF',MAG:'\ud83d\udce6 MAG',ADM:'\ud83d\udd11 ADM'};
     if(el)el.textContent=rn2[ROLE]||ROLE;
     applyRoleUI();
-    toast('Ruolo: '+ROLE,'g');
   }
+  var rem=gv('set_rem');
+  try{if(rem)localStorage.setItem('tremind',rem);else localStorage.removeItem('tremind');}catch(e){}
+  csht();
+  toast('Impostazioni salvate \u00b7 '+ROLE,'g');
+  renderQueue();renderList();
 }
 
 // ══════════════════════════════════════════════════
@@ -1138,7 +1170,7 @@ function addRow() {
     datSta:isR?'':gv('cDSta'),rma:isR?'':gv('cRma'),
     contatto:isR?'':gv('cCon'),datCon:isR?'':gv('cDCon'),
     agente:isR?'':gv('cAge'),docRic:isR?'':gv('cDocR'),
-    datDoc:'',note:isR?'':gv('cNote'),photo:pendName||'',
+    datDoc:'',note:isR?'':gv('cNote'),photo:pendName||'',photoThumb:pendThumb||'',
     _who:deviceName,_role:ROLE
   };
   sendMsg({type:'add',row:row});
@@ -1154,8 +1186,9 @@ function addRow() {
   document.getElementById('cliTip').style.display='none';
   if(!isR){var cs=['cAno','cCon','cDocR'];for(var i=0;i<cs.length;i++){var el=document.getElementById(cs[i]);if(el)el.selectedIndex=0;}}
   clearPhoto();
-  toast('Aggiunto alla lista condivisa','g');
-  gTab('pgList');
+  insCount++;
+  toast('\u2713 '+cod+' aggiunto \u00b7 '+insCount+' in questa sessione','g');
+  var fc=document.getElementById(isR?'rCod':'cCod');if(fc)fc.focus();
 }
 
 function renderAll(){renderList();renderQueue();updBS();}
@@ -1289,10 +1322,24 @@ function bulkDelete(){
 // ══════════════════════════════════════════════════
 var ROLE_FASI = {ALL:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'],RIC:['RICEVIMENTO'],UFF:['UFFICIO RESI'],MAG:['MAGAZZINO'],ADM:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE']};
 
+function cutoffInfo(vet){
+  if(!vet)return null;
+  for(var i=0;i<supDb.length;i++){
+    var s=supDb[i];
+    if((s.vet===vet||s.name===vet)&&s.cutoffH!==undefined){
+      var now=new Date();
+      return {vet:vet,diff:s.cutoffH*60+(s.cutoffM||0)-(now.getHours()*60+now.getMinutes())};
+    }
+  }
+  return null;
+}
+
 function renderQueue(){
   var ff=ROLE_FASI[ROLE]||ROLE_FASI['ALL'],arr=gra(),mine=[];
   for(var i=0;i<arr.length;i++) if(ff.indexOf(arr[i].fase)>=0) mine.push(arr[i]);
-  mine.sort(function(a,b){return(a._ts||0)-(b._ts||0);});
+  // Prima chi ha un cutoff vettore imminente, poi ordine di arrivo
+  function urg(r){var ci=cutoffInfo(r.vetUsc);return(ci&&ci.diff>0)?ci.diff:1e9;}
+  mine.sort(function(a,b){var ua=urg(a),ub=urg(b);if(ua!==ub)return ua-ub;return(a._ts||0)-(b._ts||0);});
   var pend=mine.filter(function(r){return r.stato&&r.stato.indexOf('\u23f3')>=0;}).length;
   var qb=document.getElementById('qbadge');
   if(qb){if(pend>0){qb.style.display='inline-flex';qb.textContent=pend;}else qb.style.display='none';}
@@ -1309,6 +1356,9 @@ function renderQueue(){
     html+='<div class="fu">';
     html+='<div class="fu-cod">'+(r.pre?'<span style="color:var(--ora);margin-right:4px">'+xe(r.pre)+'</span>':'')+xe(r.cod)+(r.photo?' 📷':'')+'</div>';
     html+='<div class="fu-sogg">'+xe(r.sogg||'—')+' · '+fd(r.datArr)+(r.ubic?' · \ud83d\udccd '+xe(r.ubic):'')+'</div>';
+    var ci=cutoffInfo(r.vetUsc);
+    if(ci&&ci.diff>0&&ci.diff<=240)html+='<div style="font-size:10px;font-weight:700;color:'+(ci.diff<60?'var(--red)':'var(--yel)')+';margin-bottom:5px">\u23f1 '+Math.floor(ci.diff/60)+'h'+('0'+ci.diff%60).slice(-2)+'m al cutoff '+xe(ci.vet)+'</div>';
+    else if(ci&&ci.diff<=0)html+='<div style="font-size:10px;color:var(--txt3);margin-bottom:5px">\u23f1 cutoff '+xe(ci.vet)+' passato \u00b7 riparte domani</div>';
     if(r.causale)html+='<div style="font-size:10px;color:var(--txt2);margin-bottom:6px;font-family:monospace">'+xe(r.causale)+'</div>';
     if(canEdit){
       html+='<div class="sti">';
@@ -1317,6 +1367,8 @@ function renderQueue(){
       if(nf) html+='<div style="margin-top:7px;padding-top:7px;border-top:1px solid var(--brd);display:flex;gap:6px">'+
         '<button class="auto-arrow" onclick="advFase(\''+xe(r._key||'')+'\',\''+xe(nf)+'\')" style="flex:1">→ '+xe(nf)+'</button>'+
         '<button class="sb ssb" onclick="editRow(\''+xe(r._key||'')+'\')" style="padding:5px 10px">✎</button>';
+      if(r.ubic)
+        html+='<button class="sb sr" onclick="disUbica(\''+xe(r._key||'')+'\')" style="padding:5px 10px" title="Rimuovi ubicazione">\ud83d\udccd\u2715</button>';
       if(ROLE_PERMS[ROLE]&&ROLE_PERMS[ROLE].canArchive&&r.fase==='FINALE')
         html+='<button class="sb sy" onclick="archiveRow(\''+xe(r._key||'')+'\')" style="padding:5px 10px" title="Archivia">📁</button>';
       html+='</div>';
@@ -1383,7 +1435,7 @@ function renderList(){
     if(r._who)html+='<div class="ac-who">\ud83d\udc64 '+xe(r._who)+(r._lastEdit&&r._lastEdit!==r._who?' \u00b7 \u270e '+xe(r._lastEdit):'')+' <span style="color:var(--txt3);font-size:8px">'+xe(r.fase||'')+'</span>'+(r._log&&r._log.length?' <span style="color:var(--txt3)">·'+r._log.length+' mod.</span>':'')+'</div>';
     html+='<div style="display:flex;justify-content:space-between"><div>';
     html+='<div class="ac-sogg">'+xe(r.sogg||'\u2014')+'</div>';
-    html+='<div class="ac-cod">'+(r.pre?'<span style="color:var(--ora);margin-right:4px">'+xe(r.pre)+'</span>':'')+xe(r.cod)+(r.photo?' \ud83d\udcf7':'')+'</div>';
+    html+='<div class="ac-cod">'+(r.pre?'<span style="color:var(--ora);margin-right:4px">'+xe(r.pre)+'</span>':'')+xe(r.cod)+(r.photoThumb?' <span onclick="viewPhoto(\''+xe(r._key||'')+'\')" style="cursor:pointer" title="Vedi foto">\ud83d\udcf7</span>':(r.photo?' \ud83d\udcf7':''))+'</div>';
     html+='</div><div style="text-align:right">';
     html+='<div class="ac-price">'+(r.prc>0?'\u20AC'+r.prc.toFixed(2):'\u2014')+'</div>';
     html+='<div class="ac-date">'+fd(r.datArr)+'</div>';
@@ -1403,6 +1455,7 @@ function renderList(){
     html+='<button class="sb ssb" onclick="showLog(\''+xe(r._key||'')+'\')" style="padding:5px 9px" title="Log modifiche">📋</button>';
     if(canE&&NEXT_FASE[r.fase]) html+='<button class="auto-arrow" onclick="advFase(\''+xe(r._key||'')+'\',\''+xe(NEXT_FASE[r.fase]||'')+'\')">→ '+xe(NEXT_FASE[r.fase]||'')+'</button>';
     if(ROLE_PERMS[ROLE]&&ROLE_PERMS[ROLE].canArchive&&r.fase==='FINALE') html+='<button class="sb sy" onclick="archiveRow(\''+xe(r._key||'')+'\')" title="Archivia">📁</button>';
+    if(canE&&r.ubic) html+='<button class="sb sr" onclick="disUbica(\''+xe(r._key||'')+'\')" title="Rimuovi ubicazione">\ud83d\udccd\u2715</button>';
     if(ROLE_PERMS[ROLE]&&ROLE_PERMS[ROLE].canDelete) html+='<button class="sb sr" onclick="delRow(\''+xe(r._key||'')+'\')" title="Elimina">✕</button>';
     html+='</div></div>';
   }
@@ -1511,6 +1564,28 @@ function clearAll(){
   sendMsg({type:'clear'});toast('Database svuotato','y');
 }
 function fineGiornata(){if(!gra().length){toast('Lista vuota','r');return;}if(!confirm('Esportare Excel e svuotare la lista per TUTTI i dispositivi?\nGli ultimi export restano recuperabili da STORICO.'))return;invia(true);}
+
+var remSnooze=0;
+function checkReminder(){
+  var t='';try{t=localStorage.getItem('tremind')||'';}catch(e){}
+  if(!t)return;
+  var now=new Date(),cur=('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
+  if(cur<t)return;
+  var today=now.toISOString().slice(0,10),done='';
+  try{done=localStorage.getItem('tremday')||'';}catch(e){}
+  if(done===today)return;
+  if(Date.now()<remSnooze)return;
+  if(!gra().length)return;
+  remSnooze=Date.now()+1800000;
+  document.getElementById('shTtl').textContent='\u23f0 FINE GIORNATA';
+  document.getElementById('shBdy').innerHTML=
+    '<div style="font-size:12px;color:var(--txt2);line-height:1.6;margin-bottom:12px">Ci sono <b style="color:var(--grn)">'+gra().length+' articoli</b> in lista. Esportare Excel (con log modifiche) e svuotare per tutti i dispositivi?</div>'+
+    '<button onclick="remDone();invia(true)" style="width:100%;background:linear-gradient(135deg,#002010,#004020);color:var(--grn);border:1px solid rgba(0,230,118,.3);padding:13px;font-size:15px;font-weight:700;border-radius:var(--rad);cursor:pointer;-webkit-appearance:none;font-family:inherit">\ud83d\udce4 ESPORTA E SVUOTA</button>'+
+    '<button onclick="csht()" style="width:100%;background:none;color:var(--txt3);border:none;padding:11px;font-size:13px;cursor:pointer;font-family:inherit">Pi\u00f9 tardi (30 min)</button>';
+  document.getElementById('ov').classList.add('on');
+  document.getElementById('sh').classList.add('on');
+}
+function remDone(){try{localStorage.setItem('tremday',new Date().toISOString().slice(0,10));}catch(e){}csht();}
 
 // ══════════════════════════════════════════════════
 // STORICO TABS
@@ -1642,7 +1717,8 @@ function initDefaultSuppliers(){
     {name:'GLS',vet:'GLS',cutoffH:17,cutoffM:0,note:'Ritiro ore 17:00',priority:3},
     {name:'BRT',vet:'BRT',cutoffH:16,cutoffM:30,note:'Prenotazione obbligatoria',priority:3},
     {name:'UPS',vet:'UPS',cutoffH:16,cutoffM:0,note:'Ritiro fisso 16:00',priority:3},
-    {name:'DHL',vet:'DHL',cutoffH:15,cutoffM:0,note:'Ritiro ore 15:00-17:00',priority:3}
+    {name:'DHL',vet:'DHL',cutoffH:15,cutoffM:0,note:'Ritiro ore 15:00-17:00',priority:3},
+    {name:'CATI',vet:'CATI',code:'009165',note:'Fornitore ricambi',priority:3}
   ];
   try{localStorage.setItem('supdb',JSON.stringify(supDb));}catch(e){}
 }
@@ -1667,7 +1743,7 @@ function renderSuppliers(){
     html+='<div class="sup-name">'+xe(s.name)+'</div>';
     if(status)html+='<span class="sup-badge '+statusCls+'">'+xe(status)+'</span>';
     html+='</div>';
-    html+='<div class="sup-info">'+xe(s.note||'')+'</div>';
+    html+='<div class="sup-info">'+(s.code?'<span style="color:var(--blu);font-family:monospace">Cod. '+xe(s.code)+'</span> \u00b7 ':'')+xe(s.note||'')+'</div>';
     html+='<div style="display:flex;gap:5px">';
     html+='<span class="sup-badge sib" style="font-size:9px">Priorità '+s.priority+'</span>';
     html+='<button class="sb ssb" onclick="editSup('+i+')" style="padding:4px 8px;font-size:9px">✎ Modifica</button>';
@@ -1678,27 +1754,56 @@ function renderSuppliers(){
   el.innerHTML=html;
 }
 
-function addSupplier(){
-  var name=prompt('Nome fornitore/vettore:');if(!name)return;
-  var cutoff=prompt('Cutoff (es. 15:30):','15:30');
-  var ch=15,cm=30;
-  if(cutoff){var p=cutoff.split(':');ch=parseInt(p[0])||15;cm=parseInt(p[1])||30;}
-  var note=prompt('Note (es. partenze, istruzioni):','');
-  supDb.push({name:name.toUpperCase(),vet:name.toUpperCase(),cutoffH:ch,cutoffM:cm,note:note||'',priority:3});
-  try{localStorage.setItem('supdb',JSON.stringify(supDb));}catch(e){}
-  renderSuppliers();toast('Fornitore aggiunto','g');
+function saveSupDb(){try{localStorage.setItem('supdb',JSON.stringify(supDb));}catch(e){}}
+function addSupplier(){supSheet(-1);}
+function editSup(i){supSheet(i);}
+
+function supSheet(i){
+  var s=i>=0?supDb[i]:{name:'',code:'',note:'',priority:3};
+  var cut=(s.cutoffH!==undefined&&s.cutoffH!=='')?(('0'+s.cutoffH).slice(-2)+':'+('0'+(s.cutoffM||0)).slice(-2)):'';
+  function f(lbl,html){return '<div style="margin-bottom:8px"><div style="font-size:9px;font-weight:700;color:var(--txt3);letter-spacing:1px;margin-bottom:3px">'+lbl+'</div>'+html+'</div>';}
+  document.getElementById('shTtl').textContent=i>=0?'MODIFICA FORNITORE':'NUOVO FORNITORE';
+  document.getElementById('shBdy').innerHTML=
+    f('NOME / RAGIONE SOCIALE','<input id="sup_name" value="'+xe(s.name)+'" placeholder="es. CATI">')+
+    f('CODICE FORNITORE (compilazione automatica nel campo FORNITORE)','<input id="sup_code" value="'+xe(s.code||'')+'" placeholder="es. 009165" inputmode="numeric">')+
+    '<div class="r2">'+
+    f('CUTOFF (vuoto = nessuno)','<input id="sup_cut" type="time" value="'+cut+'">')+
+    f('PRIORIT\u00c0 (1-3)','<input id="sup_pri" type="number" min="1" max="3" value="'+(s.priority||3)+'">')+
+    '</div>'+
+    f('NOTE','<input id="sup_note" value="'+xe(s.note||'')+'" placeholder="es. partenze, istruzioni">')+
+    '<button onclick="saveSup('+i+')" style="width:100%;background:linear-gradient(135deg,#002010,#004020);color:var(--grn);border:1px solid rgba(0,230,118,.3);padding:13px;font-size:15px;font-weight:700;border-radius:var(--rad);cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:6px">\u2713 SALVA</button>'+
+    '<button onclick="csht()" style="width:100%;background:none;color:var(--txt3);border:none;padding:11px;font-size:13px;cursor:pointer;font-family:inherit">Annulla</button>';
+  document.getElementById('ov').classList.add('on');
+  document.getElementById('sh').classList.add('on');
 }
 
-function editSup(i){
-  var s=supDb[i];
-  var name=prompt('Nome:',s.name);if(!name)return;
-  var cutoff=prompt('Cutoff:',s.cutoffH+':'+(s.cutoffM<10?'0':'')+s.cutoffM);
-  var ch=s.cutoffH,cm=s.cutoffM;
-  if(cutoff){var p=cutoff.split(':');ch=parseInt(p[0])||15;cm=parseInt(p[1])||0;}
-  var note=prompt('Note:',s.note);
-  supDb[i]={name:name.toUpperCase(),vet:name.toUpperCase(),cutoffH:ch,cutoffM:cm,note:note||'',priority:s.priority||3};
-  try{localStorage.setItem('supdb',JSON.stringify(supDb));}catch(e){}
-  renderSuppliers();toast('Aggiornato','g');
+function saveSup(i){
+  var name=gv('sup_name').toUpperCase();
+  if(!name){toast('Nome obbligatorio','r');return;}
+  var cut=gv('sup_cut'),ch,cm;
+  if(cut){var p=cut.split(':');ch=parseInt(p[0],10);cm=parseInt(p[1],10)||0;if(isNaN(ch)){ch=undefined;}}
+  var obj={name:name,vet:name,code:gv('sup_code'),note:gv('sup_note'),priority:Math.min(3,Math.max(1,parseInt(gv('sup_pri'),10)||3))};
+  if(ch!==undefined){obj.cutoffH=ch;obj.cutoffM=cm;}
+  if(i>=0)supDb[i]=obj;else supDb.push(obj);
+  saveSupDb();renderSuppliers();csht();
+  toast(i>=0?'Fornitore aggiornato':'Fornitore aggiunto','g');
+}
+
+function fornByCode(v){
+  v=String(v||'').trim().toUpperCase();
+  if(!v)return null;
+  var nz=v.replace(/^0+/,'');
+  if(!nz)return null;
+  for(var i=0;i<supDb.length;i++){
+    var c=String(supDb[i].code||'').trim().toUpperCase();
+    if(c&&(c===v||c.replace(/^0+/,'')===nz))return supDb[i];
+  }
+  return null;
+}
+
+function onForn(el){
+  var s=fornByCode(el.value);
+  if(s){el.value=s.name;ce(el);toast('Fornitore: '+s.name,'g');}
 }
 
 function delSup(i){if(!confirm('Eliminare?'))return;supDb.splice(i,1);try{localStorage.setItem('supdb',JSON.stringify(supDb));}catch(e){}renderSuppliers();}
@@ -1738,6 +1843,7 @@ function editRow(key){
   html+=fld('VETTORE RIC.',sl('vetRic',['PIEMME','CIPI','AGENTE','COLLEGA','AD','DIEMME','GLS','VINCA','BANCO','PIENNE','BRT','UPS','DHL','TNT','LGT','CITYLINE','NUOVA DEMOS'],r.vetRic));
   html+='<div class="sh-section">NOTE</div>';
   html+=fld('NOTE','<textarea id="ei_note" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:var(--rad2);outline:none;resize:none;min-height:52px;font-family:inherit;margin-bottom:7px">'+xe(r.note||'')+'</textarea>');
+  if(r.photoThumb)html+='<img src="'+xe(r.photoThumb)+'" style="max-width:100%;border-radius:8px;border:1px solid var(--brd2);margin-bottom:7px;display:block">';
   if(r.photo)html+='<div style="font-size:10px;color:var(--grn);margin-bottom:9px;font-family:monospace">\ud83d\udcf7 '+xe(r.photo)+'</div>';
 
   html+='<button onclick="svEdit(\''+key+'\')" style="width:100%;background:linear-gradient(135deg,#002010,#004020);color:var(--grn);border:1px solid rgba(0,230,118,.3);padding:13px;font-size:15px;font-weight:700;border-radius:var(--rad);cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:4px">✓ SALVA MODIFICHE</button>';
@@ -1853,6 +1959,7 @@ function handleScanResult(code){
   if(scanDone)return;scanDone=true;
   closeScan();
   if(scanTarget==='ubic'){applyUbic(code);return;}
+  if(scanTarget==='find'){findByScan(code);return;}
   if(code.indexOf('UBI:')===0){toast('Questo \u00e8 un QR ubicazione: da LISTA usa \u2611 e \ud83d\udccd Ubica','y');return;}
   var isR=mode==='r';
   var el=document.getElementById(isR?'rCod':'cCod');
@@ -1879,6 +1986,34 @@ function bulkUbica(){
   var sel=Object.keys(bulkSel);
   if(!sel.length){toast('Seleziona almeno un articolo','y');return;}
   openScan('ubic');
+}
+
+function findByScan(code){
+  var q=normUbic(code);
+  var el=document.getElementById('srch');if(el)el.value=q;
+  gTab('pgList');
+  applyFilters();
+  var m=getFiltered();
+  if(m.length===1&&canEditRow(m[0])){editRow(m[0]._key);toast('Trovato: '+m[0].cod+(m[0].ubic?' \u00b7 \ud83d\udccd '+m[0].ubic:''),'g');}
+  else toast(m.length+' risultati per '+q,m.length?'g':'y');
+}
+
+function disUbica(key){
+  var r=rows[key];if(!r||!r.ubic)return;
+  if(!canEditRow(r)){toast('Non autorizzato','r');return;}
+  if(!confirm('Rimuovere l\'ubicazione '+r.ubic+' da '+r.cod+'?'))return;
+  sendMsg({type:'update',key:key,changes:{ubic:'',_lastEdit:deviceName}});
+  toast('\ud83d\udccd Ubicazione rimossa da '+r.cod,'y');
+}
+
+function viewPhoto(key){
+  var r=rows[key];if(!r||!r.photoThumb)return;
+  document.getElementById('shTtl').textContent='\ud83d\udcf7 '+r.cod;
+  document.getElementById('shBdy').innerHTML='<img src="'+xe(r.photoThumb)+'" style="width:100%;border-radius:10px">'+
+    (r.photo?'<div style="font-size:10px;color:var(--txt2);font-family:monospace;margin-top:6px">'+xe(r.photo)+'</div>':'')+
+    '<button onclick="csht()" style="width:100%;background:var(--bg2);color:var(--txt2);border:1px solid var(--brd);padding:11px;font-size:13px;border-radius:var(--rad);cursor:pointer;font-family:inherit;margin-top:12px">Chiudi</button>';
+  document.getElementById('ov').classList.add('on');
+  document.getElementById('sh').classList.add('on');
 }
 
 function genUbiQR(){
@@ -1943,6 +2078,12 @@ function handlePhoto(input){
       var cv=document.createElement('canvas'),mw=1600,sc=img.width>mw?mw/img.width:1;
       cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);
       cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      // Miniatura compressa che resta legata alla riga (sync + scheda)
+      var tw=280,tsc=img.width>tw?tw/img.width:1;
+      var tc=document.createElement('canvas');
+      tc.width=Math.round(img.width*tsc);tc.height=Math.round(img.height*tsc);
+      tc.getContext('2d').drawImage(img,0,0,tc.width,tc.height);
+      pendThumb=tc.toDataURL('image/jpeg',0.55);
       cv.toBlob(function(blob){
         pendBlob=blob;pendName=fn;
         document.getElementById('pname').textContent=fn;
@@ -1955,7 +2096,7 @@ function handlePhoto(input){
   };
   rd.readAsDataURL(file);input.value='';
 }
-function clearPhoto(){pendBlob=null;pendName=null;document.getElementById('pbadge').style.display='none';document.getElementById('btnCam').classList.remove('on');}
+function clearPhoto(){pendBlob=null;pendName=null;pendThumb=null;document.getElementById('pbadge').style.display='none';document.getElementById('btnCam').classList.remove('on');}
 function savePhoto(blob,fn){
   if(isIOS&&canShare&&window.File){try{var f=new File([blob],fn,{type:'image/jpeg'});navigator.share({files:[f],title:fn}).then(function(){toast('Foto condivisa','g');}).catch(function(e){if(e.name!=='AbortError')pdl(blob,fn);});return;}catch(e){}}
   if(photoDH){photoDH.getFileHandle(fn,{create:true}).then(function(fh){return fh.createWritable();}).then(function(w){return w.write(blob).then(function(){return w.close();});}).then(function(){toast('Foto: '+photoDH.name,'g');}).catch(function(){pdl(blob,fn);});return;}
