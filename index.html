@@ -3924,6 +3924,10 @@ var scanHandled    = false;
 var lastScanCode   = '';
 var lastScanTime   = 0;
 
+// Il QR è riservato alle UBICAZIONI: nelle modalità articolo lo scanner
+// non deve MAI leggerlo (le scatole hanno spesso un QR accanto al barcode).
+function scanWantsQR(){ return scanMode==='find'; }
+
 function startZxing(){
   scanHandled=false; scanBusy=false; lastScanCode=''; lastScanTime=0;
   var status=document.getElementById('scanStatus');
@@ -3947,7 +3951,9 @@ function startZxing(){
 }
 
 function startNativeScan(video,h5qDiv,status){
-  var wanted=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','code_93','codabar','itf','qr_code','data_matrix','pdf417','aztec'];
+  var wanted = scanWantsQR()
+    ? ['qr_code']
+    : ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','code_93','codabar','itf','data_matrix','pdf417','aztec'];
   function build(formats){
     var det;
     try{ det=new window.BarcodeDetector(formats&&formats.length?{formats:formats}:undefined); }
@@ -3989,7 +3995,13 @@ function nativeLoop(video,det){
     det.detect(video).then(function(codes){
       scanBusy=false;
       if(scanEngine!=='native'){return;}
-      if(codes&&codes.length){ onLiveDetected(codes[0].rawValue); }
+      if(codes&&codes.length){
+        for(var ci=0;ci<codes.length;ci++){
+          var isQR=(codes[ci].format==='qr_code');
+          if(isQR!==scanWantsQR()) continue; // QR solo per ubicazioni, barcode solo per articoli
+          onLiveDetected(codes[ci].rawValue); break;
+        }
+      }
     }).catch(function(){ scanBusy=false; });
   }
   scanRAF=setTimeout(function(){ nativeLoop(video,det); },120);
@@ -4013,6 +4025,14 @@ function startH5q(video,h5qDiv,status){
     aspectRatio:1.3333,
     experimentalFeatures:{useBarCodeDetectorIfSupported:true}
   };
+  try{
+    if(typeof Html5QrcodeSupportedFormats!=='undefined'){
+      var F=Html5QrcodeSupportedFormats;
+      cfg.formatsToSupport = scanWantsQR()
+        ? [F.QR_CODE]
+        : [F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.CODE_128,F.CODE_39,F.CODE_93,F.CODABAR,F.ITF,F.DATA_MATRIX,F.PDF_417,F.AZTEC];
+    }
+  }catch(e){}
   h5qReader.start({facingMode:'environment'},cfg,
     function(text){ onLiveDetected(text); },
     function(){}
@@ -4027,6 +4047,7 @@ function onLiveDetected(raw){
   if(scanHandled){return;}
   var code=(raw==null?'':raw).toString().trim();
   if(!code){return;}
+  if(!scanWantsQR() && /^LOC:/i.test(code)){return;} // QR ubicazione ignorato in modalità articolo
   var now=Date.now();
   if(code===lastScanCode && now-lastScanTime<2000){return;}
   lastScanCode=code; lastScanTime=now;
@@ -6861,7 +6882,14 @@ function tryZxingImage(dataUrl, cb) {
   // su varianti ingrandite e ruotate; solo alla fine passa all'OCR.
   if(typeof ZXing === 'undefined' || !ZXing.BrowserMultiFormatReader) { runTesseractScan(dataUrl, cb); return; }
   var hints = null;
-  try { hints = new Map(); hints.set(ZXing.DecodeHintType.TRY_HARDER, true); } catch(e) { hints = null; }
+  try {
+    hints = new Map();
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    // Foto articoli: il QR non va mai letto (riservato alle ubicazioni)
+    var BF = ZXing.BarcodeFormat;
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,
+      [BF.EAN_13,BF.EAN_8,BF.UPC_A,BF.UPC_E,BF.CODE_128,BF.CODE_39,BF.CODE_93,BF.CODABAR,BF.ITF,BF.DATA_MATRIX,BF.PDF_417,BF.AZTEC]);
+  } catch(e) { hints = null; }
   function decodeUrl(url, okCb, koCb){
     var reader;
     try { reader = hints ? new ZXing.BrowserMultiFormatReader(hints) : new ZXing.BrowserMultiFormatReader(); }
