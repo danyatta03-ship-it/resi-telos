@@ -1443,7 +1443,38 @@ function uv(el){el.value=el.value.toUpperCase();}
 function ce(el){el.classList.remove('err');}
 function fCh(f){return f==='STANDARD'?'cg':f==='ANOMALIA'?'cr':f==='ECCEZIONE'?'co':f==='FILIALE IN'||f==='FILIALE OUT'?'cy':'cn';}
 function fSt(f){return f==='STANDARD'?3:f==='ANOMALIA'?4:f==='ECCEZIONE'?7:5;}
-function gra(){return Object.values(rows);}
+// ── STORICO TRIMESTRE: overlay di modifiche (UFF/ADM) su record read-only ──
+var TRI_OVR = {};                                    // { 'tri_N': {campo:valore,...}, ... }
+try{ TRI_OVR = JSON.parse(localStorage.getItem('triovr')||'{}'); }catch(e){ TRI_OVR = {}; }
+function saveTriOvr(){ try{ localStorage.setItem('triovr', JSON.stringify(TRI_OVR)); }catch(e){} }
+// Assegna chiavi stabili e flag di sola lettura ai record storici
+(function initTriKeys(){
+  if(typeof DB_TRI==='undefined' || !DB_TRI || !DB_TRI.length) return;
+  for(var i=0;i<DB_TRI.length;i++){
+    var r=DB_TRI[i];
+    if(!r._key) r._key = 'tri_'+i;
+    r._frozen = true;                                 // marker: origine storico trimestre
+  }
+})();
+// Restituisce il record storico con eventuali override applicati (senza mutare l'originale)
+function triApplyOvr(r){
+  if(!r||!r._key) return r;
+  var ov = TRI_OVR[r._key];
+  if(!ov) return r;
+  var out = {}; for(var k in r) out[k]=r[k];
+  for(var k2 in ov) out[k2]=ov[k2];
+  return out;
+}
+// Universo: attuali (rows) + storici (DB_TRI con override applicati).
+// I record storici mantengono _frozen=true così l'UI e i permessi li riconoscono.
+function grAll(){
+  var out = Object.values(rows);
+  if(typeof DB_TRI!=='undefined' && DB_TRI){
+    for(var i=0;i<DB_TRI.length;i++) out.push(triApplyOvr(DB_TRI[i]));
+  }
+  return out;
+}
+function gra(){return Object.values(rows);}          // righe ATTUALI (backward-compat: chi filtra per fase/stato lavora solo su queste)
 function svf(v){v=v.trim().toUpperCase();if(v&&forn.indexOf(v)<0){forn.push(v);try{localStorage.setItem('tf',JSON.stringify(forn));}catch(e){}rdl();}}
 function rdl(){
   var ls=document.getElementById('lSogg'),lf=document.getElementById('lFor');
@@ -1759,13 +1790,25 @@ function resetFilters(){
 }
 
 function getFiltered(){
-  var arr=gra();
+  // Se l'utente sta CERCANDO qualcosa (testo, date, filtri specifici) unisco lo storico;
+  // altrimenti mostro solo le righe attuali (per non affollare la LISTA con 6000+ voci sempre)
+  var hasQuery = !!(filterState.q||filterState.da||filterState.a||filterState.fase||filterState.flusso||filterState.stato||filterState.vet);
+  var arr = hasQuery ? grAll() : gra();
   return arr.filter(function(r){
     if(filterState.fase && r.fase!==filterState.fase) return false;
     if(filterState.flusso && r.flusso!==filterState.flusso) return false;
     if(filterState.stato && r.stato!==filterState.stato) return false;
     if(filterState.vet && r.vetRic!==filterState.vet) return false;
-    if(filterState.q && (r.cod+(r.sogg||'')+(r.causale||'')+(r.forn||'')).toLowerCase().indexOf(filterState.q)<0) return false;
+    if(filterState.q){
+      // Nella ricerca risolvo anche il NOME CLIENTE dal codice soggetto (utile per cercare "TARICCO" invece di "009820")
+      var _nomeCli='';
+      if(typeof CLI_DATA!=='undefined' && CLI_DATA && r.sogg){
+        var _raw = CLI_DATA[r.sogg] || CLI_DATA[String(r.sogg).replace(/^0+/,'')];
+        if(_raw) _nomeCli = (_raw.split('|')[0]||'');
+      }
+      var hay = ((r.cod||'')+(r.sogg||'')+_nomeCli+(r.causale||'')+(r.forn||'')+(r.rma||'')+(r.agente||'')+(r.note||'')+(r.pre||'')).toLowerCase();
+      if(hay.indexOf(filterState.q)<0) return false;
+    }
     if(filterState.da && r.datArr && r.datArr<filterState.da) return false;
     if(filterState.a && r.datArr && r.datArr>filterState.a) return false;
     if(stuckOnly && !slaLevel(r)) return false;
@@ -1921,6 +1964,8 @@ function renderQueue(){
 function canEditRow(r){
   var p=ROLE_PERMS[ROLE]||ROLE_PERMS['RIC'];
   if(!r||!r.fase) return false;
+  // Record STORICO (DB_TRI): modifica riservata a UFF e ADM
+  if(r._frozen) return (ROLE==='UFF' || ROLE==='ADM');
   // Modifica CAMPI: cumulativa verso l'alto (la propria fase e quelle precedenti; FINALE solo ADM)
   return (p.canEditFasi||[]).indexOf(r.fase)>=0;
 }
@@ -2120,7 +2165,7 @@ function renderList(){
     html+='<div class="ac-price">'+(r.prc>0?'\u20AC'+r.prc.toFixed(2):'\u2014')+'</div>';
     html+='<div class="ac-date">'+fd(r.datArr)+'</div>';
     html+='</div></div>';
-    html+='<div class="ac-chips">'+slaChip(r)+'<span class="chip '+fc+'">'+xe(r.flusso||'—')+'</span><span class="chip cb">'+xe(r.vetRic||'')+'</span><span class="chip cn">Qt\u00e0 '+r.qty+'</span>';
+    html+='<div class="ac-chips">'+(r._frozen?'<span class="chip" style="background:rgba(150,120,50,.15);color:#d0b370;border:1px solid rgba(150,120,50,.4)" title="Record dallo storico trimestre">🗄 STORICO</span>':'')+slaChip(r)+'<span class="chip '+fc+'">'+xe(r.flusso||'—')+'</span><span class="chip cb">'+xe(r.vetRic||'')+'</span><span class="chip cn">Qt\u00e0 '+r.qty+'</span>';
     if(r.causale)html+='<span class="chip cn">'+xe(r.causale)+'</span>';
     if(r.anomalia)html+='<span class="chip cr">'+xe(r.anomalia)+'</span>';
     if(r.stato)html+=statoChip(r.stato,r.fase);
@@ -2707,10 +2752,15 @@ function delSup(i){if(!confirm('Eliminare?'))return;supDb.splice(i,1);try{localS
 // ══════════════════════════════════════════════════
 // duplicaRow \u00e8 definita pi\u00f9 sotto (setTimeout per attendere il render del tab)
 function editRow(key){
-  var r=rows[key];if(!r){toast('Non trovato','r');return;}
-  if(!canEditRow(r)){toast('Non sei autorizzato a modificare questo articolo','r');return;}
+  var r=rows[key];
+  // Storico trimestre: cerco tra DB_TRI e applico eventuale override
+  if(!r && String(key).indexOf('tri_')===0 && typeof DB_TRI!=='undefined'){
+    for(var i=0;i<DB_TRI.length;i++){ if(DB_TRI[i]._key===key){ r = triApplyOvr(DB_TRI[i]); break; } }
+  }
+  if(!r){toast('Non trovato','r');return;}
+  if(!canEditRow(r)){toast(r._frozen?'Modifica dello storico riservata a UFFICIO/ADMIN':'Non sei autorizzato a modificare questo articolo','r');return;}
   editMotivoNR=r.motivoNR||'';
-  document.getElementById('shTtl').textContent='MODIFICA · '+r.cod;
+  document.getElementById('shTtl').textContent=(r._frozen?'🗄 MODIFICA STORICO · ':'MODIFICA · ')+r.cod;
   function inp(fid,val,ph,tp){return'<input id="ei_'+fid+'" type="'+(tp||'text')+'" value="'+xe(val||'')+'" placeholder="'+(ph||'')+'" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:var(--rad2);-webkit-appearance:none;outline:none;font-family:inherit;margin-bottom:7px">';}
   function sl(fid,opts,val){var h='<select id="ei_'+fid+'" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:var(--rad2);-webkit-appearance:none;outline:none;font-family:inherit;margin-bottom:7px"><option value="">—</option>';for(var j=0;j<opts.length;j++)h+='<option'+(opts[j]===val?' selected':'')+'>'+xe(opts[j])+'</option>';return h+'</select>';}
   function fld(lbl,html){return'<div style="margin-bottom:7px"><div style="font-size:9px;font-weight:700;color:var(--txt3);letter-spacing:1px;margin-bottom:3px">'+lbl+'</div>'+html+'</div>';}
@@ -2782,6 +2832,23 @@ function svEdit(key){
     note:document.getElementById('ei_note')?document.getElementById('ei_note').value.trim():'',
     _lastEdit:deviceName,_lastEditTs:Date.now(),_lastEditRole:ROLE
   };
+  // STORICO TRIMESTRE: override locale (non tocca DB_TRI e non passa da sendMsg → non è in rows)
+  if(String(key).indexOf('tri_')===0){
+    if(ROLE!=='UFF' && ROLE!=='ADM'){ toast('Solo UFFICIO/ADMIN possono modificare lo storico','r'); return; }
+    var base = null;
+    if(typeof DB_TRI!=='undefined' && DB_TRI){ for(var i=0;i<DB_TRI.length;i++){ if(DB_TRI[i]._key===key){ base=DB_TRI[i]; break; } } }
+    if(!base){ toast('Record storico non trovato','r'); return; }
+    var ov = TRI_OVR[key] || {};
+    var diff = {};
+    for(var k in ch){ if(k.charAt(0)==='_') continue; if(String(base[k]||'')!==String(ch[k]||'')) diff[k]={da:base[k]||'',a:ch[k]||''}; }
+    for(var k2 in ch){ ov[k2]=ch[k2]; }
+    ov._log = (ov._log||[]).concat([{ts:Date.now(),user:deviceName,role:ROLE,action:'MODIFICA STORICO',changes:diff}]).slice(-20);
+    TRI_OVR[key] = ov; saveTriOvr();
+    csht(); toast('✓ Storico modificato ('+Object.keys(diff).length+' campi)','b');
+    // aggiorna vista
+    try{ renderList(); }catch(_){}
+    return;
+  }
   var prev=rows[key]||{};
   function finalize(){ editMotivoNR=''; sendMsg({type:'update',key:key,changes:ch}); csht(); toast('Salvato'+(ch.motivoNR?' · '+ch.motivoNR:''),'b'); }
   // NON RENDIBILE → motivazione obbligatoria (dal campo scheda, dalla scelta al volo o dal popup)
