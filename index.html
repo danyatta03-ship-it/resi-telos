@@ -928,6 +928,12 @@ select option {
   </div>
 
   <div id="hPanExp" style="display:none">
+    <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:800;color:#3B9FD4;margin-bottom:4px">🗃 ESPORTAZIONE COMPLETA DATABASE</div>
+      <div style="font-size:10px;color:var(--txt2);line-height:1.5;margin-bottom:8px">Un file Excel con TUTTO quello che c'è nell'app: righe correnti, archivio e storico trimestre, ognuno nel suo foglio. Comodo per backup, controlli mensili o passaggio alla direzione.</div>
+      <button onclick="exportFullDB()" style="width:100%;background:linear-gradient(135deg,#001a40,#003080);color:#3B9FD4;border:1.5px solid #3B9FD4;padding:13px;font-size:14px;font-weight:800;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit">📥 Scarica intero database (Excel)</button>
+      <button onclick="exportFullDBCSV()" style="width:100%;background:none;color:#888;border:1px solid #333;padding:10px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:6px">📄 …o in CSV (unico file)</button>
+    </div>
     <div style="font-size:9px;font-weight:700;color:var(--txt3);letter-spacing:1.5px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--brd)">SESSIONI ESPORTATE (LOG MODIFICHE INCLUSO)</div>
     <div id="histList"></div>
   </div>
@@ -4503,6 +4509,14 @@ function clearAllMem(){
 var CON_EMAILS = {};
 function loadEmails(){ try{CON_EMAILS=JSON.parse(localStorage.getItem('conemails')||'{}');}catch(e){CON_EMAILS={};} }
 function saveEmails(){ try{localStorage.setItem('conemails',JSON.stringify(CON_EMAILS));}catch(e){} }
+// Rubrica agenti: { "NOMEAGENTE": {tel:"+393...", mail:"..."} }
+var AGENTI = {};
+function loadAgenti(){ try{AGENTI=JSON.parse(localStorage.getItem('agenti')||'{}');}catch(e){AGENTI={};} }
+function saveAgenti(){ try{localStorage.setItem('agenti',JSON.stringify(AGENTI));}catch(e){} }
+function agenteKey(n){ return String(n||'').trim().toUpperCase(); }
+function normPhoneWA(t){ t=String(t||'').replace(/[^\d]/g,''); if(!t)return ''; if(t.length===10)t='39'+t; return t; }
+function agenteInfo(nome){ loadAgenti(); return AGENTI[agenteKey(nome)] || null; }
+function saveAgenteInfo(nome, info){ loadAgenti(); AGENTI[agenteKey(nome)] = info; saveAgenti(); }
 loadEmails();
 
 var CON_PAGE=0, CON_PP=80;
@@ -5509,30 +5523,45 @@ function generateAnoMail(a) {
   }
 
   var displayName = clientName||clientCode||'Cliente';
-  var motivo = ANOMALIA_MOTIVI[a.anomalia]||a.anomalia||'anomalia non specificata';
+  // Riferimento all'anomalia specifica (SOLO quella scelta, non un elenco predefinito di documenti)
+  var motivo = ANOMALIA_MOTIVI[a.anomalia]||a.anomalia||'documentazione richiesta';
   var dataFmt = a.datArr?a.datArr.split('-').reverse().join('/'):(a.ts?new Date(a.ts).toLocaleDateString('it-IT'):'');
   var codArt = (a.pre?a.pre+' ':'')+a.cod;
+  var descArt = ((a.note||'').split('·')[0]||'').trim() || codArt;
+  var agenteNome = (a.agente||a._who||'').split(/[\s\.]+/)[0] || 'Collega';
+  // Firma: chi sta usando l'app in questo momento (login/log server)
+  var operatoreFirma = (typeof deviceName!=='undefined' && deviceName) ? deviceName : '';
 
-  // Subject: "Anomalia Reso - CODICE NOME"
-  var subjClient = clientCode+(clientName?' - '+clientName:'');
-  var subj = 'Anomalia Reso - '+subjClient;
+  // OGGETTO: cc CODICE NOMECLIENTE - ANOMALIA RESO CAUSALE - codice PRE COD
+  var causaleLabel = (a.causale||'').toUpperCase() || 'ANOMALIA';
+  var subj = 'cc '+clientCode+' '+clientName+' - ANOMALIA RESO '+causaleLabel+' - codice '+codArt;
+
+  // Riferimento alla bolla originale del cliente (BL/VEN/… memorizzato in rma o nelle note)
+  var rifBolla = a.rma || '';
+  var rifBollaMatch = String(a.note||'').match(/BL\/[A-Z]+\/[\w\-]+/i);
+  if(rifBollaMatch) rifBolla = rifBollaMatch[0];
 
   var NL='\n';
   var body =
-    'Gentile '+clientName+','+NL+NL+
-    'in riferimento al reso ricevuto in data '+dataFmt+', si comunica che non è possibile '+
-    'procedere con la gestione per le seguenti motivazioni:'+NL+NL+
-    'Articolo:             '+codArt+NL+
-    (a.rma?'N. DDT / Bolla:       '+a.rma+NL:'')+
-    (dataFmt?'Data DDT:             '+dataFmt+NL:'')+
-    (a.causale?'Causale reso:         '+a.causale+NL:'')+
-    'Anomalia riscontrata: '+(a.anomalia||'')+NL+NL+
-    'Per poter procedere è necessario che venga fornita la seguente documentazione:'+NL+NL+
-    '✗ '+motivo+NL+NL+
-    'Per qualsiasi comunicazione:'+NL+'resi.torino@telosgroup.it'+NL+NL+
-    'Cordiali saluti,'+NL+'Reparto Resi — Telos SPA';
+    'Ciao '+agenteNome+','+NL+
+    'abbiamo ricevuto un reso in '+(a.causale||'ANOMALIA')+' dal cliente '+
+      (clientName||displayName)+' (cc '+clientCode+') tramite DDT reso n. '+
+      (a.rma||'-')+' del '+(dataFmt||'-')+
+      (rifBolla?', in riferimento alla '+rifBolla+(dataFmt?' del '+dataFmt:''):'')+
+      ' del seguente particolare:'+NL+NL+
+    '- '+descArt+(codArt&&descArt.indexOf(codArt)<0?' con codice '+codArt:'')+NL+NL+
+    'Per poter procedere con l\'accredito al cliente, avremo gentilmente bisogno di '+motivo.toLowerCase()+'.'+NL+
+    'Restiamo in attesa di un tuo gentile riscontro.'+NL+
+    'Grazie per la collaborazione.'+NL+NL+
+    'Cordiali Saluti e Buon Lavoro'+NL+
+    (operatoreFirma||'Reparto Resi - Telos SPA');
 
-  if(!email) toast('Email non trovata: aggiungila in CONTATTI per '+displayName,'b');
+  // Uso email/telefono dell'agente se in rubrica (email destinatario e WhatsApp)
+  var agInfo = agenteInfo(a.agente||'');
+  if(agInfo && agInfo.mail && !email) email = agInfo.mail;
+  var agTel = agInfo && agInfo.tel ? agInfo.tel : '';
+
+  if(!email && !agTel) toast('Nessun contatto: aggiungi email/telefono dell\'agente '+agenteNome,'b');
 
   var _photoKeys = (a.photoKeys&&a.photoKeys.length)?a.photoKeys:(a.photoKey?[a.photoKey]:[]);
   function doOpen(finalBody){
@@ -5540,38 +5569,19 @@ function generateAnoMail(a) {
     // (necessario: dopo la generazione AI asincrona il "gesto utente" è scaduto
     //  e il browser bloccherebbe l'apertura del client di posta).
     // Carica le foto anomalia: mailto NON può allegare → l'utente le scarica/copia dall'anteprima.
-    if(!_photoKeys.length){ showMailPreview(email, subj, finalBody||body, []); return; }
+    var ctx = { agenteNome: agenteNome, agenteFullName: (a.agente||''), agTel: agTel };
+    if(!_photoKeys.length){ showMailPreview(email, subj, finalBody||body, [], ctx); return; }
     Promise.all(_photoKeys.map(function(k){ return idbGet('anophoto_'+k).then(function(v){return v||null;}).catch(function(){return null;}); }))
-      .then(function(ph){ showMailPreview(email, subj, finalBody||body, ph.filter(Boolean)); });
+      .then(function(ph){ showMailPreview(email, subj, finalBody||body, ph.filter(Boolean), ctx); });
   }
-  // Email generata dall'AI (più curata + documenti del fornitore), con fallback al template
-  if(typeof aiAvailable==='function' && aiAvailable()){
-    toast('✍️ Genero email con AI…','b');
-    var gar=(typeof getGaranziaInfo==='function')?getGaranziaInfo(a.forn):null;
-    var garTxt='';
-    if(gar){ var gp=[];
-      if(gar.documenti&&gar.documenti.length) gp.push('Documenti tipici richiesti da '+(a.forn||'questo fornitore')+': '+gar.documenti.join(', '));
-      if(gar.giorni&&gar.giorni!=='X') gp.push('Termine garanzia: '+gar.giorni+' giorni');
-      if(gar.valoreMin&&gar.valoreMin>0) gp.push('Valore minimo reso: '+gar.valoreMin+' euro');
-      garTxt=gp.join('. ');
-    }
-    var aiPrompt='Scrivi SOLO il CORPO (niente oggetto, niente intestazioni) di un\'email professionale in italiano dal Reparto Resi di Telos SPA al cliente "'+(clientName||displayName)+'". '+
-      'Comunica con cortesia che il reso non puo\' essere gestito per l\'anomalia indicata e specifica con precisione la documentazione necessaria per procedere. '+
-      'Usa SOLO questi dati reali (non inventarne altri): Articolo: '+codArt+'; N. DDT/Bolla: '+(a.rma||'-')+'; Data DDT: '+(dataFmt||'-')+'; Causale reso: '+(a.causale||'-')+'; Anomalia: '+(a.anomalia||'-')+' ('+motivo+'); Data reso: '+(dataFmt||'-')+'. '+
-      'Cita nel testo il numero e la data del DDT. '+
-      (garTxt?('Info fornitore: '+garTxt+'. '):'')+
-      'Massimo 130 parole. Chiudi con "Cordiali saluti," (a capo) "Reparto Resi - Telos SPA" e il riferimento resi.torino@telosgroup.it.';
-    aiComplete([{type:'text',text:aiPrompt}], function(content,err){
-      doOpen(content&&content.trim()?content.trim():body);
-    }, {temp:0.4, timeout:12000, maxAttempts:3});
-  } else {
-    doOpen(body);
-  }
+  // Usiamo il template diretto (agente): niente AI e niente riferimenti fornitore
+  doOpen(body);
 }
 
 // Anteprima email: l'apertura di Outlook parte dal click dell'utente (gesto valido)
-function showMailPreview(email, subj, bodyText, photos){
+function showMailPreview(email, subj, bodyText, photos, ctx){
   photos=photos||[]; window._mpPhotos=photos;
+  window._mpCtx = ctx||{};
   var old=document.getElementById('mailPrevBox'); if(old) old.remove();
   var box=document.createElement('div'); box.id='mailPrevBox';
   box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1450;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto;-webkit-overflow-scrolling:touch';
@@ -5597,12 +5607,16 @@ function showMailPreview(email, subj, bodyText, photos){
     }
     h+='</div>';
   }
+  var ctx = window._mpCtx||{};
+  var agFull = ctx.agenteFullName||ctx.agenteNome||'';
   h+='<div style="display:flex;gap:8px;margin-bottom:6px">';
   h+='<button onclick="mpOpenOutlook()" style="flex:1;background:#3B9FD4;color:#fff;border:none;padding:13px;font-size:14px;font-weight:800;border-radius:10px;cursor:pointer;-webkit-appearance:none">📧 Outlook (PC)</button>';
   h+='<button onclick="mpOpenWeb()" style="flex:1;background:#0a3a2a;color:#2ecc71;border:1.5px solid #2ecc71;padding:13px;font-size:14px;font-weight:800;border-radius:10px;cursor:pointer;-webkit-appearance:none">🌐 Outlook Web</button>';
   h+='</div>';
+  h+='<button onclick="mpOpenWhatsApp()" style="width:100%;background:#083a1c;color:#25D366;border:2px solid #25D366;padding:13px;font-size:14px;font-weight:800;border-radius:10px;cursor:pointer;-webkit-appearance:none;margin-bottom:6px">💬 Invia su WhatsApp'+(ctx.agTel?' → '+xe(ctx.agTel):'')+'</button>';
   h+='<button onclick="mpCopy()" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1.5px solid #3B9FD4;padding:11px;font-size:13px;font-weight:700;border-radius:10px;cursor:pointer;-webkit-appearance:none;margin-bottom:6px">📋 Copia testo</button>';
-  h+='<div style="font-size:10px;color:#666;text-align:center">"PC" apre Outlook installato (va impostato come app email predefinita di Windows). "Web" apre Outlook nel browser. Oppure "Copia testo" e incolla.</div>';
+  if(agFull) h+='<button onclick="mpAgentEdit(\''+xe(agFull).replace(/\x27/g,"\\\'")+'\')" style="width:100%;background:none;color:#888;border:1px dashed #333;padding:9px;font-size:11px;border-radius:8px;cursor:pointer;-webkit-appearance:none;margin-bottom:6px">👤 Rubrica agente: '+xe(agFull)+' — aggiungi/modifica email e cellulare</button>';
+  h+='<div style="font-size:10px;color:#666;text-align:center">WhatsApp usa il numero salvato nella rubrica agente. "Outlook (PC)" apre il client email predefinito, "Web" nel browser.</div>';
   inner.innerHTML=h; box.appendChild(inner); document.body.appendChild(box);
 }
 function mpOpenOutlook(){
@@ -5613,6 +5627,124 @@ function mpOpenOutlook(){
   // apertura diretta nel gesto utente (non naviga: il browser passa il mailto all'app)
   try{ window.location.href=url; }catch(e){ openMail(url); }
   toast('📧 Se Outlook è installato come app predefinita si apre. Altrimenti usa "Outlook Web".','b');
+}
+// ══════════════════════════════════════════════════
+// EXPORT COMPLETO DATABASE (Excel multi-foglio: CORRENTI + ARCHIVIO + TRIMESTRE)
+// ══════════════════════════════════════════════════
+function exportFullDB(){
+  toast('📥 Preparazione export completo…','b');
+  try{
+    var correnti = (typeof gra==='function') ? gra() : Object.values(rows||{});
+    var archiv   = (typeof arch!=='undefined' && arch) ? Object.values(arch) : [];
+    var storico  = (typeof DB_TRI!=='undefined' && DB_TRI) ? DB_TRI : [];
+
+    function toSheet(arr, titolo){
+      var data = [];
+      data.push([{v:titolo+' — Telos SPA — '+new Date().toLocaleDateString('it-IT'), s:2}].concat(ea(HDR.length-1)));
+      data.push(HDR.map(function(h){return{v:h,s:1};}));
+      for(var i=0;i<arr.length;i++) data.push(mkRow(arr[i]));
+      return data;
+    }
+
+    var s1 = bsh(toSheet(correnti, 'CORRENTI ('+correnti.length+')'), CW1);
+    var s2 = bsh(toSheet(archiv,   'ARCHIVIO ('+archiv.length+')'),   CW1);
+    var s3 = bsh(toSheet(storico,  'STORICO TRIMESTRE ('+storico.length+')'), CW1);
+    var s4 = bsh((typeof bLog==='function')?bLog(correnti):[LOG_HDR||[]], '');
+
+    var wb='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+
+      '<sheet name="CORRENTI" sheetId="1" r:id="rId1"/>'+
+      '<sheet name="ARCHIVIO" sheetId="2" r:id="rId2"/>'+
+      '<sheet name="STORICO TRIMESTRE" sheetId="3" r:id="rId3"/>'+
+      '<sheet name="LOG MODIFICHE" sheetId="4" r:id="rId4"/>'+
+      '</sheets></workbook>';
+    var wbr='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'+
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>'+
+      '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>'+
+      '<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/>'+
+      '<Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'+
+      '</Relationships>';
+    var ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+      '<Default Extension="xml" ContentType="application/xml"/>'+
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+
+      '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'+
+      '<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'+
+      '<Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'+
+      '<Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'+
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+
+      '</Types>';
+    var rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+    var zip = mzip([
+      {n:'[Content_Types].xml',d:s2u8(ct)},
+      {n:'_rels/.rels',d:s2u8(rels)},
+      {n:'xl/workbook.xml',d:s2u8(wb)},
+      {n:'xl/_rels/workbook.xml.rels',d:s2u8(wbr)},
+      {n:'xl/worksheets/sheet1.xml',d:s2u8(s1)},
+      {n:'xl/worksheets/sheet2.xml',d:s2u8(s2)},
+      {n:'xl/worksheets/sheet3.xml',d:s2u8(s3)},
+      {n:'xl/worksheets/sheet4.xml',d:s2u8(s4)},
+      {n:'xl/styles.xml',d:s2u8(STY)}
+    ]);
+    var fn='Database_Completo_'+new Date().toISOString().slice(0,10)+'.xlsx';
+    dlFb(new Blob([zip],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), fn, function(){
+      toast('✓ Database completo: '+(correnti.length+archiv.length+storico.length)+' righe totali','g');
+    });
+  } catch(e){ console.error(e); toast('Errore export: '+e.message,'r'); }
+}
+
+function exportFullDBCSV(){
+  try{
+    var correnti = (typeof gra==='function') ? gra() : Object.values(rows||{});
+    var archiv   = (typeof arch!=='undefined' && arch) ? Object.values(arch) : [];
+    var storico  = (typeof DB_TRI!=='undefined' && DB_TRI) ? DB_TRI : [];
+    var lines=[ ['ORIGINE'].concat(HDR).join(';') ];
+    function push(arr, tag){
+      arr.forEach(function(r){
+        var vals=[tag].concat([r.datArr,r.vetRic,r.datElab,r.sogg,r.pre,r.cod,r.qty,r.forn,r.prc,r.vetUsc,r.flusso,r.causale,r.anomalia,r.tipoDoc,r.fase,r.stato,r.datSta,r.rma,r.contatto,r.datCon,r.agente,r.docRic,r.datDoc,r.note,r.photo||'',r._who||'',r.motivoNR||'',r._finalBy||'',r._finalTs?new Date(r._finalTs).toLocaleString('it-IT'):'']);
+        lines.push(vals.map(function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';}).join(';'));
+      });
+    }
+    push(correnti,'CORRENTE'); push(archiv,'ARCHIVIO'); push(storico,'STORICO');
+    var fn='Database_Completo_'+new Date().toISOString().slice(0,10)+'.csv';
+    dlFb(new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}), fn, function(){
+      toast('✓ CSV completo: '+(correnti.length+archiv.length+storico.length)+' righe','g');
+    });
+  } catch(e){ toast('Errore CSV: '+e.message,'r'); }
+}
+
+function mpOpenWhatsApp(){
+  var ctx=window._mpCtx||{};
+  var body=((document.getElementById('mpBody')||{}).value||'');
+  var subj=((document.getElementById('mpSubj')||{}).value||'').trim();
+  var msg=(subj?subj+'\n\n':'')+body;
+  var num = normPhoneWA(ctx.agTel||'');
+  if(!num){
+    if(!ctx.agenteFullName){ toast('Nessun agente associato al reso','y'); return; }
+    if(confirm('Numero WhatsApp non salvato per "'+ctx.agenteFullName+'". Vuoi aggiungerlo ora?')){
+      mpAgentEdit(ctx.agenteFullName); return;
+    }
+    return;
+  }
+  var url='https://wa.me/'+num+'?text='+encodeURIComponent(msg);
+  window.open(url,'_blank');
+  toast('💬 WhatsApp: verifica il messaggio prima di inviare','b');
+}
+function mpAgentEdit(nome){
+  loadAgenti();
+  var cur = agenteInfo(nome) || {};
+  var tel = prompt('CELLULARE agente "'+nome+'" (con o senza +39):', cur.tel||'');
+  if(tel === null) return;
+  var mail = prompt('EMAIL agente "'+nome+'":', cur.mail||'');
+  if(mail === null) return;
+  saveAgenteInfo(nome, { tel: tel.trim(), mail: mail.trim().toLowerCase() });
+  var ctx = window._mpCtx||{};
+  ctx.agTel = tel.trim();
+  window._mpCtx = ctx;
+  // Se in preview è vuoto il "A", precompila con la mail agente
+  var to = document.getElementById('mpTo');
+  if(to && !to.value.trim() && mail.trim()) to.value = mail.trim();
+  toast('✓ Rubrica agente aggiornata','g');
 }
 function mpOpenWeb(){
   var to=((document.getElementById('mpTo')||{}).value||'').trim();
