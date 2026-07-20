@@ -559,13 +559,14 @@ select option {
     <button class="bnxt" onclick="gTab('pgList')">→ VAI ALLA LISTA COMPLETA</button>
   </div>
 
-  <div class="card" style="margin-bottom:12px">
-    <div class="ch"><span>CARTELLA FOTO</span></div>
+  <div class="card" style="margin-bottom:12px" id="photoFolderCard">
+    <div class="ch"><span>DOVE FINISCONO LE FOTO</span></div>
     <div class="cb" style="display:flex;gap:8px;align-items:center">
-      <div class="sinfo sin" id="pfi" style="flex:1;padding:7px 10px">Nessuna cartella selezionata</div>
-      <button onclick="pickPD()" class="sb sg" style="padding:8px 11px;flex-shrink:0">📁</button>
+      <div class="sinfo sin" id="pfi" style="flex:1;padding:7px 10px;font-size:11px;line-height:1.5">📷 La miniatura resta nella riga dell'articolo (toccala in Lista per rivederla). La foto piena viene salvata via <b>Condividi</b> nell'app Foto del telefono.</div>
+      <button onclick="pickPD()" class="sb sg" id="pickPDBtn" style="padding:8px 11px;flex-shrink:0;display:none" title="Scegli cartella (solo Chrome desktop)">📁</button>
     </div>
   </div>
+  <script>if(typeof window.showDirectoryPicker==='function'){var _b=document.getElementById('pickPDBtn');if(_b)_b.style.display='';}</script>
 </div>
 
 <!-- ═══ CODA ═══ -->
@@ -2851,7 +2852,10 @@ function pdlFallback(blob,fn){
   toast('Foto scaricata','b');
 }
 function initPF(){var sv='';try{sv=localStorage.getItem('tpf')||'';}catch(e){}var el=document.getElementById('pfi');if(sv&&el){el.textContent='\ud83d\udcc1 '+sv;el.style.color='var(--yel)';}}
-function pickPD(){if(!canDir){toast('Non disponibile','y');return;}window.showDirectoryPicker({mode:'readwrite'}).then(function(h){photoDH=h;try{localStorage.setItem('tpf',h.name);}catch(e){}var el=document.getElementById('pfi');if(el){el.textContent='\ud83d\udcc1 '+h.name;el.className='sinfo sig';}toast('Cartella: '+h.name,'b');}).catch(function(e){if(e.name!=='AbortError')toast('Errore','r');});}
+function pickPD(){
+  if(!canDir){ toast('Su questo dispositivo la scelta cartella non \u00e8 disponibile: le foto restano nella riga e nell\u2019app Foto','y'); return; }
+  window.showDirectoryPicker({mode:'readwrite'}).then(function(h){photoDH=h;try{localStorage.setItem('tpf',h.name);}catch(e){}var el=document.getElementById('pfi');if(el){el.innerHTML='\ud83d\udcc1 Salvo anche in: <b>'+xe(h.name)+'</b>';el.className='sinfo sig';}toast('Cartella: '+h.name,'b');}).catch(function(e){if(e.name!=='AbortError')toast('Errore','r');});
+}
 
 // ══════════════════════════════════════════════════
 // XLSX ENGINE (pure JS, zero deps)
