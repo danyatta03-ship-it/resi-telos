@@ -5289,10 +5289,51 @@ function analyzeAnomalia(b64){
   var anoOpts=[], cauOpts=[];
   var aE=document.getElementById('cAno'); if(aE){ for(var i=0;i<aE.options.length;i++){ var t=(aE.options[i].text||'').trim(); if(t && t.indexOf('\u2014')<0 && t.toUpperCase().indexOf('NESSUN')<0) anoOpts.push(t); } }
   var cE=document.getElementById('cCau'); if(cE){ for(var j=0;j<cE.options.length;j++){ var t2=(cE.options[j].text||'').trim(); if(t2 && t2!=='\u2014') cauOpts.push(t2); } }
+  // Marche automotive trattate dal reparto (sigla PRE \u2192 nome completo).
+  // Vengono passate all'AI cos\u00ec pu\u00f2 riconoscere logo/etichetta sulla foto.
+  var BRANDS = {
+    "BOS":"BOSCH","VAL":"VALEO","BIL":"BILSTEIN","MON":"MONROE","KYB":"KYB","SAC":"SACHS","ZF":"ZF SACHS",
+    "NGK":"NGK","DEN":"DENSO","BER":"BERU","CHA":"CHAMPION","MAG":"MAGNETI MARELLI","HEL":"HELLA","OSR":"OSRAM","PHI":"PHILIPS",
+    "SKF":"SKF","FAG":"FAG","INA":"INA","LUK":"LUK","SNR":"SNR NTN","GAT":"GATES","CON":"CONTINENTAL","CTL":"CONTITECH","DAY":"DAYCO","OPT":"OPTIBELT",
+    "ATE":"ATE","TRW":"TRW","BRE":"BREMBO","FER":"FERODO","PAG":"PAGID","BEN":"BENDIX","TEX":"TEXTAR","JUR":"JURID",
+    "MAL":"MAHLE","MAN":"MANN FILTER","HEN":"HENGST","UFI":"UFI","BOS FIL":"BOSCH FILTER","FIL":"FILTRON","PUR":"PUROLATOR",
+    "COR":"CORTECO","ELR":"ELRING","REI":"REINZ","VIC":"VICTOR REINZ",
+    "MEY":"MEYLE","LMF":"LEMFORDER","FEB":"FEBI BILSTEIN","OCA":"OCAP","SID":"SIDEM","OPTS":"OPTIMAL","MET":"METELLI","HEP":"HEPU","BLU":"BLUE PRINT","QH":"QUINTON HAZELL","STA":"STARK","KAM":"KAMOKA","TRI":"TRISCAN",
+    "PIE":"PIERBURG","VDO":"VDO CONTINENTAL","DEL":"DELPHI","BOR":"BORGWARNER","GAR":"GARRETT","PHR":"PHINIA","STA MOT":"STANADYNE",
+    "NRF":"NRF","BEH":"BEHR","AVA":"AVA COOLING","VAN":"VAN WEZEL","THE":"THERMOTEC","AKS":"AKS DASIS",
+    "BOS EXH":"BOSAL","ERN":"ERNST","WAL":"WALKER","EMI":"EMINOX","JAP":"JAPANPARTS","ASH":"ASHIKA","NIP":"NIPPARTS","BLU IND":"BLUEPRINT","MASU":"MASUMA",
+    "AS-PL":"AS-PL","WAI":"WAI GLOBAL","CAR":"CARGO","REM":"REMY","LET":"LETRIKA",
+    "GKN":"GKN LOBRO","SPI":"SPIDAN","GSP":"GSP","MAP":"MAPCO","RUV":"RUVILLE","FTE":"FTE","HAZ":"HAZET",
+    "FCA":"FCA MOPAR","REN":"RENAULT ORIG","FRD":"FORD ORIG","STELLANTIS":"STELLANTIS","IVE":"IVECO ORIG",
+    "MOV":"MOVIDIS","CATI":"CATI","CATO":"CATO","BOSAL":"BOSAL"
+  };
+  var TIPOLOGIE = [
+    "FRENO_PASTIGLIE","FRENO_DISCO","FRENO_PINZA","FRENO_CILINDRO","FRENO_TUBO_FLESSIBILE","ABS_SENSORE",
+    "FILTRO_ARIA","FILTRO_OLIO","FILTRO_ABITACOLO","FILTRO_GASOLIO","FILTRO_CARBURANTE","FILTRO_ARIA_ABITACOLO",
+    "AMMORTIZZATORE","MOLLA_SOSPENSIONE","KIT_AMMORTIZZATORI","KIT_SOSPENSIONE","BRACCIO_OSCILLANTE","BARRA_STABILIZZATRICE","BIELLETTA","TESTINA_STERZO","SCATOLA_STERZO","SILENT_BLOCK","SUPPORTO_MOTORE",
+    "SEMIASSE","CUFFIA_SEMIASSE","CUSCINETTO_RUOTA","MOZZO_RUOTA","GIUNTO_OMOCINETICO",
+    "KIT_FRIZIONE","KIT_DISTRIBUZIONE","CINGHIA_SERVIZI","CINGHIA_DISTRIBUZIONE","POLI_V","POMPA_ACQUA","TENDICINGHIA","GALOPPINO","VOLANO_BIMASSA","VOLANO",
+    "POMPA_CARBURANTE","POMPA_OLIO","INIETTORE","POMPA_INIEZIONE","COMMON_RAIL",
+    "ALTERNATORE","MOTORINO_AVVIAMENTO","REGOLATORE_TENSIONE","CANDELETTA","CANDELA","BOBINA_ACCENSIONE","CAVI_ACCENSIONE",
+    "SENSORE_LAMBDA","SENSORE_TEMPERATURA","SENSORE_ALBERO_MOTORE","SENSORE_ALBERO_CAMME","SENSORE_MAP_MAF","SENSORE_LIVELLO","CENTRALINA_ELETTRONICA",
+    "VALVOLA_EGR","TERMOSTATO","MANICOTTO_RADIATORE","RADIATORE_MOTORE","RADIATORE_INTERCOOLER","RADIATORE_ABITACOLO","VENTOLA_RADIATORE",
+    "TURBOCOMPRESSORE","INTERCOOLER","COLLETTORE_ASPIRAZIONE","COLLETTORE_SCARICO","COPPA_OLIO",
+    "GUARNIZIONE_TESTA","KIT_GUARNIZIONI","GUARNIZIONE_COPPA",
+    "SILENZIATORE","CATALIZZATORE","FAP_DPF","TUBO_SCARICO",
+    "TERGICRISTALLO_SPAZZOLE","LAMPADINA","FANALE_ANTERIORE","FANALE_POSTERIORE","SPECCHIETTO","CENTRALINA_LUCI","VENTOLA_ABITACOLO",
+    "SERRATURA","MANIGLIA","CILINDRETTO_FRIZIONE","POMPA_FRIZIONE","BATTERIA","CAVO_MASSA",
+    "ACCESSORIO","ALTRO"
+  ];
+  var brandLines = [];
+  for(var _bk in BRANDS){ brandLines.push(_bk+' = '+BRANDS[_bk]); }
   var prompt=[
     "RUOLO: sei un magazziniere del reparto RESI con 30 anni di esperienza nel ricambio auto/veicoli industriali. Hai visto passare centinaia di migliaia di pezzi (freni, filtri, ammortizzatori, alternatori, motorini, iniettori, pompe, cinghie, kit distribuzione, candele, sensori, catalizzatori, radiatori, kit frizione, cuscinetti, silent-block, tergicristalli, lampadine, kit turbo, dischi, pastiglie, tubi, cablaggi, ecc.).",
-    "MISSIONE: il tuo lavoro \u00e8 proteggere l'azienda dai resi non validi. Devi giudicare da UNA FOTO se il pezzo pu\u00f2 essere accettato per la restituzione al fornitore/produttore.",
+    "MISSIONE: il tuo lavoro \u00e8 proteggere l'azienda dai resi non validi e velocizzare l'accettazione. Devi (1) capire CHE PEZZO \u00c8 dalla forma, (2) leggere il LOGO/MARCA sulla scatola o sul pezzo, (3) giudicare da UNA FOTO se pu\u00f2 essere accettato per la restituzione.",
     "REGOLA D'ORO: un ricambio \u00e8 accettabile SOLO se appare NUOVO, INTEGRO, PULITO e NON risulta essere stato montato, provato o manipolato. Nel dubbio motivato, NON accettare \u2014 \u00e8 meglio far discutere con l'officina che ingoiare un pezzo usato che il fornitore ci rimander\u00e0 indietro.",
+    "MARCHE TRATTATE dal reparto (sigla PRE = nome completo del brand). Se sulla scatola/pezzo vedi il logo di una di queste, restituisci la SIGLA nel campo 'marca'. Se il logo \u00e8 chiaro ma non \u00e8 in lista, restituisci il nome completo in maiuscolo. Se non \u00e8 leggibile, lascia stringa vuota.",
+    "  " + brandLines.join('; '),
+    "TIPOLOGIA PEZZO: dalla forma dell'oggetto scegli UNA sola voce da questa lista chiusa. Se davvero non riesci a categorizzare, usa \"ALTRO\".",
+    "  " + TIPOLOGIE.join(', '),
     "COSA CERCARE (indizi tipici, non esaustivi):",
     " \u2022 Sporco da montaggio: polvere di frizione o freno (marrone chiaro/nera), unto motore (giallo-ambra), tracce di olio scuro, fuliggine su marmitte/catalizzatori/EGR/turbo, silicone o pasta guarnizione residua, grasso su cuscinetti, refrigerante colorato su pompe/radiatori.",
     " \u2022 Segni meccanici di montaggio: filettature schiacciate/segnate, bulloneria stretta (esagoni tondati, vernice pastilla mancante), sedi di serraggio con l'impronta della chiave, superfici di appoggio graffiate a raggiera, guarnizioni schiacciate/stampate, connettori elettrici con pin ossidati o piegati, ossido dove non dovrebbe esserci.",
@@ -5305,7 +5346,7 @@ function analyzeAnomalia(b64){
     "  ANOMALIE VALIDE: "+JSON.stringify(anoOpts),
     "  CAUSALI VALIDE:  "+JSON.stringify(cauOpts),
     "RISPOSTA: SOLO JSON valido, niente markdown, niente testo attorno. Schema esatto:",
-    '  {"anomalia": "<voce dalla lista o \\"\\">", "causale": "<voce dalla lista o \\"\\">", "condizione": "NUOVO|LIEVI_SEGNI|MONTATO|DANNEGGIATO|CONTRAFFATTO_SOSPETTO|NON_VALUTABILE", "accettabile": true|false, "confidenza": "alta|media|bassa", "segnali": ["max 5 stringhe brevi, es. \\"traccia unto sul filetto\\", \\"pastiglia con strisciata\\"" ], "descrizione": "1 frase da magazziniere, italiano, max 25 parole", "avvertenza": "vuoto oppure indicazione all\'operatore, es. \\"foto sfocata: rifare vicina e con luce\\""}',
+    '  {"marca":"<SIGLA dalla lista o nome brand in maiuscolo o \\"\\">", "tipologia":"<UNA voce dalla lista TIPOLOGIE>", "anomalia": "<voce dalla lista o \\"\\">", "causale": "<voce dalla lista o \\"\\">", "condizione": "NUOVO|LIEVI_SEGNI|MONTATO|DANNEGGIATO|CONTRAFFATTO_SOSPETTO|NON_VALUTABILE", "accettabile": true|false, "confidenza": "alta|media|bassa", "segnali": ["max 5 stringhe brevi, es. \\"traccia unto sul filetto\\", \\"pastiglia con strisciata\\"" ], "descrizione": "1 frase da magazziniere, italiano, max 25 parole, che INIZI con marca e tipologia (es. \\"BOSCH filtro aria: nuovo in scatola integra\\")", "avvertenza": "vuoto oppure indicazione all\'operatore, es. \\"foto sfocata: rifare vicina e con luce\\""}',
     "STILE: parla come un magazziniere, non come un manuale ('trovo tracce di frizione sulla pinza', 'il disco ha gi\u00e0 l'anello di rodaggio', 'la filettatura \u00e8 marcata dalla chiave', 'la scatola \u00e8 integra e il pezzo dentro pulito: sembra un reso valido'). Diretto, tecnico, niente cortesie inutili. Se il pezzo \u00e8 chiaramente nuovo e integro, dillo con la stessa fermezza con cui rifiuteresti un pezzo usato."
   ].join('\n');
   aiComplete([{type:'text',text:prompt},{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64}}], function(content,err){
@@ -5314,9 +5355,20 @@ function analyzeAnomalia(b64){
     var done=[];
     if(d.anomalia){ var m=ocrMatchOption('cAno', String(d.anomalia)); if(m){ var el=document.getElementById('cAno'); if(el){ el.value=m; if(typeof ce==='function')ce(el); done.push(m); } } }
     if(d.causale){ var el2=document.getElementById('cCau'); if(el2&&!el2.value){ var m2=ocrMatchOption('cCau', String(d.causale)); if(m2){ el2.value=m2; if(typeof ce==='function')ce(el2); } } }
+    // Marca dal logo \u2192 campo PRE (solo se vuoto: non sovrascriviamo quello che l'operatore ha gi\u00e0 digitato)
+    if(d.marca){
+      var pE=document.getElementById('cPre');
+      if(pE && !pE.value){
+        var mk=String(d.marca).toUpperCase().trim();
+        pE.value = (BRANDS[mk] ? mk : mk.slice(0,20));
+        if(typeof ce==='function')ce(pE);
+        done.push(mk);
+      }
+    }
     // Nota: mettiamo il verdetto strutturato nel campo NOTE cos\u00ec resta tracciato in Excel e log modifiche
     var parts=[];
     if(d.descrizione) parts.push(String(d.descrizione).trim());
+    if(d.tipologia) parts.push('TIPOLOGIA: '+d.tipologia);
     if(d.segnali && d.segnali.length) parts.push('SEGNI: '+d.segnali.filter(Boolean).join(', '));
     if(d.condizione) parts.push('CONDIZIONE: '+d.condizione);
     if(typeof d.accettabile!=='undefined') parts.push('ACCETTABILE: '+(d.accettabile?'S\u00cc':'NO'));
