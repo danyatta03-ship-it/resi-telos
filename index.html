@@ -370,15 +370,10 @@ select option {
   <!-- CLOSE button always visible top-right -->
   <button onclick="closeScan()" style="position:absolute;top:12px;right:12px;z-index:10;width:44px;height:44px;background:rgba(0,0,0,.7);border:2px solid rgba(255,255,255,.3);border-radius:50%;color:#fff;font-size:22px;font-weight:300;cursor:pointer;-webkit-appearance:none;display:flex;align-items:center;justify-content:center;line-height:1">&#10005;</button>
   <div id="scanCtxMsg" style="font-size:13px;font-weight:700;color:#3B9FD4;margin-bottom:8px;text-align:center;min-height:16px;padding:0 50px"></div>
-  <div style="position:relative;width:100%;max-width:380px">
-    <video id="scanVideo" style="width:100%;max-height:52vh;border-radius:10px;background:#000;display:block;object-fit:cover" autoplay muted playsinline></video>
-    <div id="scanH5q" style="width:100%;max-height:52vh;border-radius:10px;background:#000;overflow:hidden;display:none"></div>
-    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:70%;height:40%;border:2px solid #3B9FD4;border-radius:8px;pointer-events:none;z-index:3">
-      <div style="position:absolute;top:-2px;left:-2px;width:16px;height:16px;border-top:3px solid #3B9FD4;border-left:3px solid #3B9FD4;border-radius:2px 0 0 0"></div>
-      <div style="position:absolute;top:-2px;right:-2px;width:16px;height:16px;border-top:3px solid #3B9FD4;border-right:3px solid #3B9FD4;border-radius:0 2px 0 0"></div>
-      <div style="position:absolute;bottom:-2px;left:-2px;width:16px;height:16px;border-bottom:3px solid #3B9FD4;border-left:3px solid #3B9FD4;border-radius:0 0 0 2px"></div>
-      <div style="position:absolute;bottom:-2px;right:-2px;width:16px;height:16px;border-bottom:3px solid #3B9FD4;border-right:3px solid #3B9FD4;border-radius:0 0 2px 0"></div>
-    </div>
+  <div style="position:relative;width:100%;max-width:640px">
+    <video id="scanVideo" style="width:100%;height:62vh;max-height:62vh;border-radius:10px;background:#000;display:block;object-fit:cover" autoplay muted playsinline></video>
+    <div id="scanH5q" style="width:100%;max-height:70vh;border-radius:10px;background:#000;overflow:hidden;display:none"></div>
+
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
 
@@ -3974,7 +3969,7 @@ function startCameraStream(video,status,onReady){
   if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){
     startH5q(video,document.getElementById('scanH5q'),status); return;
   }
-  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false}).then(function(stream){
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false}).then(function(stream){
     scanStreamLocal=stream;
     if(!video){return;}
     video.srcObject=stream; video.setAttribute('playsinline',''); video.muted=true;
@@ -4021,8 +4016,9 @@ function startH5q(video,h5qDiv,status){
   catch(e){ if(status){status.textContent='Errore avvio scanner';status.style.color='#E05555';} return; }
   var cfg={
     fps:10,
-    qrbox:function(w,h){ var m=Math.floor(Math.min(w,h)*0.74); return {width:m,height:Math.floor(m*0.62)}; },
-    aspectRatio:1.3333,
+    // Riquadro di lettura ampio: quasi tutta la larghezza, fascia alta al centro
+    qrbox:function(w,h){ return {width:Math.floor(w*0.94), height:Math.floor(Math.max(Math.min(h*0.5,w*0.6),120))}; },
+    videoConstraints:{facingMode:'environment', width:{ideal:1920}, height:{ideal:1080}},
     experimentalFeatures:{useBarCodeDetectorIfSupported:true}
   };
   try{
@@ -6400,6 +6396,7 @@ function ocrDocument(inputEl){
       // 1) AI vision se configurata
       var aiWasConfigured = !!ocrAIConfig();
       ocrViaAI(dataUrl, function(aiRes){
+        if(aiRes&&aiRes.noDoc){ ocrLoading=false; ocrHideLoading(); toast('\u26a0 Nessuna bolla riconosciuta nella foto: inquadra il documento e riprova','y'); return; }
         if(aiRes){ ocrLoading=false; ocrHideLoading(); showOcrConfirm(aiRes, dataUrl, 'ai'); return; }
         // 2) Tesseract offline su immagine pre-elaborata
         ocrPreprocess(dataUrl, function(proc){
@@ -6549,12 +6546,13 @@ function ocrViaAI(dataUrl, cb){
   var cfg=ocrAIConfig();
   if(!cfg||!cfg.endpoint){ cb(null); return; }
   ocrSetLoading('AI: analisi bolla\u2026');
-  var prompt='Sei un esperto nella lettura di bolle/DDT italiani di reso merce, spesso COMPILATI A MANO IN CORSIVO (a volte con righe evidenziate). L\'azienda stampata in ALTO (mittente) è il CLIENTE che restituisce i pezzi: mettila in "soggetto". Il destinatario è sempre TELOS: ignoralo. REGOLE FONDAMENTALI: 1) La bolla contiene quasi sempre PIÙ ARTICOLI, uno per blocco di righe: estraili TUTTI, nessuno escluso, nell\'ordine in cui compaiono; non fermarti mai al primo. 2) Ogni articolo di solito ha: quantità (es. "1" oppure "Ø1"), descrizione, sigla marca (es. NGK, BIR, FAU, VAL) e un CODICE tra parentesi o accanto alla descrizione: quello è il codice articolo. 3) Le righe che iniziano con "RIF." / "RIF.BL" / "RIF.BOLLA" seguite da numero e data sono il RIFERIMENTO alla bolla di consegna originaria dell\'articolo che le precede: mettile nel campo "riferimento" di QUELL\'articolo, NON sono codici articolo. 4) Sul corsivo ambiguo scegli l\'interpretazione più plausibile per un codice ricambi (cifre e lettere maiuscole). Rispondi SOLO con JSON valido, senza testo extra, con chiavi: numero_documento, data (formato GG/MM/AAAA), soggetto, vettore, causale, articoli (array di oggetti {pre, codice, descrizione, quantita, prezzo, riferimento}). I campi mancanti devono essere stringa vuota.';
+  var prompt='Sei un esperto nella lettura di bolle/DDT italiani di reso merce, spesso COMPILATI A MANO IN CORSIVO (a volte con righe evidenziate). PRIMA DI TUTTO verifica che l\'immagine contenga DAVVERO un documento di trasporto/bolla/fattura con del testo: se non c\'\u00e8 alcun documento (un tavolo, un oggetto qualunque, una foto senza testo leggibile) rispondi SOLO {"nessun_documento": true} e nient\'altro. NON INVENTARE MAI nulla: trascrivi esclusivamente ci\u00f2 che \u00e8 scritto e leggibile nell\'immagine; un campo non presente resta stringa vuota; in caso di dubbio sull\'esistenza stessa del documento rispondi {"nessun_documento": true}. L\'azienda stampata in ALTO (mittente) è il CLIENTE che restituisce i pezzi: mettila in "soggetto". Il destinatario è sempre TELOS: ignoralo. REGOLE FONDAMENTALI: 1) La bolla contiene quasi sempre PIÙ ARTICOLI, uno per blocco di righe: estraili TUTTI, nessuno escluso, nell\'ordine in cui compaiono; non fermarti mai al primo. 2) Ogni articolo di solito ha: quantità (es. "1" oppure "Ø1"), descrizione, sigla marca (es. NGK, BIR, FAU, VAL) e un CODICE tra parentesi o accanto alla descrizione: quello è il codice articolo. 3) Le righe che iniziano con "RIF." / "RIF.BL" / "RIF.BOLLA" seguite da numero e data sono il RIFERIMENTO alla bolla di consegna originaria dell\'articolo che le precede: mettile nel campo "riferimento" di QUELL\'articolo, NON sono codici articolo. 4) Sul corsivo ambiguo scegli l\'interpretazione più plausibile per un codice ricambi (cifre e lettere maiuscole). Rispondi SOLO con JSON valido, senza testo extra, con chiavi: numero_documento, data (formato GG/MM/AAAA), soggetto, vettore, causale, articoli (array di oggetti {pre, codice, descrizione, quantita, prezzo, riferimento}). I campi mancanti devono essere stringa vuota.';
   aiComplete([{type:'text',text:prompt},{type:'image_url',image_url:{url:dataUrl}}], function(content,err){
     if(!content){ cb(null); return; }
     var obj=ocrSafeJSON(content);
+    if(obj&&(obj.nessun_documento===true||obj.nessun_documento==='true')){ cb({noDoc:true}); return; }
     cb(obj?normalizeAIResult(obj):null);
-  }, {temp:0.1, timeout:25000});
+  }, {temp:0, timeout:25000});
 }
 function ocrSafeJSON(s){ try{return JSON.parse(s);}catch(e){} var m=String(s).match(/\{[\s\S]*\}/); if(m){ try{return JSON.parse(m[0]);}catch(e2){} } return null; }
 function normalizeAIResult(o){
@@ -6571,7 +6569,9 @@ function normalizeAIResult(o){
       var rif=(a.riferimento||a.rif||'').toString().trim();
       var desc=(a.descrizione||a.desc||'').toString();
       if(rif) desc=(desc?desc+' \u00b7 ':'')+'RIF '+rif;
-      arts.push({pre:pre, cod:cod, qty:qty, prc:(a.prezzo||a.prc||'').toString().replace(',','.'), desc:desc});
+      // Un articolo senza codice, marca e descrizione non è una lettura: scartalo
+      if(cod||pre||(a.descrizione||a.desc||'').toString().trim())
+        arts.push({pre:pre, cod:cod, qty:qty, prc:(a.prezzo||a.prc||'').toString().replace(',','.'), desc:desc});
     }
   }
   return {
