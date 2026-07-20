@@ -5289,25 +5289,50 @@ function analyzeAnomalia(b64){
   var anoOpts=[], cauOpts=[];
   var aE=document.getElementById('cAno'); if(aE){ for(var i=0;i<aE.options.length;i++){ var t=(aE.options[i].text||'').trim(); if(t && t.indexOf('\u2014')<0 && t.toUpperCase().indexOf('NESSUN')<0) anoOpts.push(t); } }
   var cE=document.getElementById('cCau'); if(cE){ for(var j=0;j<cE.options.length;j++){ var t2=(cE.options[j].text||'').trim(); if(t2 && t2!=='\u2014') cauOpts.push(t2); } }
-  var prompt='Sei l\'addetto al CONTROLLO QUALIT\u00c0 in accettazione RESI di ricambi auto. '+
-    'REGOLA FONDAMENTALE: un pezzo reso \u00e8 accettabile SOLO se appare NUOVO, PULITO e NON usato/montato. '+
-    'Esamina con attenzione la foto del pezzo (anche se \u00e8 sfuso, senza scatola) e applica queste regole visive:\n'+
-    '- pezzo con sporco, polvere, unto, fuliggine, aloni/macchie scure, segni di montaggio o di utilizzo \u2192 "MONTATO E SPORCO";\n'+
-    '- pezzo rotto, crepato, deformato, ammaccato o con parti mancanti \u2192 "PEZZO DANNEGGIATO";\n'+
-    '- pezzo nudo senza la sua scatola originale \u2192 "SCATOLA OG MANCANTE";\n'+
-    '- confezione aperta o con perdita di liquidi \u2192 "PERVENUTO APERTO (LIQUIDI)".\n'+
-    'Scegli l\'ANOMALIA ESATTAMENTE da questa lista (stringa vuota SOLO se il pezzo \u00e8 chiaramente nuovo e integro): '+JSON.stringify(anoOpts)+'. '+
-    'Scegli la CAUSALE da questa lista (o vuota): '+JSON.stringify(cauOpts)+'. '+
-    'Rispondi SOLO con JSON valido: {"anomalia":"","causale":"","descrizione":""}. La descrizione (italiano, max 15 parole) deve dire cosa vedi sul pezzo.';
+  var prompt=[
+    "RUOLO: sei un magazziniere del reparto RESI con 30 anni di esperienza nel ricambio auto/veicoli industriali. Hai visto passare centinaia di migliaia di pezzi (freni, filtri, ammortizzatori, alternatori, motorini, iniettori, pompe, cinghie, kit distribuzione, candele, sensori, catalizzatori, radiatori, kit frizione, cuscinetti, silent-block, tergicristalli, lampadine, kit turbo, dischi, pastiglie, tubi, cablaggi, ecc.).",
+    "MISSIONE: il tuo lavoro \u00e8 proteggere l'azienda dai resi non validi. Devi giudicare da UNA FOTO se il pezzo pu\u00f2 essere accettato per la restituzione al fornitore/produttore.",
+    "REGOLA D'ORO: un ricambio \u00e8 accettabile SOLO se appare NUOVO, INTEGRO, PULITO e NON risulta essere stato montato, provato o manipolato. Nel dubbio motivato, NON accettare \u2014 \u00e8 meglio far discutere con l'officina che ingoiare un pezzo usato che il fornitore ci rimander\u00e0 indietro.",
+    "COSA CERCARE (indizi tipici, non esaustivi):",
+    " \u2022 Sporco da montaggio: polvere di frizione o freno (marrone chiaro/nera), unto motore (giallo-ambra), tracce di olio scuro, fuliggine su marmitte/catalizzatori/EGR/turbo, silicone o pasta guarnizione residua, grasso su cuscinetti, refrigerante colorato su pompe/radiatori.",
+    " \u2022 Segni meccanici di montaggio: filettature schiacciate/segnate, bulloneria stretta (esagoni tondati, vernice pastilla mancante), sedi di serraggio con l'impronta della chiave, superfici di appoggio graffiate a raggiera, guarnizioni schiacciate/stampate, connettori elettrici con pin ossidati o piegati, ossido dove non dovrebbe esserci.",
+    " \u2022 Segni di uso reale: pastiglie con anche solo una lieve strisciata sul materiale d'attrito; dischi con anello di frizione anche minimo; cinghie/kit distribuzione con impronta lucida sui denti o sulle poli-V; ammortizzatori con olio trasudato o stelo lucido/rigato; filtri con polvere/schiuma/liquido; alternatori/motorini con puleggia usurata o carboncini corti; iniettori con residuo carbonioso sul nasello; candele/bobine con isolatore scurito.",
+    " \u2022 Anomalie confezione: scatola strappata/schiacciata/bagnata, sigilli forzati/sostituiti, blister aperto, sacchetto anti-umidit\u00e0 mancante quando previsto, etichetta originale mancante o riattaccata (colla visibile).",
+    " \u2022 Danno da logistica vs danno da uso: un urto sullo spigolo della scatola con pezzo integro dentro \u00e8 danno di trasporto; un pezzo dentro pulito ma con la scatola intatta e nastrata NON \u00e8 un reso da montato \u2014 spesso \u00e8 cambio ordine o codice sbagliato.",
+    " \u2022 Sospetto contraffazione o pezzo non originale: stampe pallide/sbavate sull'etichetta, font incoerente, plastica dei tappi/sigilli di qualit\u00e0 visibilmente inferiore, marca famosa con sacchetto anonimo, mancanza di codice DataMatrix quando dovrebbe esserci.",
+    "GESTIONE DEL DUBBIO: se la foto \u00e8 sfocata, sovraesposta, in controluce, troppo lontana, taglia l'articolo, oppure inquadra solo la scatola chiusa senza aprirla, NON inventare un difetto. In questi casi rispondi con confidenza \"bassa\" e chiedi (nel campo avvertenza) di rifare la foto vicina, a fuoco, con luce buona e con il pezzo estratto dalla scatola.",
+    "COERENZA CON LE LISTE DEL SISTEMA: devi scegliere ANOMALIA e CAUSALE ESATTAMENTE dalle voci consentite qui sotto. Se nessuna calza davvero, lascia stringa vuota per quel campo. Non inventare voci nuove.",
+    "  ANOMALIE VALIDE: "+JSON.stringify(anoOpts),
+    "  CAUSALI VALIDE:  "+JSON.stringify(cauOpts),
+    "RISPOSTA: SOLO JSON valido, niente markdown, niente testo attorno. Schema esatto:",
+    '  {"anomalia": "<voce dalla lista o \\"\\">", "causale": "<voce dalla lista o \\"\\">", "condizione": "NUOVO|LIEVI_SEGNI|MONTATO|DANNEGGIATO|CONTRAFFATTO_SOSPETTO|NON_VALUTABILE", "accettabile": true|false, "confidenza": "alta|media|bassa", "segnali": ["max 5 stringhe brevi, es. \\"traccia unto sul filetto\\", \\"pastiglia con strisciata\\"" ], "descrizione": "1 frase da magazziniere, italiano, max 25 parole", "avvertenza": "vuoto oppure indicazione all\'operatore, es. \\"foto sfocata: rifare vicina e con luce\\""}',
+    "STILE: parla come un magazziniere, non come un manuale ('trovo tracce di frizione sulla pinza', 'il disco ha gi\u00e0 l'anello di rodaggio', 'la filettatura \u00e8 marcata dalla chiave', 'la scatola \u00e8 integra e il pezzo dentro pulito: sembra un reso valido'). Diretto, tecnico, niente cortesie inutili. Se il pezzo \u00e8 chiaramente nuovo e integro, dillo con la stessa fermezza con cui rifiuteresti un pezzo usato."
+  ].join('\n');
   aiComplete([{type:'text',text:prompt},{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64}}], function(content,err){
     if(!content){ toast('AI anomalia: '+(err||'nessun risultato'),'y'); return; }
     var d=ocrSafeJSON(content); if(!d){ toast('AI: risposta non interpretabile','y'); return; }
     var done=[];
     if(d.anomalia){ var m=ocrMatchOption('cAno', String(d.anomalia)); if(m){ var el=document.getElementById('cAno'); if(el){ el.value=m; if(typeof ce==='function')ce(el); done.push(m); } } }
     if(d.causale){ var el2=document.getElementById('cCau'); if(el2&&!el2.value){ var m2=ocrMatchOption('cCau', String(d.causale)); if(m2){ el2.value=m2; if(typeof ce==='function')ce(el2); } } }
-    if(d.descrizione){ var n=document.getElementById('cNote'); if(n&&!n.value){ n.value=d.descrizione; } }
-    toast('\ud83e\udde0 '+(done.length?('Rilevato: '+done.join(' \u00b7 ')):(d.descrizione||'sembra nuovo/integro')),'b');
-  }, {temp:0.15, timeout:30000});
+    // Nota: mettiamo il verdetto strutturato nel campo NOTE cos\u00ec resta tracciato in Excel e log modifiche
+    var parts=[];
+    if(d.descrizione) parts.push(String(d.descrizione).trim());
+    if(d.segnali && d.segnali.length) parts.push('SEGNI: '+d.segnali.filter(Boolean).join(', '));
+    if(d.condizione) parts.push('CONDIZIONE: '+d.condizione);
+    if(typeof d.accettabile!=='undefined') parts.push('ACCETTABILE: '+(d.accettabile?'S\u00cc':'NO'));
+    if(d.confidenza) parts.push('CONFIDENZA: '+String(d.confidenza).toUpperCase());
+    if(d.avvertenza) parts.push('\u26a0 '+d.avvertenza);
+    var notaAI=parts.join(' \u00b7 ');
+    var n=document.getElementById('cNote'); if(n && notaAI){ n.value = n.value ? (n.value+' \u00b7 '+notaAI) : notaAI; }
+    // Toast riassuntivo con colore in base al verdetto
+    var kind=(d.accettabile===false||/DANNEGG|CONTRAFF|MONTATO/i.test(d.condizione||''))?'y':(d.accettabile===true?'g':'b');
+    var head=done.length?done.join(' \u00b7 '):(d.condizione||'esaminato');
+    toast('\ud83e\udde0 '+head+(d.confidenza?' ('+d.confidenza+')':''), kind);
+    // Se la confidenza \u00e8 bassa, avvertenza esplicita
+    if(String(d.confidenza||'').toLowerCase()==='bassa' && d.avvertenza){
+      setTimeout(function(){ toast('\u26a0 '+d.avvertenza,'y'); }, 1200);
+    }
+  }, {temp:0.05, timeout:35000});
 }
 
 // ════════════════════════════════════════════════════════════════
