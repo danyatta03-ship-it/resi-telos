@@ -376,6 +376,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
+  <div style="font-size:9px;color:#444;text-align:center;margin-top:2px">scanner v9</div>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -3924,6 +3925,52 @@ var lastScanTime   = 0;
 // non deve MAI leggerlo (le scatole hanno spesso un QR accanto al barcode).
 function scanWantsQR(){ return scanMode==='find'; }
 
+// ── Motore di RINFORZO live: ZXing TRY_HARDER sui fotogrammi ─────────
+// Lo stesso decodificatore che legge le foto difficili, applicato in
+// parallelo al video: aiuta iPhone/PC sui barcode 1D piccoli o sfocati.
+var zaTimer=null, zaBusy=false, zaLast='', zaCanvas=null, zaCtx=null;
+function zxingAssistStart(videoOrSel){
+  zxingAssistStop();
+  if(typeof ZXing==='undefined'||!ZXing.BrowserMultiFormatReader) return;
+  if(scanWantsQR()) return; // per i QR ubicazione basta il motore principale
+  var hints=null;
+  try{
+    hints=new Map();
+    hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
+    var BF=ZXing.BarcodeFormat;
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[BF.EAN_13,BF.EAN_8,BF.UPC_A,BF.UPC_E,BF.CODE_128,BF.CODE_39,BF.CODE_93,BF.CODABAR,BF.ITF,BF.DATA_MATRIX]);
+  }catch(e){}
+  zaLast='';
+  zaTimer=setInterval(function(){
+    if(scanHandled){ zxingAssistStop(); return; }
+    if(zaBusy) return;
+    var vid=(typeof videoOrSel==='string')?document.querySelector(videoOrSel):videoOrSel;
+    if(!vid||vid.readyState<2||!vid.videoWidth) return;
+    zaBusy=true;
+    try{
+      if(!zaCanvas){ zaCanvas=document.createElement('canvas'); zaCtx=zaCanvas.getContext('2d',{willReadFrequently:true}); }
+      // fascia centrale (60% dell'altezza), upscalata fino a ~1000px
+      var vw=vid.videoWidth, vh=vid.videoHeight;
+      var bandH=Math.round(vh*0.6), bandY=Math.round((vh-bandH)/2);
+      var scale=Math.min(2, Math.max(1, 1000/vw));
+      zaCanvas.width=Math.round(vw*scale); zaCanvas.height=Math.round(bandH*scale);
+      zaCtx.drawImage(vid, 0, bandY, vw, bandH, 0, 0, zaCanvas.width, zaCanvas.height);
+      var reader=hints?new ZXing.BrowserMultiFormatReader(hints):new ZXing.BrowserMultiFormatReader();
+      reader.decodeFromImageUrl(zaCanvas.toDataURL('image/png')).then(function(res){
+        try{reader.reset();}catch(e){}
+        zaBusy=false;
+        var code=res&&(res.getText?res.getText():res.text)||'';
+        code=String(code).trim();
+        if(!code||scanHandled) return;
+        // accetta solo dopo DUE letture identiche consecutive (zero false letture)
+        if(code===zaLast){ onLiveDetected(code); }
+        else zaLast=code;
+      }).catch(function(){ try{reader.reset();}catch(e){} zaBusy=false; });
+    }catch(e){ zaBusy=false; }
+  },380);
+}
+function zxingAssistStop(){ if(zaTimer){clearInterval(zaTimer);zaTimer=null;} zaBusy=false; zaLast=''; }
+
 function startZxing(){
   scanHandled=false; scanBusy=false; lastScanCode=''; lastScanTime=0;
   var status=document.getElementById('scanStatus');
@@ -3955,7 +4002,7 @@ function startNativeScan(video,h5qDiv,status){
     try{ det=new window.BarcodeDetector(formats&&formats.length?{formats:formats}:undefined); }
     catch(e){ try{det=new window.BarcodeDetector();}catch(e2){ startH5q(video,h5qDiv,status); return; } }
     scanEngine='native'; scanDetector=det;
-    startCameraStream(video,status,function(){ nativeLoop(video,det); });
+    startCameraStream(video,status,function(){ nativeLoop(video,det); zxingAssistStart(video); });
   }
   try{
     if(window.BarcodeDetector.getSupportedFormats){
@@ -4035,6 +4082,7 @@ function startH5q(video,h5qDiv,status){
     function(){}
   ).then(function(){
     if(status){status.textContent='Inquadra il codice a barre nel riquadro';status.style.color='#3B9FD4';}
+    zxingAssistStart('#scanH5q video');
   }).catch(function(err){
     if(status){status.textContent='Impossibile avviare la fotocamera — digita il codice o usa 📷 Foto';status.style.color='#E05555';}
   });
@@ -4057,6 +4105,7 @@ function onLiveDetected(raw){
 }
 
 function stopZxing(){
+  zxingAssistStop();
   scanEngine=null; scanBusy=false; scanHandled=true;
   if(scanRAF){ clearTimeout(scanRAF); scanRAF=null; }
   scanDetector=null;
