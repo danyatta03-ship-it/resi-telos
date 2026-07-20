@@ -2352,15 +2352,21 @@ function swHTab(t){
 // ══════════════════════════════════════════════════
 function renderDash(){
   var arr=gra(),el=document.getElementById('dashC');if(!el)return;
-  var allData=arr.concat(Object.values(arch));
-  if(!arr.length&&!Object.values(arch).length){el.innerHTML='<div class="empty"><div class="ei">\ud83d\udcca</div><div>Nessun dato disponibile.</div></div>';return;}
+  var archArr=Object.values(arch||{});
+  // Includo anche lo STORICO TRIMESTRE (DB_TRI) per statistiche coerenti col RIEPILOGO
+  var storArr=(typeof DB_TRI!=='undefined' && DB_TRI) ? DB_TRI : [];
+  var allData=arr.concat(archArr).concat(storArr);
+  if(!allData.length){el.innerHTML='<div class="empty"><div class="ei">\ud83d\udcca</div><div>Nessun dato disponibile.</div></div>';return;}
+  // Composizione fonti dei dati (per trasparenza)
+  var dashInfo = '<div style="font-size:9px;color:var(--txt3);letter-spacing:1px;font-weight:700;margin-bottom:8px;text-align:center">FONTI: '+arr.length+' attuali \u00b7 '+archArr.length+' archiviati \u00b7 '+storArr.length+' storico trimestre</div>';
   var totV=0,nO=0,nC=0,fmap={},cmap={},vmap={},wmap={};
-  for(var i=0;i<allData.length;i++){var r=allData[i];totV+=r.prc||0;if(r.fase==='FINALE')nC++;else nO++;if(r.fase)fmap[r.fase]=(fmap[r.fase]||0)+1;if(r.causale)cmap[r.causale]=(cmap[r.causale]||0)+1;if(r.vetRic)vmap[r.vetRic]=(vmap[r.vetRic]||0)+1;if(r._who)wmap[r._who]=(wmap[r._who]||0)+1;}
+  for(var i=0;i<allData.length;i++){var r=allData[i];totV+=(parseFloat(r.prc)||0);if(r.fase==='FINALE')nC++;else nO++;if(r.fase)fmap[r.fase]=(fmap[r.fase]||0)+1;if(r.causale)cmap[r.causale]=(cmap[r.causale]||0)+1;if(r.vetRic)vmap[r.vetRic]=(vmap[r.vetRic]||0)+1;if(r._who)wmap[r._who]=(wmap[r._who]||0)+1;}
   var pal=['#3B9FD4','#3B9FD4','#5BB8E0','#E05555','#E0E0E0','#3B9FD4','#80deea'];
   function bars(map,n){var keys=Object.keys(map).sort(function(a,b){return map[b]-map[a];}).slice(0,n||7),mx=keys.length?map[keys[0]]:1,h='';for(var i=0;i<keys.length;i++){var pct=Math.round(map[keys[i]]/mx*100);h+='<div class="brow"><div class="blbl" title="'+xe(keys[i])+'">'+xe(keys[i])+'</div><div class="btrk"><div class="bfill" style="width:'+pct+'%;background:'+pal[i%pal.length]+'"></div></div><div class="bval">'+map[keys[i]]+'</div></div>';}return h;}
   var html='';
+  html+=dashInfo;
   html+='<div class="r2" style="margin-bottom:9px">';
-  html+='<div class="sc" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15)"><div class="sc-n" style="color:var(--grn);font-size:22px">'+allData.length+'</div><div class="sc-l" style="color:rgba(59,159,212,.5)">TOTALE</div></div>';
+  html+='<div class="sc" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15)"><div class="sc-n" style="color:var(--grn);font-size:22px">'+allData.length.toLocaleString('it-IT')+'</div><div class="sc-l" style="color:rgba(59,159,212,.5)">TOTALE</div></div>';
   html+='<div class="sc" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15)"><div class="sc-n" style="color:var(--blu);font-size:20px">\u20AC'+(totV>=1000?(totV/1000).toFixed(1)+'k':totV.toFixed(0))+'</div><div class="sc-l" style="color:rgba(59,159,212,.5)">VALORE</div></div>';
   html+='</div>';
   html+='<div class="r2" style="margin-bottom:9px">';
