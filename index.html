@@ -3080,13 +3080,22 @@ function bSum(src){
 }
 
 function makeFullXLSX(ar){
-  // 3-sheet: DATABASE + RIEPILOGO + LOG MODIFICHE
-  var s1=bsh(bDB(ar),CW1),s2=bsh(bSum(ar),''),s3=bsh(bLog(ar),'');
-  var wb='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="DATABASE" sheetId="1" r:id="rId1"/><sheet name="RIEPILOGO" sheetId="2" r:id="rId2"/><sheet name="LOG MODIFICHE" sheetId="3" r:id="rId3"/></sheets></workbook>';
-  var wbr='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
-  var ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
+  // 4-sheet: DATABASE (righe attuali) + RIEPILOGO + LOG MODIFICHE + STORICO TRIMESTRE (DB_TRI)
+  var stor = (typeof DB_TRI!=='undefined' && DB_TRI) ? DB_TRI : [];
+  function bStorico(){
+    var t=new Date().toLocaleDateString('it-IT');
+    var data=[];
+    data.push([{v:'STORICO TRIMESTRE - TELOS SPA - '+t+' - '+stor.length+' righe', s:2}].concat(ea(HDR.length-1)));
+    data.push(HDR.map(function(h){return{v:h,s:1};}));
+    for(var i=0;i<stor.length;i++) data.push(mkRow(stor[i]));
+    return data;
+  }
+  var s1=bsh(bDB(ar),CW1), s2=bsh(bSum(ar),''), s3=bsh(bLog(ar),''), s4=bsh(bStorico(),CW1);
+  var wb='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="DATABASE" sheetId="1" r:id="rId1"/><sheet name="RIEPILOGO" sheetId="2" r:id="rId2"/><sheet name="LOG MODIFICHE" sheetId="3" r:id="rId3"/><sheet name="STORICO TRIMESTRE" sheetId="4" r:id="rId4"/></sheets></workbook>';
+  var wbr='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/><Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+  var ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
   var rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
-  return mzip([{n:'[Content_Types].xml',d:s2u8(ct)},{n:'_rels/.rels',d:s2u8(rels)},{n:'xl/workbook.xml',d:s2u8(wb)},{n:'xl/_rels/workbook.xml.rels',d:s2u8(wbr)},{n:'xl/worksheets/sheet1.xml',d:s2u8(s1)},{n:'xl/worksheets/sheet2.xml',d:s2u8(s2)},{n:'xl/worksheets/sheet3.xml',d:s2u8(s3)},{n:'xl/styles.xml',d:s2u8(STY)}]);
+  return mzip([{n:'[Content_Types].xml',d:s2u8(ct)},{n:'_rels/.rels',d:s2u8(rels)},{n:'xl/workbook.xml',d:s2u8(wb)},{n:'xl/_rels/workbook.xml.rels',d:s2u8(wbr)},{n:'xl/worksheets/sheet1.xml',d:s2u8(s1)},{n:'xl/worksheets/sheet2.xml',d:s2u8(s2)},{n:'xl/worksheets/sheet3.xml',d:s2u8(s3)},{n:'xl/worksheets/sheet4.xml',d:s2u8(s4)},{n:'xl/styles.xml',d:s2u8(STY)}]);
 }
 
 // ══════════════════════════════════════════════════
@@ -3105,14 +3114,20 @@ function invia(ca){
 }
 
 function expCSV(){
-  var ar=gra();if(!ar.length){toast('Nessun articolo','r');return;}
-  var lines=[HDR.join(';')];
-  for(var i=0;i<ar.length;i++){
-    var r=ar[i];
-    lines.push([fd(r.datArr),r.vetRic,fd(r.datElab),r.sogg,r.pre,r.cod,r.qty,r.forn,r.prc,r.vetUsc,r.flusso,r.causale,r.anomalia,r.tipoDoc,r.fase,r.stato,fd(r.datSta),r.rma,r.contatto,fd(r.datCon),r.agente,r.docRic,fd(r.datDoc),r.note,r.photo||'',r._who||'',r.motivoNR||'']
+  var ar=gra();
+  var stor=(typeof DB_TRI!=='undefined' && DB_TRI) ? DB_TRI : [];
+  if(!ar.length && !stor.length){toast('Nessun articolo','r');return;}
+  // Colonna ORIGINE per distinguere DATABASE (righe attuali/archivio) dallo STORICO trimestre
+  var lines=[ ['ORIGINE'].concat(HDR).join(';') ];
+  function pushRow(r, tag){
+    lines.push([tag, fd(r.datArr),r.vetRic,fd(r.datElab),r.sogg,r.pre,r.cod,r.qty,r.forn,r.prc,r.vetUsc,r.flusso,r.causale,r.anomalia,r.tipoDoc,r.fase,r.stato,fd(r.datSta),r.rma,r.contatto,fd(r.datCon),r.agente,r.docRic,fd(r.datDoc),r.note,r.photo||'',r._who||'',r.motivoNR||'']
       .map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(';'));
   }
-  dlFb(new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}), 'Resi_'+new Date().toISOString().slice(0,10)+'.csv', function(){toast('CSV generato','b');});
+  for(var i=0;i<ar.length;i++)   pushRow(ar[i],   'ATTUALE');
+  for(var j=0;j<stor.length;j++) pushRow(stor[j], 'STORICO');
+  dlFb(new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}), 'Resi_'+new Date().toISOString().slice(0,10)+'.csv', function(){
+    toast('\u2713 CSV: '+ar.length+' attuali + '+stor.length+' storico','b');
+  });
 }
 
 // Esporta SOLO la vista corrente (filtri + ricerca + "solo fermi" attivi)
