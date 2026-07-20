@@ -826,9 +826,10 @@ select option {
   </div>
 
   <div id="hPanDB" style="display:none">
-    <div style="font-size:11px;color:var(--txt2);margin-bottom:8px;line-height:1.6">
-      Database 1° Trimestre 2026 · <strong style="color:var(--grn)">3.986 righe</strong>
+    <div style="font-size:11px;color:var(--txt2);margin-bottom:8px;line-height:1.6" id="dbHead">
+      Database Trimestre · <strong style="color:var(--grn)" id="dbCount">— righe</strong>
     </div>
+    <script>(function updDbHead(){var el=document.getElementById('dbCount');if(el && typeof DB_TRI!=='undefined')el.textContent=(DB_TRI.length||0).toLocaleString('it-IT')+' righe';})();</script>
     <!-- Ricerca globale -->
     <input class="srch" id="dbSrch" placeholder="🔍 Cerca in tutte le colonne..." oninput="renderDB(1)" style="margin-bottom:7px;font-size:14px;width:100%;display:block;box-sizing:border-box">
     <!-- Filtri riga 1 -->
