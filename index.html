@@ -687,6 +687,7 @@ select option {
         style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px;font-size:20px;font-weight:800;border-radius:8px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:center">
       <button onclick="psQtyAdj(1)" style="width:44px;height:44px;background:#1a1a1a;color:#fff;border:1px solid #333;border-radius:8px;font-size:20px;font-weight:700;cursor:pointer;-webkit-appearance:none;flex-shrink:0">+</button>
     </div>
+    <div style="font-size:10px;color:#3B9FD4;margin-bottom:10px;text-align:center">Il codice \u00e8 gi\u00e0 nel campo CODICE \u2713</div>
     <button onclick="confirmScan2()" style="width:100%;background:#003820;color:#3B9FD4;border:2px solid #3B9FD4;padding:14px;font-size:16px;font-weight:700;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:8px">
       &#10003; CONFERMA
     </button>
@@ -4140,12 +4141,16 @@ function handleScanResult(code){
     toast('Non è un QR ubicazione: '+code,'y');
     scanMode='form';scanLocId=null;return;
   }
-  // Modalita normale: compila form
+  // Modalita normale: il numero letto viene SUBITO trascritto nel campo CODICE
   var mem3=CODE_MEM[code];
   if(mem3){
     fillFormWithCode(code,mem3.pre||'',mem3.qty||1);
     toast('\ud83d\udcf8 '+code+(mem3.pre?' \u00b7 '+mem3.pre:'')+'  (memoria)','b');
   }else{
+    fillFormWithCode(code,'',1);
+    toast('\ud83d\udcf8 '+code,'b');
+    // Il popup chiede solo PRE e quantit\u00e0: il codice \u00e8 gi\u00e0 nel campo
+    // e ci resta anche se il popup viene chiuso senza confermare
     showPostScanPopup(code,function(c,p,q){fillFormWithCode(c,p,q);toast('\ud83d\udcf8 '+c+(p?' \u00b7 '+p:''),'b');});
   }
 }
