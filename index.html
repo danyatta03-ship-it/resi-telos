@@ -376,13 +376,14 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <div style="font-size:9px;color:#444;text-align:center;margin-top:2px">scanner v9</div>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v11 · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
     <button onclick="scanManualConfirm()" style="background:rgba(59,159,212,.1);color:#3B9FD4;border:1px solid rgba(59,159,212,.3);border-radius:8px;padding:0 16px;font-size:14px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">OK</button>
   </div>
   <div style="display:flex;gap:8px;margin-top:10px;width:100%;max-width:360px">
+    <button id="rapidBtn" onclick="toggleScanRapid()" style="flex:1;background:rgba(0,230,118,.08);color:var(--grn);border:1px solid rgba(0,230,118,.35);border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">⚡ Raffica: OFF</button>
     <button onclick="setScanModeUbica()" id="ubicaBtn" style="flex:1;background:rgba(59,159,212,.12);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">&#128230; Ubica</button>
     <button onclick="scanFotoFallback()" style="flex:1;background:rgba(59,159,212,.08);color:#3B9FD4;border:1px solid rgba(59,159,212,.3);border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">&#128247; Foto</button>
     <button onclick="closeScan()" style="flex:1;background:none;color:#555;border:1px solid #333;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">&#10005; Chiudi</button>
@@ -816,6 +817,7 @@ select option {
     <button class="htab-btn" id="hTabDB" onclick="swHTab('db')">🗄 TRIMESTRE</button>
     <button class="htab-btn" id="hTabForn" onclick="swHTab('forn')">&#128230; LOGISTICA</button>
     <button class="htab-btn" id="hTabRie" onclick="swHTab('rie')">📈 RIEPILOGO</button>
+    <button class="htab-btn" id="hTabGal" onclick="swHTab('gal')">🖼 GALLERIA</button>
     <button class="htab-btn" id="hTabExp" onclick="swHTab('exp')">💾 EXPORT</button>
   </div>
 
@@ -856,6 +858,10 @@ select option {
   </div>
 
   <div id="hPanForn" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v11</b></div>
+      <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
+    </div>
   <!-- Sub-tabs LOGISTICA -->
   <div style="display:flex;gap:6px;margin-bottom:10px">
     <button onclick="swLogTab('corrieri')" id="logTabC"
@@ -910,6 +916,15 @@ select option {
       </select>
     </div>
     <div id="rieContent"></div>
+  </div>
+
+  <div id="hPanGal" style="display:none">
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input id="galSrch" oninput="renderGallery()" placeholder="🔍 Cerca codice, cliente, data..." style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 12px;font-size:13px;border-radius:8px;outline:none;-webkit-appearance:none;font-family:inherit">
+      <button onclick="clearGallery()" class="sb sr" style="padding:9px 11px;font-size:11px">Svuota</button>
+    </div>
+    <div style="font-size:10px;color:var(--txt3);margin-bottom:8px;line-height:1.5">Tutte le foto scattate restano qui salvate sul telefono, sfogliabili per data. Toccale per aprirle in grande e scaricarle.</div>
+    <div id="galList"></div>
   </div>
 
   <div id="hPanExp" style="display:none">
@@ -1028,7 +1043,7 @@ var AUTO_STATO = {
   'FINALE':'NOTA CREDITO'
 };
 
-var HDR = ['Data Listato','Vettore Ricevimento','Data Elaborazione','Soggetto','Pre','Codice','Quantita','Fornitore','Prezzo','Vettore Uscita','Tipo flusso','Causale','Anomalia','Tipo documento','FASE','STATO','Data stato','RMA','Contatto','Data contatto','Agente','Doc Ricevuti','Data Ric.Doc','Note','Foto','Inserito da','Motivo NR'];
+var HDR = ['Data Listato','Vettore Ricevimento','Data Elaborazione','Soggetto','Pre','Codice','Quantita','Fornitore','Prezzo','Vettore Uscita','Tipo flusso','Causale','Anomalia','Tipo documento','FASE','STATO','Data stato','RMA','Contatto','Data contatto','Agente','Doc Ricevuti','Data Ric.Doc','Note','Foto','Inserito da','Motivo NR','Chiuso da','Data chiusura'];
 var CAULIST = ['ERRATO ORDINE','CARCASSA','GARANZIA','GARANZIA MANODOPERA','GARANZIA DANNI E MANODOPERA','ERRATO CONFEZIONAMENTO','DANNEGGIATO','PERVENUTO MONTATO AL CLIENTE',"QUANTITA' MANCANTE",'RIFIUTATO FORNITORE','INCOMPLETO','RNC FILIALE IN TRANSITO','TRR/01D','DIVERSO DA OE/INCOMPATIBILE','SOSTITUZIONE/RIPARAZIONE','PROFORMA'];
 
 // ══════════════════════════════════════════════════
@@ -1463,17 +1478,30 @@ function onSogg(val) {
     pickSogg(foundCod, nome);
     return;
   }
-  // Name search - show best match chip
-  var best=null;
+  // Name search - dropdown con più match
+  var matches=[];
+  var qUp=val;
   for(var k in CLI_DATA){
     var nm=(CLI_DATA[k]||'').split('|')[0]||'';
-    if(nm.toUpperCase().indexOf(val)>=0){
-      best={cod:k,nm:nm.trim(),fil:(CLI_DATA[k]||'').split('|')[1]||''};break;
+    var nmU=nm.toUpperCase();
+    if(nmU.indexOf(qUp)>=0){
+      matches.push({cod:k, nm:nm.trim(), fil:(CLI_DATA[k]||'').split('|')[1]||'', starts:nmU.indexOf(qUp)===0});
+      if(matches.length>=40)break;
     }
   }
-  if(!best){ tip.style.display='none'; return; }
-  var bvet=CLI_FIL&&CLI_FIL[best.fil]?CLI_FIL[best.fil]:'';
-  showSoggChip(best.cod, best.nm, bvet);
+  if(!matches.length){ tip.style.display='none'; return; }
+  matches.sort(function(a,b){ if(a.starts!==b.starts) return a.starts?-1:1; return a.nm.localeCompare(b.nm); });
+  var top=matches.slice(0,6);
+  var html='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:5px">'+matches.length+(matches.length>=40?'+':'')+' RISULTATI · TOCCA IL CLIENTE</div>';
+  for(var i=0;i<top.length;i++){
+    var m=top[i], mvet=CLI_FIL&&CLI_FIL[m.fil]?CLI_FIL[m.fil]:'';
+    html+='<div onclick="pickSogg(\''+xe(m.cod)+'\',\''+xe(m.nm).replace(/\'/g,"\\'")+'\')" style="padding:8px 10px;border-radius:6px;background:#0f1a24;border:1px solid #1f2f3f;margin-bottom:5px;cursor:pointer">'+
+      '<div style="font-size:12px;font-weight:700;color:#e8e8e8">'+xe(m.nm)+'</div>'+
+      '<div style="font-size:10px;color:#3B9FD4;font-family:monospace">'+xe(m.cod)+(mvet?' · '+xe(mvet):'')+(m.fil?' · Fil.'+xe(m.fil):'')+'</div></div>';
+  }
+  tip.innerHTML=html; tip.style.display='block';
+  // se c'è solo un match che inizia con la query, precompilo il primo (comodo per tastiera)
+  if(top.length===1||(top[0].starts && val.length>=Math.min(4,top[0].nm.length))) showSoggChip(top[0].cod, top[0].nm, CLI_FIL&&CLI_FIL[top[0].fil]?CLI_FIL[top[0].fil]:'');
 }
 
 function showSoggChip(cod, nome, vet){
@@ -2003,7 +2031,10 @@ function advFase(key,fase){
     toast('Ruolo '+ROLE+' non autorizzato a portare a '+fase,'r');return;
   }
   var auto=AUTO_STATO[fase]||'';
-  sendMsg({type:'update',key:key,changes:{fase:fase,stato:auto,datSta:new Date().toISOString().slice(0,10),_lastEdit:deviceName,_role:ROLE}});
+  var ch={fase:fase,stato:auto,datSta:new Date().toISOString().slice(0,10),_lastEdit:deviceName,_role:ROLE};
+  // Firma operatore quando l'articolo entra in FINALE (per contestazioni interne)
+  if(fase==='FINALE'&&!r._finalBy){ ch._finalBy=deviceName; ch._finalTs=Date.now(); ch._finalRole=ROLE; }
+  sendMsg({type:'update',key:key,changes:ch});
   // If FINALE reached, offer to email fornitore
   if(fase==='FINALE') setTimeout(function(){ checkAndEmailFornitore(r); },600);
   // If MAGAZZINO → auto PRESA LOGISTICA: offer mail
@@ -2254,11 +2285,12 @@ function remDone(){try{localStorage.setItem('tremday',new Date().toISOString().s
 // STORICO TABS
 // ══════════════════════════════════════════════════
 function swHTab(t){
-  var P={dash:'hPanDash',db:'hPanDB',forn:'hPanForn',rie:'hPanRie',exp:'hPanExp'};
-  var B={dash:'hTabDash',db:'hTabDB',forn:'hTabForn',rie:'hTabRie',exp:'hTabExp'};
+  var P={dash:'hPanDash',db:'hPanDB',forn:'hPanForn',rie:'hPanRie',gal:'hPanGal',exp:'hPanExp'};
+  var B={dash:'hTabDash',db:'hTabDB',forn:'hTabForn',rie:'hTabRie',gal:'hTabGal',exp:'hTabExp'};
   for(var k in P){var p=document.getElementById(P[k]),b=document.getElementById(B[k]);if(!p||!b)continue;if(k===t){p.style.display='';b.classList.add('on');}else{p.style.display='none';b.classList.remove('on');}}
   if(t==='dash'){renderDash();renderDashExtra();showTurnoInfo();}
   if(t==='db')renderDB(1);
+  if(t==='gal')renderGallery();
   if(t==='forn'){setTimeout(function(){swLogTab('corrieri');},50);}
   if(t==='exp')renderHist();
   if(t==='rie')renderRiepilogo();
@@ -2507,7 +2539,7 @@ function dlRow2(r){
 
 function mkRow(r){
   var s=fSt(r.flusso||'STANDARD');
-  return [{v:fd(r.datArr),s:s},{v:r.vetRic,s:s},{v:fd(r.datElab),s:s},{v:r.sogg,s:s},{v:r.pre,s:s},{v:r.cod,s:s},{v:parseInt(r.qty)||1,s:s},{v:r.forn,s:s},{v:parseFloat(r.prc)||0,s:s},{v:r.vetUsc,s:s},{v:r.flusso,s:s},{v:r.causale,s:s},{v:r.anomalia,s:s},{v:r.tipoDoc,s:s},{v:r.fase,s:s},{v:r.stato,s:s},{v:fd(r.datSta),s:s},{v:r.rma,s:s},{v:r.contatto,s:s},{v:fd(r.datCon),s:s},{v:r.agente,s:s},{v:r.docRic,s:s},{v:fd(r.datDoc),s:s},{v:r.note,s:s},{v:r.photo||'',s:s},{v:r._who||'',s:s},{v:r.motivoNR||'',s:s}];
+  return [{v:fd(r.datArr),s:s},{v:r.vetRic,s:s},{v:fd(r.datElab),s:s},{v:r.sogg,s:s},{v:r.pre,s:s},{v:r.cod,s:s},{v:parseInt(r.qty)||1,s:s},{v:r.forn,s:s},{v:parseFloat(r.prc)||0,s:s},{v:r.vetUsc,s:s},{v:r.flusso,s:s},{v:r.causale,s:s},{v:r.anomalia,s:s},{v:r.tipoDoc,s:s},{v:r.fase,s:s},{v:r.stato,s:s},{v:fd(r.datSta),s:s},{v:r.rma,s:s},{v:r.contatto,s:s},{v:fd(r.datCon),s:s},{v:r.agente,s:s},{v:r.docRic,s:s},{v:fd(r.datDoc),s:s},{v:r.note,s:s},{v:r.photo||'',s:s},{v:r._who||'',s:s},{v:r.motivoNR||'',s:s},{v:r._finalBy||'',s:s},{v:r._finalTs?new Date(r._finalTs).toLocaleString('it-IT'):'',s:s}];
 }
 
 // ══════════════════════════════════════════════════
@@ -2668,6 +2700,7 @@ function delSup(i){if(!confirm('Eliminare?'))return;supDb.splice(i,1);try{localS
 // ══════════════════════════════════════════════════
 // EDIT SHEET
 // ══════════════════════════════════════════════════
+// duplicaRow \u00e8 definita pi\u00f9 sotto (setTimeout per attendere il render del tab)
 function editRow(key){
   var r=rows[key];if(!r){toast('Non trovato','r');return;}
   if(!canEditRow(r)){toast('Non sei autorizzato a modificare questo articolo','r');return;}
@@ -2712,6 +2745,7 @@ function editRow(key){
   if(r.photoThumb)html+='<img src="'+xe(r.photoThumb)+'" style="max-width:100%;border-radius:8px;border:1px solid var(--brd2);margin-bottom:7px;display:block">';
   if(r.photo)html+='<div style="font-size:10px;color:var(--grn);margin-bottom:9px;font-family:monospace">\ud83d\udcf7 '+xe(r.photo)+'</div>';
 
+  html+='<button onclick="duplicaRow(\''+key+'\')" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1.5px solid #3B9FD4;padding:11px;font-size:13px;font-weight:700;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:8px">\ud83d\udccb Duplica in nuova riga</button>';
   html+='<button onclick="svEdit(\''+key+'\')" style="width:100%;background:linear-gradient(135deg,#002010,#004020);color:var(--grn);border:1px solid rgba(59,159,212,.3);padding:13px;font-size:15px;font-weight:700;border-radius:var(--rad);cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:4px">✓ SALVA MODIFICHE</button>';
   html+='<button onclick="csht()" style="width:100%;background:none;color:var(--txt3);border:none;padding:11px;font-size:13px;cursor:pointer;font-family:inherit">Annulla</button>';
 
@@ -2807,6 +2841,8 @@ function handlePhoto(input){
           tc.getContext('2d').drawImage(img,0,0,tc.width,tc.height);
           pendThumb=tc.toDataURL('image/jpeg',0.55);
         }
+        // Galleria interna: salvo la foto piena in IndexedDB
+        try{ idbSet('gal:'+fn, {ts:Date.now(), name:fn, dataUrl:cv.toDataURL('image/jpeg',0.85), sta:staVal||''}); }catch(_){ }
         cv.toBlob(function(blob){
           pendPhotos.push({name:fn,b64:b64,blob:blob});
           pendName=pendPhotos[0].name; pendBlob=pendPhotos[0].blob; pendPhotoB64=pendPhotos[0].b64; // primo = compat
@@ -2852,6 +2888,100 @@ function pdlFallback(blob,fn){
   toast('Foto scaricata','b');
 }
 function initPF(){var sv='';try{sv=localStorage.getItem('tpf')||'';}catch(e){}var el=document.getElementById('pfi');if(sv&&el){el.textContent='\ud83d\udcc1 '+sv;el.style.color='var(--yel)';}}
+// ══════════════════════════════════════════════════
+// GALLERIA BOLLE — foto salvate in IndexedDB, sfogliabili per data
+// ══════════════════════════════════════════════════
+function idbListGal(cb){
+  if(!IDB){ cb([]); return; }
+  try{
+    var out=[]; var tx=IDB.transaction('kv','readonly'); var st=tx.objectStore('kv');
+    var rq=st.openCursor();
+    rq.onsuccess=function(e){
+      var c=e.target.result;
+      if(!c){ cb(out); return; }
+      if(String(c.key).indexOf('gal:')===0){ try{ var v=c.value; if(v&&v.dataUrl) out.push({key:c.key, ts:v.ts||0, name:v.name||c.key.slice(4), url:v.dataUrl, sta:v.sta||''}); }catch(_){} }
+      c.continue();
+    };
+    rq.onerror=function(){ cb(out); };
+  }catch(e){ cb([]); }
+}
+
+function renderGallery(){
+  var el=document.getElementById('galList'); if(!el) return;
+  el.innerHTML='<div style="text-align:center;padding:20px;color:#555;font-size:12px">Caricamento…</div>';
+  var q=((document.getElementById('galSrch')||{}).value||'').trim().toUpperCase();
+  idbListGal(function(items){
+    if(q) items=items.filter(function(x){ return x.name.toUpperCase().indexOf(q)>=0; });
+    items.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    if(!items.length){ el.innerHTML='<div style="text-align:center;padding:26px;color:#555;font-size:12px">'+(q?'Nessun risultato':'Nessuna foto salvata: quando scatti dalla scheda inserimento le foto compaiono qui.')+'</div>'; return; }
+    // Raggruppo per giorno
+    var groups={}; for(var i=0;i<items.length;i++){ var d=new Date(items[i].ts||0); var k=d.toLocaleDateString('it-IT'); (groups[k]=groups[k]||[]).push(items[i]); }
+    var keys=Object.keys(groups); keys.sort(function(a,b){ return new Date(groups[b][0].ts||0)-new Date(groups[a][0].ts||0); });
+    var html='';
+    for(var gi=0;gi<keys.length;gi++){
+      var day=keys[gi], list=groups[day];
+      html+='<div style="font-size:10px;color:#3B9FD4;letter-spacing:1px;font-weight:700;margin:12px 0 6px">'+xe(day)+' · '+list.length+' foto</div>';
+      html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px">';
+      for(var j=0;j<list.length;j++){
+        var it=list[j];
+        html+='<div onclick="galOpen(\''+xe(it.key)+'\')" style="cursor:pointer;background:#0f0f0f;border:1px solid #1f1f1f;border-radius:6px;overflow:hidden;aspect-ratio:1;position:relative">'+
+          '<img src="'+xe(it.url)+'" style="width:100%;height:100%;object-fit:cover;display:block">'+
+          (it.sta&&it.sta.indexOf('ANOMALIA')>=0?'<div style="position:absolute;top:2px;right:2px;background:rgba(224,85,85,.85);color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">!</div>':'')+
+          '</div>';
+      }
+      html+='</div>';
+    }
+    el.innerHTML=html;
+  });
+}
+
+function galOpen(key){
+  idbGet(key).then(function(v){
+    if(!v||!v.dataUrl){ toast('Foto non trovata','r'); return; }
+    var ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:1500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;gap:10px';
+    ov.innerHTML='<img src="'+v.dataUrl+'" style="max-width:100%;max-height:78vh;border-radius:8px">'+
+      '<div style="font-size:10px;color:#888;font-family:monospace;text-align:center;word-break:break-all;max-width:400px">'+xe(v.name||'')+'</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<a href="'+v.dataUrl+'" download="'+xe(v.name||'foto.jpg')+'" style="background:#003820;color:#3B9FD4;border:1px solid #3B9FD4;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">⬇ Scarica</a>'+
+        '<button onclick="galDelete(\''+xe(key)+'\',this)" style="background:rgba(224,85,85,.1);color:#E05555;border:1px solid rgba(224,85,85,.4);padding:10px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;-webkit-appearance:none">✕ Elimina</button>'+
+        '<button onclick="this.parentNode.parentNode.remove()" style="background:none;color:#fff;border:1px solid #333;padding:10px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;-webkit-appearance:none">Chiudi</button>'+
+      '</div>';
+    document.body.appendChild(ov);
+  });
+}
+
+function galDelete(key, btn){
+  if(!confirm('Eliminare questa foto?')) return;
+  idbDel(key).then(function(){
+    var ov=btn.parentNode.parentNode; if(ov&&ov.parentNode) ov.parentNode.removeChild(ov);
+    renderGallery(); toast('Foto eliminata','y');
+  });
+}
+
+function clearGallery(){
+  if(!confirm('Svuotare la galleria? Tutte le foto salvate verranno eliminate (i dati degli articoli restano).')) return;
+  idbListGal(function(items){
+    var jobs=items.map(function(i){ return idbDel(i.key); });
+    Promise.all(jobs).then(function(){ renderGallery(); toast('Galleria svuotata','y'); });
+  });
+}
+
+function forceAppUpdate(){
+  if(!confirm('Aggiornare l\'app? La pagina verrà ricaricata scaricando l\'ultima versione dal server.'))return;
+  toast('\ud83d\udd04 Aggiornamento in corso...','b');
+  var jobs=[];
+  try{ if('serviceWorker' in navigator){
+    jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister();}));}));
+  } }catch(e){}
+  try{ if('caches' in window){
+    jobs.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}));
+  } }catch(e){}
+  Promise.all(jobs).then(function(){
+    setTimeout(function(){ location.reload(true); }, 400);
+  }).catch(function(){ location.reload(true); });
+}
+
 function pickPD(){
   if(!canDir){ toast('Su questo dispositivo la scelta cartella non \u00e8 disponibile: le foto restano nella riga e nell\u2019app Foto','y'); return; }
   window.showDirectoryPicker({mode:'readwrite'}).then(function(h){photoDH=h;try{localStorage.setItem('tpf',h.name);}catch(e){}var el=document.getElementById('pfi');if(el){el.innerHTML='\ud83d\udcc1 Salvo anche in: <b>'+xe(h.name)+'</b>';el.className='sinfo sig';}toast('Cartella: '+h.name,'b');}).catch(function(e){if(e.name!=='AbortError')toast('Errore','r');});
@@ -3975,6 +4105,22 @@ function zxingAssistStart(videoOrSel){
 }
 function zxingAssistStop(){ if(zaTimer){clearInterval(zaTimer);zaTimer=null;} zaBusy=false; zaLast=''; }
 
+// ── Modalità RAFFICA: dopo la lettura, se i campi comuni del form sono
+// già compilati, la riga viene aggiunta da sola e lo scanner resta aperto
+var scanRapid=false, scanRapidCount=0;
+function toggleScanRapid(){
+  scanRapid=!scanRapid; scanRapidCount=0;
+  var b=document.getElementById('rapidBtn');
+  if(b){ b.textContent=scanRapid?('⚡ Raffica: ON  (0)'):'⚡ Raffica: OFF'; b.style.background=scanRapid?'rgba(0,230,118,.22)':'rgba(0,230,118,.08)'; }
+  var st=document.getElementById('scanStatus');
+  if(st) st.textContent=scanRapid?'Modalità raffica: compila prima i campi comuni sopra':'';
+  toast(scanRapid?'⚡ Raffica ON: inserimento automatico':'⚡ Raffica OFF','b');
+}
+function rapidBadgeUpdate(){
+  var b=document.getElementById('rapidBtn');
+  if(b&&scanRapid) b.textContent='⚡ Raffica: ON  ('+scanRapidCount+')';
+}
+
 function startZxing(){
   scanHandled=false; scanBusy=false; lastScanCode=''; lastScanTime=0;
   var status=document.getElementById('scanStatus');
@@ -4069,7 +4215,7 @@ function startH5q(video,h5qDiv,status){
   var cfg={
     fps:10,
     // Riquadro di lettura ampio: quasi tutta la larghezza, fascia alta al centro
-    qrbox:function(w,h){ return {width:Math.floor(w*0.94), height:Math.floor(Math.max(Math.min(h*0.5,w*0.6),120))}; },
+    qrbox:function(w,h){ var W=Math.max(Math.floor(w*0.94),60); var H=Math.max(Math.floor(Math.min(h*0.5,w*0.6)),60); return {width:W,height:H}; },
     videoConstraints:{facingMode:'environment', width:{ideal:1920}, height:{ideal:1080}},
     experimentalFeatures:{useBarCodeDetectorIfSupported:true}
   };
@@ -4157,7 +4303,15 @@ function scanManualConfirm(){
 // ── Central handler ──────────────────────────────────────
 function handleScanResult(code){
   var mode=scanMode, locId=scanLocId; // salvati PRIMA di closeScan, che resetta scanMode a 'form'
-  closeScan();
+  // In raffica lo scanner resta APERTO tra un articolo e l'altro (niente closeScan+openScan)
+  if(scanRapid && mode==='form'){
+    // Cooldown 1s: il motore continua a inquadrare lo stesso codice → non riprocessarlo
+    lastScanCode=code; lastScanTime=Date.now();
+    zaLast='';
+    setTimeout(function(){ scanHandled=false; }, 1000);
+  } else {
+    closeScan();
+  }
   code=code.trim().toUpperCase();
   // QR ubicazione
   if(code.indexOf('LOC:')===0){
@@ -4199,12 +4353,30 @@ function handleScanResult(code){
   if(mem3){
     fillFormWithCode(code,mem3.pre||'',mem3.qty||1);
     toast('\ud83d\udcf8 '+code+(mem3.pre?' \u00b7 '+mem3.pre:'')+'  (memoria)','b');
+  }else if(scanRapid){
+    // In raffica non apriamo il popup: PRE e Qt\u00e0 restano quelli correnti
+    fillFormWithCode(code,'',1);
+    toast('\ud83d\udcf8 '+code,'b');
   }else{
     fillFormWithCode(code,'',1);
     toast('\ud83d\udcf8 '+code,'b');
-    // Il popup chiede solo PRE e quantit\u00e0: il codice \u00e8 gi\u00e0 nel campo
-    // e ci resta anche se il popup viene chiuso senza confermare
     showPostScanPopup(code,function(c,p,q){fillFormWithCode(c,p,q);toast('\ud83d\udcf8 '+c+(p?' \u00b7 '+p:''),'b');});
+  }
+  // Raffica: tenta l'inserimento; lo scanner resta aperto e pronto per il prossimo codice
+  if(scanRapid){
+    setTimeout(function(){
+      var beforeN=Object.keys(rows).length;
+      try{ addRow(); }catch(e){}
+      if(Object.keys(rows).length>beforeN){
+        scanRapidCount++;
+        rapidBadgeUpdate();
+        var st=document.getElementById('scanStatus');
+        if(st){ st.textContent='\u2713 '+scanRapidCount+' articoli in questa raffica \u00b7 pronto per il prossimo'; st.style.color='var(--grn)'; }
+      } else {
+        scanRapid=false; closeScan();
+        toast('\u26a0 Compila i campi comuni (data, vettore, causale, ecc.) e riattiva Raffica','y');
+      }
+    },250);
   }
 }
 
@@ -4614,7 +4786,11 @@ function duplicaRow(key){
       var staEl=document.getElementById('cSta');
       if(staEl&&r.stato){staEl.value=r.stato;}
     },150);
-    toast('\u{1F4CB} Articolo duplicato nel form','b');
+    // Chiudo la scheda modifica e vai sul campo CODICE (che è vuoto per una nuova scansione)
+    csht();
+    var cc=document.getElementById('cCod');
+    if(cc){ cc.value=''; try{cc.focus();}catch(_){}; try{cc.scrollIntoView({behavior:'smooth',block:'center'});}catch(_){} }
+    toast('\u{1F4CB} Copia di '+(r.cod||'')+' · scansiona il nuovo codice','b');
   },200);
 }
 
