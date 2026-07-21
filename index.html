@@ -380,7 +380,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v28 · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v29 · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -492,13 +492,11 @@ select option {
         <div class="f"><label><span>CAUSALE <span class="req">✱</span></span></label>
           <select id="cCau" onchange="onCauChange(this)">
             <option value="">—</option>
-            <option>ERRATO ORDINE</option><option>CARCASSA</option><option>GARANZIA</option><option>GARANZIA MANODOPERA</option><option>GARANZIA DANNI E MANODOPERA</option><option>ERRATO CONFEZIONAMENTO</option><option>DANNEGGIATO</option><option>PERVENUTO MONTATO AL CLIENTE</option><option>QUANTITA' MANCANTE</option><option>RIFIUTATO FORNITORE</option><option>INCOMPLETO</option><option>RNC FILIALE IN TRANSITO</option><option>TRR/01D</option><option>DIVERSO DA OE/INCOMPATIBILE</option><option>SOSTITUZIONE/RIPARAZIONE</option><option>PROFORMA</option>
           </select>
         </div>
-        <div class="f"><label style="display:flex;align-items:center;justify-content:space-between"><span>ANOMALIA</span><button type="button" onclick="analyzeAnomalia()" title="L'AI legge l'anomalia dalla foto del pezzo" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">✨ AI da foto</button></label>
+        <div class="f"><label style="display:flex;align-items:center;justify-content:space-between"><span>ANOMALIA <span style="font-size:9px;color:var(--txt3);font-weight:400" id="cAnoHint">(scegli prima la causale)</span></span><button type="button" onclick="analyzeAnomalia()" title="L'AI legge l'anomalia dalla foto del pezzo" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">✨ AI da foto</button></label>
           <select id="cAno">
             <option value="">— Nessuna —</option>
-            <option>MATERIALE ORIGINALE</option><option>BOLLA MANCANTE</option><option>CAUSALE MANCANTE</option><option>DOCUMENTO INCOMPLETO</option><option>BATTERIA ESAUSTA</option><option>QUANTITA' DISCORDANTE</option><option>PEZZO DANNEGGIATO</option><option>MONTATO E SPORCO</option><option>SCATOLA OG MANCANTE</option><option>NON ADDEBITATO/A</option><option>PERVENUTO APERTO (LIQUIDI)</option><option>ARTICOLO MAI PERVENUTO</option><option>GARANZIA_MANODOPERA + DANNI</option><option>MANCA RICEVUTA</option><option>MANCA RELAZIONE</option><option>MANCA FATTURA A COSTO 0</option><option>MANCA LIBRETTO</option><option>MANCA MODULO</option><option>DIFETTO NON VALIDO</option><option>FUORI GARANZIA</option><option>NO GARANZIA OE</option><option>ATTESA COMUNICAZIONE FORNITORE</option>
           </select>
         </div>
       </div>
@@ -864,7 +862,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v28</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v29</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -876,6 +874,10 @@ select option {
     <button onclick="swLogTab('fornitori')" id="logTabF"
       style="flex:1;background:#111;color:#999;border:1px solid #2a2a2a;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">
       &#127981; Fornitori
+    </button>
+    <button onclick="swLogTab('regole')" id="logTabR"
+      style="flex:1;background:#111;color:#999;border:1px solid #2a2a2a;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">
+      &#128203; Regole
     </button>
   </div>
 
@@ -898,6 +900,17 @@ select option {
     <input id="fornSearch" oninput="renderFornitori()" placeholder="&#128269; Cerca fornitore..."
       style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 12px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">
     <div id="fornList"></div>
+  </div>
+
+  <!-- REGOLE RESO panel (v29) -->
+  <div id="logPanR" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:#3B9FD4">REGOLE RESO FORNITORE</div>
+      <div style="font-size:10px;color:var(--txt3)"><span id="ruleCount">0</span> in anagrafica</div>
+    </div>
+    <input id="ruleSearch" oninput="renderRules()" placeholder="&#128269; Cerca fornitore per vedere le sue regole..."
+      style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 12px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">
+    <div id="ruleList"></div>
   </div>
 
 </div>
@@ -972,10 +985,6 @@ select option {
   </div>
 </div>
 
-
-  <div id="globalSearchRes" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#111;border:1px solid #2a2a2a;border-radius:10px"></div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <div class="ov" id="ov" onclick="csht(event)">
@@ -1009,10 +1018,83 @@ var ROLE_PERMS = {
 
 var STATI = {
   'RICEVIMENTO':['DA GESTIRE \u23f3','ANOMALIA RICEVIMENTO','STALLO RICEVIMENTO'],
-  'UFFICIO RESI':['RICHIESTA ATTESA APPROVAZIONE \u23f3','RICHIESTA \u2705 - ACCUMULARE','RICHIESTA \u2705 - FARE RNC (FILIALE)','RNC \ud83d\udd13 - ACCUMULARE','RNC \u2705 - FARE RICHIESTA (FILIALE)','STALLO UFFICIO','ANOMALIA UFFICIO'],
+  'UFFICIO RESI':[
+    'RICHIESTA ATTESA APPROVAZIONE \u23f3',
+    'RICHIESTA \u2705 - ACCUMULARE',
+    'RICHIESTA \u2705 - FARE RNC (FILIALE)',
+    'RNC \ud83d\udd13 - ACCUMULARE (SOLO DDT SENZA RIF AQ)',
+    'RNC \u2705 - FARE RICHIESTA (FILIALE)',
+    'STALLO UFFICIO',
+    'ANOMALIA UFFICIO'
+  ],
   'MAGAZZINO':['CHIUDERE','PRESA LOGISTICA','ANOMALIA MAGAZZINO','STALLO MAGAZZINO'],
   'FINALE':['NOTA CREDITO','NON RENDIBILE','TRASFERITO FILIALE','ROTTAMATO','COMMERCIALE','VENDUTO','REVISIONATO','RIFIUTATO CLIENTE','ADDEBITATO VETTORE','STOCK MAGAZZINO']
 };
+
+// Sotto-categorie per CAUSALE \u2014 mutuamente esclusive.
+// Se si sceglie GARANZIA appaiono SOLO le sotto-cat garanzia,
+// se si sceglie GARANZIA MANODOPERA / DANNI appaiono SOLO le sue,
+// se si sceglie qualsiasi altra causale appaiono le anomalie generiche.
+var CAU_SUBS = {
+  'GARANZIA': [
+    'BOLLA MANCANTE',
+    'MANCA MODULO',
+    'DIFETTO NON VALIDO',
+    'MANCA LIBRETTO',
+    'MANCA MODULO E LIBRETTO',
+    'MANCA DIAGNOSI',
+    'FUORI GARANZIA',
+    'MANCA RICEVUTA O RELAZIONE',
+    'MANCA MODULO, LIBRETTO, RICEVUTA E/O RELAZIONE',
+    'NO GARANZIA OE',
+    'MANCA DIAGNOSI E LIBRETTO',
+    'MANCA MODULO, LIBRETTO E DIAGNOSI',
+    'MANCA MODULO E DIAGNOSI',
+    'MANCA DIAGNOSI E RELAZIONE/RICEVUTA'
+  ],
+  'GARANZIA MANODOPERA': [
+    'MANCA RICEVUTA',
+    'MANCA RELAZIONE',
+    'MANCA FATTURA A COSTO 0',
+    'MANCA LIBRETTO',
+    'MANCA RICEVUTA, LIBRETTO, FATTURA A COSTO 0 E FOTO',
+    'FOTO HD PER MANODOPERA E DANNI',
+    'MANCA RICEVUTA, FATTURA A COSTO 0 E DICHIARAZIONE'
+  ],
+  'GARANZIA DANNI E MANODOPERA': [
+    'MANCA RICEVUTA',
+    'MANCA RELAZIONE',
+    'MANCA FATTURA A COSTO 0',
+    'MANCA LIBRETTO',
+    'MANCA RICEVUTA, LIBRETTO, FATTURA A COSTO 0 E FOTO',
+    'FOTO HD PER MANODOPERA E DANNI',
+    'MANCA RICEVUTA, FATTURA A COSTO 0 E DICHIARAZIONE'
+  ]
+};
+// Anomalie generiche disponibili per TUTTE le altre causali (non garanzia)
+var ANOMALIE_GEN = [
+  'MATERIALE ORIGINALE',
+  'BOLLA MANCANTE',
+  'CAUSALE MANCANTE',
+  'DOCUMENTO INCOMPLETO',
+  'BATTERIA ESAUSTA',
+  "QUANTITA' DISCORDANTE",
+  'PEZZO DANNEGGIATO',
+  'MONTATO E SPORCO',
+  'SCATOLA OG MANCANTE',
+  'NON ADDEBITATO/A',
+  'PERVENUTO APERTO (LIQUIDI)',
+  'DANNEGGIATO NON SEGNALATO ENTRO 24h',
+  'INCOMPLETO'
+];
+// Ritorna le sotto-cat disponibili per una data causale (mutex per famiglia)
+function subsForCausale(cau){
+  var c = String(cau||'').trim().toUpperCase();
+  if(c === 'GARANZIA') return CAU_SUBS['GARANZIA'];
+  if(c === 'GARANZIA MANODOPERA') return CAU_SUBS['GARANZIA MANODOPERA'];
+  if(c === 'GARANZIA DANNI E MANODOPERA') return CAU_SUBS['GARANZIA DANNI E MANODOPERA'];
+  return ANOMALIE_GEN;
+}
 
 var FASI_ORDER = ['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'];
 var NEXT_FASE = {'RICEVIMENTO':'UFFICIO RESI','UFFICIO RESI':'MAGAZZINO','MAGAZZINO':'FINALE'};
@@ -1055,7 +1137,25 @@ var AUTO_STATO = {
 };
 
 var HDR = ['Data Listato','Vettore Ricevimento','Data Elaborazione','Soggetto','Pre','Codice','Quantita','Fornitore','Prezzo','Vettore Uscita','Tipo flusso','Causale','Anomalia','Tipo documento','FASE','STATO','Data stato','RMA','Contatto','Data contatto','Agente','Doc Ricevuti','Data Ric.Doc','Note','Foto','Inserito da','Motivo NR','Chiuso da','Data chiusura'];
-var CAULIST = ['ERRATO ORDINE','CARCASSA','GARANZIA','GARANZIA MANODOPERA','GARANZIA DANNI E MANODOPERA','ERRATO CONFEZIONAMENTO','DANNEGGIATO','PERVENUTO MONTATO AL CLIENTE',"QUANTITA' MANCANTE",'RIFIUTATO FORNITORE','INCOMPLETO','RNC FILIALE IN TRANSITO','TRR/01D','DIVERSO DA OE/INCOMPATIBILE','SOSTITUZIONE/RIPARAZIONE','PROFORMA'];
+var CAULIST = [
+  '"NON CONFORME" - ERRATO ORDINE',
+  '"RESO/RESO MERCE" - ERRATO ORDINE',
+  '"NO CAUSALE" - ERRATO ORDINE',
+  'ERRATA SPEDIZIONE',
+  'ORDINE DISDETTO CLIENTE',
+  'ORDINE MULTIPLO',
+  'ERRATA COMPARAZIONE CATALOGO',
+  'DIVERSO DA OE/INCOMPATIBILE',
+  'ERRATO CONFEZIONAMENTO',
+  "INCOMPLETO - MANCA UN PZ ALL'INTERNO",
+  'CARCASSA',
+  'GARANZIA',
+  'GARANZIA MANODOPERA',
+  'GARANZIA DANNI E MANODOPERA',
+  'DANNEGGIATO - SEGNALATO AL BANCO',
+  'PERVENUTO MONTATO/SPORCO AL CLIENTE DA RESO',
+  'PERVENUTO MONTATO/SPORCO AL CLIENTE DA FORNITORE'
+];
 
 // ══════════════════════════════════════════════════
 // STATO APPLICAZIONE
@@ -1149,6 +1249,8 @@ function setupAfterLogin() {
     var cf=document.getElementById('cFor'); if(cf) cf.addEventListener('blur', function(){svf(this.value);});
     var el=document.getElementById('arcFase');
     if(el){var ac='';for(var i=0;i<CAULIST.length;i++)ac+='<option>'+xe(CAULIST[i])+'</option>';el.innerHTML+=ac;}
+    // Popola il select CAUSALE del form INSERIMENTO da CAULIST (fonte unica)
+    if(typeof populateCauSelect==='function') populateCauSelect();
     rdl(); initPF(); applyMB();
     if(MEM.vetRic){var hv=document.getElementById('hVet');if(hv&&!hv.value)hv.value=MEM.vetRic;}
   } catch(e) {}
@@ -2620,7 +2722,94 @@ function mkRow(r){
 }
 
 // ══════════════════════════════════════════════════
-// SUPPLIERS
+// REGOLE FORNITORI (v29) — anagrafica compilata da mail ufficiali dei fornitori.
+// Struttura per la ricerca in LOGISTICA. Contiene contatti + regole reso per
+// GARANZIA / CARCASSA / ERRATO ORDINE / DISDETTO + note operative.
+// ══════════════════════════════════════════════════
+var SUP_RULES = {
+  'AS-PL': {contatti:{mail:'reclami@as-pl.com'}, portale:'as-pl.com/it', garanzia:'porto carico AS-PL previa autorizzazione Ufficio Tecnico', carcassa:'', errato:'modulo reclamo entro 14 giorni dalla data acquisto; oltre → non accettato', ritiro:'DHL su richiesta via mail (indirizzo esatto + peso complessivo colli)', note:'Se ritiro con corriere autonomo → addebito fattura successiva'},
+  'AUTOMOTIVE LINE': {contatti:{mail:'spedizioni@automotiveline.it'}, corriere:'GLS (DHL per ABS)', garanzia:'PORTO ASSEGNATO', carcassa:'PORTO ASSEGNATO', errato:'PORTO FRANCO', disdetto:'PORTO ASSEGNATO', ritiro:'mail con doc allegato + copia dentro il pacco; conferma inserimento in risposta', note:'Verifica in sede → mail conferma → nota credito'},
+  'AUTOVIP': {contatti:{mail:'magazzino@auto-vip.it'}, garanzia:'sostituzione/riparazione, NO rimborso', carcassa:'', errato:'reso commerciale entro 48h; oltre → no (salvo garanzia)', note:'Annullamento ordine solo via mail; Renault: no reso <€50; alcune famiglie escluse'},
+  'FRATELLI BOSIO': {contatti:{mail:'fratelli.bosio@bosio-estfb.it', ref:'Burglo Gianni'}, garanzia:'pre-autorizzazione via mail con causale + motivazione', carcassa:'idem', errato:'idem', note:'Loro rispondono con istruzioni caso per caso'},
+  'CATI': {contatti:{mail:'mfrancesconi@cati.it', ref:'Monya Francesconi'}, corriere:'CITYLINE', ritiro:'preavviso obbligatorio, altrimenti corriere rifiuta ritiro', note:'Modalità dedicata o consegna quando autista fa presa'},
+  'COMMERCIALE LUCANA 2': {contatti:{mail:'resi.clienti@commercialelucana2.com', mail2:'maria@recarsrl.it'}, portale:'portale interno', garanzia:'', carcassa:'', errato:'≥€50 → porto assegnato loro; <€50 → 10€ penale + 10€ trasporto cliente. Errata ordinazione → 10€+10€ a nostro carico', note:'Reso non voluto: cliente paga trasporto = carico nostro'},
+  'CRF': {contatti:{mail:'silvio.pistone@cierreffe.com', mail2:'logistica@cierreffe.com', mail3:'info@cierreffe.com', ref:'Silvio Pistone'}, portale:'portale con fogli accettazione + bolla reso', ritiro:'voluminoso → prenoto presa via mail', note:'Consegna SDA o Telma, MAI CiPi'},
+  'COPAT': {contatti:{mail:'martina@copatconnectors.com'}, note:'Nessuna procedura standard; resi caso per caso previa autorizzazione Ufficio vendite'},
+  'CRYSTAL MOTOR': {contatti:{mail:'commerciale@crystalmotor.it', mail2:'info@crystalmotor.it', ref:'Alberto Billocci'}, errato:'-15% detratto + spese trasporto', garanzia:'difetto invio/vetro → rientro carico loro, no detrazioni', ritiro:'modulo "RITIRI" nella categoria merce, con autorizzazione', note:'Corriere varia per zona. Cristalli danneggiati: possiamo mandare col loro corriere ma responsabilità nostra'},
+  'CENTRO ROTAZIONE DIESEL': {contatti:{mail:'mauro.mondino@centrorotazionediesel.it', tel:'3901858437', ref:'Mauro Mondino'}, sede:'V. Luda 24, Carmagnola', garanzia:'inviate DDT → ritirano loro', errato:'inviate voi', note:'Vendite porto franco con addebito trasporto in fattura (compreso ritiro usato). Copia DDT a Magda per trasporti'},
+  'COVIND': {contatti:{mail:'p.greganti@covind.it', ref:'Paola Greganti'}, sede:'Strada della Cebrosa 68, Settimo Torinese (TO)', garanzia:'24 mesi data fattura', errato:'ritiro franco stabilimento con vs corriere, imballo originale', note:'Master procedura PDF NO FOTO. Termine richiesta 15gg dalla data ricevimento (solo difetti di produzione). NON APPLICANO PENALI'},
+  'DAG DIESEL LINE': {contatti:{mail:'commerciale@dag-diesel.com', ref:'Francesca Ros'}, sede:'Via Verona 7, Oderzo (TV)', garanzia:'PORTO FRANCO', carcassa:'PORTO FRANCO, entro 1 anno emissione doc, integra, non arrugginita, non smontata', errato:'PORTO FRANCO', disdetto:'PORTO FRANCO', note:'BOSCH Diesel Center distributor. Carcassa: trasporto restituzione = carico cliente. Pezzi mancanti addebitati'},
+  'D.R.A.': {contatti:{mail:'resireclami@drasrl.eu', mail2:'info@drasrl.eu', mail3:'amministrazione@drasrl.eu', ref:'Alessia Usi'}, sede:'Via Leopoldo Giuntini 7, Empoli (FI)', portale:'portale > "Ritiri" (in alto a destra) → modulo', ritiro:'vettore ritiro = stesso di consegna, varia in base a sede. Corriere passa in automatico'},
+  'DAS EUROPE': {contatti:{mail:'garanzie@daseurope.com', mail2:'info@daseurope.com', ref:'Giada Bartolomei'}, sede:'Empoli (FI)', garanzia:'PORTO ASSEGNATO o richiesta ritiro dal sito (mandano loro corriere)', carcassa:'idem', errato:'spedizione a carico cliente'},
+  'DIPA SPORT': {contatti:{mail:'commerce@dipasport.com', tel:'328 2860968', ref:'Riccardo Marazzi'}, corriere:'GLS', garanzia:'PORTO ASSEGNATO (se respinta → addebito ritiro)', carcassa:'abbonamento Flat mensile per 2 ritiri/mese per filiale', errato:'PORTO FRANCO + penale €30+IVA a pratica', note:'Solo per resi integri e non manomessi/danneggiati'},
+  'FIRAD': {contatti:{mail:'info@firad.it'}, portale:'https://www.firad.com/it/garanzia-prodotti/', garanzia:'se problema riscontrato → riparazione/sostituzione immediata a spese loro; se conforme → spese verifica+spedizione a carico vostro', ritiro:'mail prima invio con problematica riscontrata'},
+  'FGL S.R.L.': {contatti:{mail:'roberta.spotti@fglsrl.com', mail2:'info@fglsrl.com', mail3:'resi@fglsrl.com', ref:'Roberta Spotti'}, sede:'Pero (MI)', corriere:'LGT', garanzia:'PORTO ASSEGNATO. Moduli VALEO/NRF/FGL da e-commerce, allegare a DDT', carcassa:'PORTO ASSEGNATO', errato:'PORTO ASSEGNATO', ritiro:'Autorizzazione → LGT ritira', note:'Danneggiato: segnalazione entro 24h con foto danno. Materiale non conforme: max 1 mese per rendere'},
+  'GINO SPA': {contatti:{mail:'simone.napodano@ginospa.com', tel:'01714 10757', wa:'3386958522', ref:'Simone Napodano'}, sede:'Cuneo, Codice Dealer D2D MB - 517000', garanzia:'A VOSTRE SPESE CON CORRIERE VOSTRO — solo passaggio vettura in officina autorizzata brand', carcassa:'A VOSTRE SPESE CON CORRIERE VOSTRO', errato:'A VOSTRE SPESE CON CORRIERE VOSTRO + penale 20% listino', disdetto:'A VOSTRE SPESE CON CORRIERE VOSTRO', note:'Reso entro 48h DDT/fattura. Ricambi NON aperti, confezione originale, no adesivi/nastri. Brand MB/Maserati/smart/Jeep/Chery/Omoda/Jaecoo'},
+  'GAMMA DIESEL': {contatti:{mail:'veronica@gammadiesel.it', mail2:'info@gammadiesel.it', tel:'0039307722648', wa:'+39 3713272836', ref:'Veronica Ramera'}, sede:'Coccaglio (BS)', corriere:'GLS', garanzia:'PORTO ASSEGNATO OK', carcassa:'PORTO ASSEGNATO OK', errato:'PORTO FRANCO', disdetto:'PORTO FRANCO'},
+  'HIDROPNEUMAT': {contatti:{mail:'mirjan@hidropneumat.hr', ref:'Mirjan Đurak'}, sede:'Trnovec Bartolovečki (HR)', garanzia:'vs corriere, trasporto vs carico. Elettronica programmata NON restituibile (EBS modulators, APS, astronic/powerpack)', carcassa:'Old cores: n° fattura + chiara indicazione "old core". Loro spediscono a fornitore → ricevono CN → emettono CN a voi'},
+  'IDIR GROUP': {contatti:{mail:'g.pitera@idirlogistica.it', mail2:'resi@idir.it', mail3:'info@idir.it'}, sede:'Napoli/Maddaloni', ritiro:'costi ritiro nostro carico se contratto spedizione attivo. Vettore indicato nell\'autorizzazione portale', note:'Ritiro presso vs sede o all\'atto della consegna nuovo ordine. Autorizzazione portale obbligatoria'},
+  'INTER CARS': {contatti:{mail:'resi.it@intercars.eu', mail2:'resi@intercars.eu', ref:'Loredana Servizio Resi'}, sede:'Via del Progresso 23, Padova', portale:'portale con Procedura Resi 2026', ritiro:'corriere loro (Pasquale)', carcassa:'accettazione solo del produttore, confezione originale, no rotture, no smontato, valore ≠ 0', note:'Danneggiato: entro 7gg data DDT, foto + test carica per batterie. Batterie con causale errato ord/garanzia NON accettate. Sospensione resi durante ferie natalizie'},
+  'LARICAMBI': {contatti:{mail:'resi@laricambi.com', ref:'Francesco Rebuttini'}, sede:'Campogalliano (MO)', corriere:'Nuova Demos Logistica (zona)', garanzia:'PORTO ASSEGNATO (garanzia/difettoso/danneggiato)', carcassa:'PORTO FRANCO', errato:'PORTO FRANCO', note:'Vs corriere: NO consegna senza autorizzazione. Danneggiato: entro 24h dalla consegna con riserva trasportatore + foto imballo'},
+  'MALÒ': {contatti:{mail:'amministrazione.torino@malospa.it', mail2:'resi.torino@malospa.it', mail3:'vendite@malospa.it', mail4:'info@malospa.it', ref:'Aurora Biondo / Maurizio'}, garanzia:'PORTO FRANCO ("non addebitiamo spese sui nostri resi")', carcassa:'Non esiste reso carcassa', errato:'PORTO FRANCO', ritiro:'nessuna prenotazione, affidate al corriere che consegna', note:'Vettore a vs discrezione (Cityline o vs corriere), specificare sempre dal DDT. Farsi firmare la copia'},
+  'MF PINTO': {contatti:{mail:'henrique.tico@mfpinto.com', mail2:'info@mfpinto.com', ref:'Henrique Tico Dep. Técnico/Garantias'}, sede:'Sintra, Portugal', corriere:'TNT o DHL', garanzia:'spedizione a vs carico, salvo materiale arrivi danneggiato → organizzano loro', carcassa:'a vs carico', errato:'se errore loro → organizzano; se vs → organizzate voi', ritiro:'mail preventiva con n° fattura + contenuto pacco + documentazione'},
+  'MACLON': {contatti:{mail:'info@maclon.com', mail2:'resi@maclon.com', tel:'011 4050130', wa:'+39 352 035 7909', ref:'Luca Palucci Resp. Magazzino'}, sede:'Via E. Macario 9, Trofarello (TO)', portale:'https://maclon.com/index.php/gestione-dei-resi-maclon/', errato:'entro 10gg ricevimento merce, imballo integro senza nastri/adesivi, prodotto non montato/usato. PENALE 5% importo restituito', garanzia:'modulo con dati veicolo + officina installazione; documentazione completa indispensabile', carcassa:'no richiesta preventiva; affidare al corriere Maclon con DDT', ritiro:'porto franco (loro incaricato ritira quotidianamente da filiale Nichelino)', note:'TurboSafe: programma protezione turbocompressori Inter-Turbo (12 mesi, gratuita, errori montaggio + rotture accidentali). Autorizzazione via mail → spedire entro 5gg + modulo compilato'},
+  'NUOVA R.L.': {contatti:{tel:''}, sede:'Torino', portale:'https://www.nuovavarl.it (nuova procedura resi dal 19/02/2024)', garanzia:'modulo RMA + DDT reso, articoli non usati/verniciati/senza imballo originale', errato:'penali per reso in base ai giorni: 3-15gg=5%, 16-30gg=15%, 31-60gg=25%, 61-365gg=50%. Mancanza imballo originale=15%. NON è consentito rendere: Hella, Magneti Marelli, Valeo, Gamma Truck, articoli verniciati/montati/usati, articoli acquistati oltre l\'anno solare', note:'Nota credito emessa previa verifica; se manca requisito → rispedito in porto assegnato o smaltito'}
+};
+// Ricerca fornitore per nome (case-insensitive, matcha anche substring)
+function findSupRule(name){
+  if(!name || typeof SUP_RULES==='undefined') return null;
+  var N = String(name).trim().toUpperCase();
+  if(SUP_RULES[N]) return {name:N, rule:SUP_RULES[N]};
+  // matcha substring (es. "AUTOVIP" trova "AUTOVIP", "MALÒ" trova "MALÒ")
+  for(var k in SUP_RULES){
+    var K = k.toUpperCase();
+    if(K.indexOf(N)>=0 || N.indexOf(K)>=0) return {name:k, rule:SUP_RULES[k]};
+  }
+  return null;
+}
+// Apre popup con regole reso del fornitore selezionato
+function showSupRule(name){
+  var res = findSupRule(name);
+  var old = document.getElementById('supRuleBox'); if(old) old.remove();
+  var box = document.createElement('div'); box.id='supRuleBox';
+  box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1500;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto;-webkit-overflow-scrolling:touch';
+  var h='<div style="background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:16px;width:100%;max-width:520px;margin:auto">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">📋 Regole fornitore</div><button onclick="document.getElementById(\'supRuleBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>';
+  if(!res){
+    h+='<div style="background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.4);border-radius:8px;padding:10px;font-size:12px;margin-bottom:10px">⚠ Nessuna regola in anagrafica per "<b>'+xe(name||'')+'</b>". Aggiungerla via aggiornamento SUP_RULES.</div>';
+  } else {
+    var r = res.rule;
+    h+='<div style="font-size:18px;font-weight:800;color:#fff;margin-bottom:8px">'+xe(res.name)+'</div>';
+    if(r.sede) h+='<div style="font-size:11px;color:#999;margin-bottom:6px">📍 '+xe(r.sede)+'</div>';
+    if(r.contatti){
+      h+='<div style="background:#0a1622;border:1px solid #16324a;border-radius:8px;padding:8px 10px;margin-bottom:8px">';
+      h+='<div style="font-size:9px;color:#3B9FD4;font-weight:700;letter-spacing:1px;margin-bottom:4px">CONTATTI</div>';
+      if(r.contatti.ref) h+='<div style="font-size:12px;color:#fff;margin-bottom:2px">👤 '+xe(r.contatti.ref)+'</div>';
+      if(r.contatti.mail) h+='<div style="font-size:12px;color:#5BB8E0"><a href="mailto:'+xe(r.contatti.mail)+'" style="color:#5BB8E0;text-decoration:none">✉ '+xe(r.contatti.mail)+'</a></div>';
+      if(r.contatti.mail2) h+='<div style="font-size:12px;color:#5BB8E0"><a href="mailto:'+xe(r.contatti.mail2)+'" style="color:#5BB8E0;text-decoration:none">✉ '+xe(r.contatti.mail2)+'</a></div>';
+      if(r.contatti.mail3) h+='<div style="font-size:12px;color:#5BB8E0"><a href="mailto:'+xe(r.contatti.mail3)+'" style="color:#5BB8E0;text-decoration:none">✉ '+xe(r.contatti.mail3)+'</a></div>';
+      if(r.contatti.mail4) h+='<div style="font-size:12px;color:#5BB8E0"><a href="mailto:'+xe(r.contatti.mail4)+'" style="color:#5BB8E0;text-decoration:none">✉ '+xe(r.contatti.mail4)+'</a></div>';
+      if(r.contatti.tel) h+='<div style="font-size:12px;color:#fff">📞 '+xe(r.contatti.tel)+'</div>';
+      if(r.contatti.wa) h+='<div style="font-size:12px;color:#25D366">💬 WA '+xe(r.contatti.wa)+'</div>';
+      h+='</div>';
+    }
+    if(r.corriere) h+='<div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.3);border-radius:8px;padding:8px 10px;margin-bottom:8px"><span style="font-size:9px;color:#2ecc71;font-weight:700;letter-spacing:1px">🚛 CORRIERE</span><br><span style="font-size:13px;color:#fff">'+xe(r.corriere)+'</span></div>';
+    if(r.portale) h+='<div style="background:rgba(59,159,212,.08);border:1px solid rgba(59,159,212,.3);border-radius:8px;padding:8px 10px;margin-bottom:8px"><span style="font-size:9px;color:#3B9FD4;font-weight:700;letter-spacing:1px">🌐 PORTALE</span><br><span style="font-size:12px;color:#fff;word-break:break-all">'+(/^https?:/.test(r.portale)?'<a href="'+xe(r.portale)+'" target="_blank" rel="noopener" style="color:#5BB8E0">'+xe(r.portale)+'</a>':xe(r.portale))+'</span></div>';
+    function block(t,c,col){ if(!c)return ''; return '<div style="background:'+(col||'#1a1a1a')+';border-radius:8px;padding:8px 10px;margin-bottom:6px"><div style="font-size:9px;color:#B8B8C0;font-weight:700;letter-spacing:1px;margin-bottom:3px">'+t+'</div><div style="font-size:12px;color:#F0F0F0;line-height:1.5">'+xe(c)+'</div></div>'; }
+    h+=block('GARANZIA', r.garanzia);
+    h+=block('CARCASSA', r.carcassa);
+    h+=block('ERRATO ORDINE', r.errato);
+    h+=block('ORDINI DISDETTI', r.disdetto);
+    h+=block('RITIRO', r.ritiro);
+    h+=block('NOTE OPERATIVE', r.note, 'rgba(230,176,60,.08)');
+  }
+  h+='</div>';
+  box.innerHTML=h; document.body.appendChild(box);
+}
+// Hook globale: da qualunque punto della UI si può richiamare showSupRule(nomeForn)
+
+// ══════════════════════════════════════════════════
+// SUPPLIERS (anagrafica vettori & orari — v27)
 // ══════════════════════════════════════════════════
 function initDefaultSuppliers(){
   // Base vettori
@@ -5103,8 +5292,35 @@ function onFasChange(el){
 function onCauChange(el){
   ce(el);
   setTimeout(suggestStato, 100);
+  // Ricarica sotto-categorie ANOMALIA in base alla causale (mutex per famiglia).
+  // Se causale = GARANZIA vedo solo sotto-cat garanzia. Se GARANZIA MANODOPERA / DANNI
+  // vedo solo le loro. Per tutte le altre causali → anomalie generiche.
+  try{
+    var cau = (el&&el.value)||'';
+    var ano = document.getElementById('cAno');
+    if(ano){
+      var subs = (typeof subsForCausale==='function') ? subsForCausale(cau) : [];
+      var current = ano.value;
+      ano.innerHTML = '<option value="">— Nessuna —</option>' + subs.map(function(o){return '<option'+(o===current?' selected':'')+'>'+xe(o)+'</option>';}).join('');
+      var hint = document.getElementById('cAnoHint');
+      if(hint){
+        var CAU = cau.trim().toUpperCase();
+        if(CAU==='GARANZIA') hint.textContent = '(sotto-cat GARANZIA)';
+        else if(CAU==='GARANZIA MANODOPERA') hint.textContent = '(sotto-cat MANODOPERA)';
+        else if(CAU==='GARANZIA DANNI E MANODOPERA') hint.textContent = '(sotto-cat DANNI+MANODOPERA)';
+        else if(!cau) hint.textContent = '(scegli prima la causale)';
+        else hint.textContent = '(anomalie generiche)';
+      }
+    }
+  }catch(e){}
   // Documenti necessari per la GARANZIA: popup SOLO quando si sceglie esplicitamente una causale di garanzia
   try{ var c=((el&&el.value)||'').toUpperCase(); if(c.indexOf('GARANZIA')===0) showGaranziaDocsPopup(); }catch(e){}
+}
+// Popola il select CAUSALE da CAULIST all'avvio (elenco unica fonte di verità)
+function populateCauSelect(){
+  var s = document.getElementById('cCau'); if(!s || typeof CAULIST==='undefined') return;
+  var current = s.value;
+  s.innerHTML = '<option value="">—</option>' + CAULIST.map(function(o){return '<option'+(o===current?' selected':'')+'>'+xe(o)+'</option>';}).join('');
 }
 // Popup documenti garanzia (in base al fornitore corrente)
 function showGaranziaDocsPopup(){
@@ -5536,14 +5752,14 @@ function analyzeAnomalia(b64){
     if(d.segnali && d.segnali.length) parts.push('SEGNI: '+d.segnali.filter(Boolean).join(', '));
     if(d.condizione) parts.push('CONDIZIONE: '+d.condizione);
     if(typeof d.accettabile!=='undefined') parts.push('ACCETTABILE: '+(d.accettabile?'S\u00cc':'NO'));
-    if(d.confidenza) parts.push('CONFIDENZA: '+String(d.confidenza).toUpperCase());
+    // "confidenza" nascosta dal report visibile all'utente (resta nel JSON dell'IA)
     if(d.avvertenza) parts.push('\u26a0 '+d.avvertenza);
     var notaAI=parts.join(' \u00b7 ');
     var n=document.getElementById('cNote'); if(n && notaAI){ n.value = n.value ? (n.value+' \u00b7 '+notaAI) : notaAI; }
-    // Toast riassuntivo con colore in base al verdetto
+    // Toast riassuntivo con colore in base al verdetto (senza confidenza in coda)
     var kind=(d.accettabile===false||/DANNEGG|CONTRAFF|MONTATO/i.test(d.condizione||''))?'y':(d.accettabile===true?'g':'b');
     var head=done.length?done.join(' \u00b7 '):(d.condizione||'esaminato');
-    toast('\ud83e\udde0 '+head+(d.confidenza?' ('+d.confidenza+')':''), kind);
+    toast('\ud83e\udde0 '+head, kind);
     // Se la confidenza \u00e8 bassa, avvertenza esplicita
     if(String(d.confidenza||'').toLowerCase()==='bassa' && d.avvertenza){
       setTimeout(function(){ toast('\u26a0 '+d.avvertenza,'y'); }, 1200);
@@ -7597,23 +7813,49 @@ var FORNITORI_LISTA = [{"name": "CATI", "ref": "VALTER", "tel": "011/4073795", "
 
 
 function swLogTab(t){
-  var pc=document.getElementById('logPanC');
-  var pf=document.getElementById('logPanF');
-  var btc=document.getElementById('logTabC');
-  var btf=document.getElementById('logTabF');
-  if(t==='corrieri'){
-    if(pc)pc.style.display='block';
-    if(pf)pf.style.display='none';
-    if(btc){btc.style.background='rgba(59,159,212,.15)';btc.style.color='#3B9FD4';btc.style.border='1.5px solid #3B9FD4';}
-    if(btf){btf.style.background='#111';btf.style.color='#999';btf.style.border='1px solid #2a2a2a';}
-    renderSuppliers();
-  }else{
-    if(pc)pc.style.display='none';
-    if(pf)pf.style.display='block';
-    if(btf){btf.style.background='rgba(59,159,212,.15)';btf.style.color='#3B9FD4';btf.style.border='1.5px solid #3B9FD4';}
-    if(btc){btc.style.background='#111';btc.style.color='#999';btc.style.border='1px solid #2a2a2a';}
-    renderFornitori();
+  var pans = {corrieri:'logPanC', fornitori:'logPanF', regole:'logPanR'};
+  var btns = {corrieri:'logTabC', fornitori:'logTabF', regole:'logTabR'};
+  for(var k in pans){
+    var p = document.getElementById(pans[k]);
+    var b = document.getElementById(btns[k]);
+    if(p) p.style.display = (k===t)?'block':'none';
+    if(b){
+      if(k===t){ b.style.background='rgba(59,159,212,.15)'; b.style.color='#3B9FD4'; b.style.border='1.5px solid #3B9FD4'; }
+      else{ b.style.background='#111'; b.style.color='#999'; b.style.border='1px solid #2a2a2a'; }
+    }
   }
+  if(t==='corrieri') renderSuppliers();
+  else if(t==='fornitori') renderFornitori();
+  else if(t==='regole') renderRules();
+}
+
+// Elenco fornitori con regole reso (SUP_RULES v29)
+function renderRules(){
+  var el = document.getElementById('ruleList'); if(!el) return;
+  var q = ((document.getElementById('ruleSearch')||{}).value||'').trim().toUpperCase();
+  var names = (typeof SUP_RULES==='object' && SUP_RULES) ? Object.keys(SUP_RULES).sort() : [];
+  var cnt = document.getElementById('ruleCount'); if(cnt) cnt.textContent = names.length;
+  var filtered = q ? names.filter(function(n){ return n.toUpperCase().indexOf(q)>=0; }) : names;
+  if(!filtered.length){
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:#666;font-size:12px">Nessun fornitore trovato.<br>Prova un altro nome o vedi l\'elenco completo.</div>';
+    return;
+  }
+  var h = '';
+  for(var i=0;i<filtered.length;i++){
+    var n = filtered[i];
+    var r = SUP_RULES[n];
+    var badges = '';
+    if(r.corriere) badges += '<span style="display:inline-block;background:rgba(46,204,113,.14);color:#2ecc71;border:1px solid rgba(46,204,113,.35);border-radius:5px;padding:2px 6px;font-size:9px;font-weight:700;margin-right:4px">🚛 '+xe(r.corriere)+'</span>';
+    if(r.portale) badges += '<span style="display:inline-block;background:rgba(59,159,212,.14);color:#3B9FD4;border:1px solid rgba(59,159,212,.35);border-radius:5px;padding:2px 6px;font-size:9px;font-weight:700;margin-right:4px">🌐 portale</span>';
+    var short = (r.errato && r.errato.length<80) ? r.errato : (r.garanzia && r.garanzia.length<80 ? r.garanzia : (r.note && r.note.length<80 ? r.note : ''));
+    h += '<div onclick="showSupRule(\''+n.replace(/\x27/g,"\\\'")+'\')" style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:9px 11px;margin-bottom:6px;cursor:pointer;-webkit-tap-highlight-color:rgba(59,159,212,.1)">';
+    h += '<div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:3px">'+xe(n)+'</div>';
+    if(badges) h += '<div style="margin-bottom:3px">'+badges+'</div>';
+    if(r.contatti && r.contatti.mail) h += '<div style="font-size:10px;color:#5BB8E0">✉ '+xe(r.contatti.mail)+'</div>';
+    if(short) h += '<div style="font-size:11px;color:#B8B8C0;margin-top:3px;line-height:1.4">'+xe(short)+'</div>';
+    h += '</div>';
+  }
+  el.innerHTML = h;
 }
 
 function renderFornitori(){
