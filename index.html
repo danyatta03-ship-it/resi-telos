@@ -6842,7 +6842,11 @@ function _normAiCfg(o){
   if(!endpoint) return null;
   return {endpoint:endpoint, token:token, model:model, keys:keys, models:models};
 }
+// Proxy sicuro server-side (Netlify Function): quando presente, ha la priorità
+// assoluta e le chiavi non toccano mai il browser.
+var OCR_AI_PROXY = null;
 function ocrAIConfig(){
+  if(OCR_AI_PROXY) return OCR_AI_PROXY;
   try{ var ls=JSON.parse(localStorage.getItem('ocr_ai')||'null'); if(ls&&ls.endpoint) return ls; }catch(e){}
   try{ if(window.OCR_AI){ var c=_normAiCfg(window.OCR_AI); if(c) return c; } }catch(e){}
   return OCR_AI_FILE||null;
@@ -6850,6 +6854,17 @@ function ocrAIConfig(){
 (function loadOcrAiFile(){
   try{
     if(location.protocol==='file:') return;   // su file:// il fetch è bloccato → si usa ocr-config.js
+    // 1) sonda proxy sicuro: se configurato lato server, disattiva qualsiasi chiave locale
+    fetch('/api/gemini',{method:'GET',cache:'no-store'})
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(o){
+        if(o && o.ok){
+          var models=(o.models&&o.models.length)?o.models:['gemini-2.5-flash-lite'];
+          OCR_AI_PROXY = {endpoint:'/api/gemini', token:'', model:models[0], models:models, keys:['proxy']};
+        }
+      })
+      .catch(function(){});
+    // 2) legacy: chiavi in ocr-config.json (usate solo se il proxy non è attivo)
     fetch('./ocr-config.json',{cache:'no-store'})
       .then(function(r){ return r.ok?r.json():null; })
       .then(function(o){ var c=_normAiCfg(o); if(c){ OCR_AI_FILE=c; } })
@@ -6860,10 +6875,17 @@ function ocrAIConfig(){
 // ════════════════════════════════════════════════════════════════
 // AI CONDIVISA (usa la stessa config Gemini dell'OCR)
 // ════════════════════════════════════════════════════════════════
-function aiAvailable(){ var c=ocrAIConfig(); return !!(c&&c.endpoint&&(c.token||(c.keys&&c.keys.length)||/workers\.dev/.test(c.endpoint))); }
-// Costruisce tutte le combinazioni (modello × chiave) da provare in ordine
+function aiAvailable(){ var c=ocrAIConfig(); return !!(c&&c.endpoint&&(c.token||(c.keys&&c.keys.length)||/workers\.dev|\/api\/gemini/.test(c.endpoint))); }
+// Costruisce tutte le combinazioni (modello × chiave) da provare in ordine.
+// Con proxy sicuro attivo, il client parla con un solo endpoint: è il server
+// che si occupa di ruotare chiavi e modelli in caso di 429.
 function aiVariants(){
   var cfg=ocrAIConfig(); if(!cfg||!cfg.endpoint) return [];
+  var isProxy=/\/api\/gemini/.test(cfg.endpoint);
+  if(isProxy){
+    var m=cfg.model||(cfg.models&&cfg.models[0])||'gemini-2.5-flash-lite';
+    return [{endpoint:cfg.endpoint, token:'', model:m, ki:0, mi:0, _proxy:true}];
+  }
   var keys=(cfg.keys&&cfg.keys.length)?cfg.keys.slice():(cfg.token?[cfg.token]:['']);
   var models=(cfg.models&&cfg.models.length)?cfg.models.slice():[cfg.model||'gemini-2.5-flash-lite'];
   var v=[]; for(var mi=0;mi<models.length;mi++){ for(var ki=0;ki<keys.length;ki++){ v.push({endpoint:cfg.endpoint, token:keys[ki], model:models[mi], ki:ki, mi:mi}); } }
@@ -6873,7 +6895,7 @@ function aiVariants(){
 var AI_USAGE=(function(){ try{ var u=JSON.parse(localStorage.getItem('ai_usage')||'null'); var t=new Date().toISOString().slice(0,10); if(!u||u.date!==t) u={date:t,ok:0,exhausted:{}}; return u; }catch(e){ return {date:new Date().toISOString().slice(0,10),ok:0,exhausted:{}}; } })();
 function aiUsageRoll(){ var t=new Date().toISOString().slice(0,10); if(AI_USAGE.date!==t){ AI_USAGE={date:t,ok:0,exhausted:{}}; } }
 function aiUsageSave(){ aiUsageRoll(); try{ localStorage.setItem('ai_usage',JSON.stringify(AI_USAGE)); }catch(e){} }
-function aiUsageSummary(){ aiUsageRoll(); return { ok:AI_USAGE.ok||0, exhausted:Object.keys(AI_USAGE.exhausted||{}).length, total:aiVariants().length }; }
+function aiUsageSummary(){ aiUsageRoll(); var cfg=ocrAIConfig(); var isProxy=cfg&&/\/api\/gemini/.test(cfg.endpoint); return { ok:AI_USAGE.ok||0, exhausted:Object.keys(AI_USAGE.exhausted||{}).length, total: isProxy?'proxy':aiVariants().length, proxy: !!isProxy }; }
 // Chiama l'AI provando i vari modelli/chiavi: se uno è esaurito (429) passa al successivo
 function aiComplete(parts, cb, opts){
   opts=opts||{};
@@ -6942,7 +6964,7 @@ function openAiCopilot(){
   box.innerHTML='<div style="background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:16px;width:100%;max-width:480px;margin:auto">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">🤖 Copilota Resi</div><button onclick="document.getElementById(\'aiCopBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>'+
     '<div style="font-size:11px;color:#888;margin-bottom:8px">Chiedi qualsiasi cosa sui tuoi resi — risponde l\'AI sui tuoi dati.</div>'+
-    '<div style="font-size:11px;color:#5BB8E0;margin-bottom:10px;background:#0a1622;border:1px solid #16324a;border-radius:7px;padding:6px 9px">📊 AI oggi: <b>'+u.ok+'</b> richieste · serbatoi esauriti: <b>'+u.exhausted+'/'+u.total+'</b></div>'+
+    '<div style="font-size:11px;color:#5BB8E0;margin-bottom:10px;background:#0a1622;border:1px solid #16324a;border-radius:7px;padding:6px 9px">📊 AI oggi: <b>'+u.ok+'</b> richieste · '+(u.proxy?'🔒 proxy sicuro (chiavi lato server)':'serbatoi esauriti: <b>'+u.exhausted+'/'+u.total+'</b>')+'</div>'+
     '<div style="display:flex;flex-wrap:wrap;margin-bottom:8px">'+sh+'</div>'+
     '<div style="display:flex;gap:8px;margin-bottom:10px"><input id="aiCopQ" placeholder="Scrivi la domanda…" onkeydown="if(event.key===\'Enter\')aiCopilotAsk(this.value)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:13px;border-radius:8px;outline:none"><button onclick="aiCopilotAsk(document.getElementById(\'aiCopQ\').value)" style="background:#3B9FD4;color:#fff;border:none;border-radius:8px;padding:0 16px;font-weight:700;cursor:pointer">Chiedi</button></div>'+
     '<div id="aiCopAns" style="background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;min-height:80px;font-size:13px;color:#e0e0e0">Le risposte appariranno qui.</div>'+
