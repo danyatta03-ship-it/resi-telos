@@ -66,6 +66,8 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:-apple-s
 .binv.ok{background:linear-gradient(135deg,#002010,#004020);color:var(--grn);border-color:var(--grn2)}
 .bcsv{background:#0a1220;color:#3B9FD4;border:1px solid #3a1800;height:48px;padding:0 12px;font-size:12px;font-weight:700;border-radius:var(--rad);cursor:pointer;-webkit-appearance:none;font-family:inherit}
 .bflt{background:var(--bg2);color:var(--txt2);border:1px solid var(--brd2);height:48px;padding:0 12px;font-size:12px;font-weight:700;border-radius:var(--rad);cursor:pointer;-webkit-appearance:none;font-family:inherit;flex-shrink:0}
+.bfab{flex:1;background:linear-gradient(135deg,#0a1e3a,#0e3060);color:#fff;border:1px solid rgba(59,159,212,.45);height:48px;padding:0 10px;font-size:14px;font-weight:800;border-radius:var(--rad);cursor:pointer;-webkit-appearance:none;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
+.bfab .bfab-lbl{font-size:12px;font-weight:800;letter-spacing:.5px;color:#3B9FD4}
 .bflt.on{border-color:var(--blu);color:var(--blu)}
 
 /* CARDS */
@@ -378,7 +380,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v27 · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v28 · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -862,7 +864,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v27</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v28</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -946,8 +948,8 @@ select option {
 <div class="bot" id="mainBot" style="display:none">
   <div class="bst"><div class="bn" id="botN">0</div><div class="bl">RIGHE</div></div>
   <div class="bst"><div class="bn" id="botE" style="color:var(--yel)">€0</div><div class="bl">TOTALE</div></div>
-  <button class="binv" id="btnInv">📤 ESPORTA EXCEL</button>
-  <button class="bcsv" onclick="expCSV()">CSV</button>
+  <button class="bfab bfab-ai" id="btnAiCop" onclick="openAiCopilot()" title="Copilota AI">🤖 <span class="bfab-lbl">AI</span></button>
+  <button class="bfab bfab-chat" id="btnChatOpen" onclick="openChatOverlay()" title="Chat operatori" style="position:relative">💬 <span class="bfab-lbl">CHAT</span><span id="chatFloatBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#E05555;color:#fff;border-radius:50%;width:20px;height:20px;font-size:10px;font-weight:800;align-items:center;justify-content:center;border:2px solid var(--bg1);line-height:20px;text-align:center">0</span></button>
   <button class="bflt" id="bulkToggle" onclick="togBulk()" title="Selezione multipla">☑</button>
 </div>
 
@@ -1192,8 +1194,12 @@ function launchApp() {
     if(supDb.length===0) initDefaultSuppliers();
   } catch(e) {}
   initAutomations();
-  var cfb=document.getElementById('chatFloatBtn');if(cfb)cfb.style.display='block';
-  var acf=document.getElementById('aiCopFab');if(acf)acf.style.display=(typeof aiAvailable==='function'&&aiAvailable())?'block':'none';
+  // v28: FAB flottanti rimossi, i pulsanti Chat/AI vivono nel footer. Se AI non disponibile disabilito il bottone footer.
+  var btnAi=document.getElementById('btnAiCop');
+  if(btnAi){
+    var avail = (typeof aiAvailable==='function'&&aiAvailable());
+    if(!avail){ btnAi.style.opacity='.45'; btnAi.title='AI non attiva'; }
+  }
   var gsb=document.getElementById('globalSearchBar');if(gsb)gsb.style.display='block';
   // Connect (shows app when ready)
   initConn();
@@ -3196,8 +3202,8 @@ function invia(ca){
   var z=makeFullXLSX(ar);
   var fn=gfn(ca?'ResiGiornata':'Resi_DB');
   var blob=new Blob([z],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-  var btn=document.getElementById('btnInv');
-  function done(msg){btn.textContent='\u2713 '+msg;btn.classList.add('ok');setTimeout(function(){btn.textContent='\ud83d\udce4 ESPORTA EXCEL';btn.classList.remove('ok');},3000);svH(fn,ar.length,ar);if(ca){sendMsg({type:'clear'});}}
+  var btn=document.getElementById('btnInv');   // rimosso dal footer in v28: le funzioni di export vivono in STORICO->EXPORT
+  function done(msg){if(btn){btn.textContent='\u2713 '+msg;btn.classList.add('ok');setTimeout(function(){btn.textContent='\ud83d\udce4 ESPORTA EXCEL';btn.classList.remove('ok');},3000);} svH(fn,ar.length,ar);if(ca){sendMsg({type:'clear'});} toast('\u2713 '+msg,'b'); }
   sendBlob(blob,fn,done);
 }
 
@@ -7853,16 +7859,9 @@ function scanFotoFallback(){
 
 </script>
 
-<!-- ═══ FLOATING CHAT BUTTON ═══ -->
-<div id="aiCopFab" style="display:none;position:fixed;bottom:72px;left:14px;z-index:300;cursor:pointer" onclick="openAiCopilot()" title="Copilota AI">
-  <div style="width:50px;height:50px;background:linear-gradient(135deg,#2980B9,#3B9FD4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 16px rgba(59,159,212,.45)">🤖</div>
-</div>
-<div id="chatFloatBtn" style="display:none;position:fixed;bottom:72px;right:14px;z-index:300;cursor:pointer" onclick="openChatOverlay()">
-  <div style="position:relative;width:54px;height:54px">
-    <div style="width:54px;height:54px;background:linear-gradient(135deg,#2980B9,#3B9FD4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 16px rgba(59,159,212,.5)">&#128172;</div>
-    <span id="chatFloatBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#E05555;color:#fff;border-radius:50%;width:20px;height:20px;font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;border:2px solid #080808">0</span>
-  </div>
-</div>
+<!-- Chat/AI FAB rimossi: ora sono nel footer .bot (bottoni bfab). Il badge chat resta nel bottone footer. -->
+<div id="aiCopFab" style="display:none"></div>
+<div id="chatFloatBtn" style="display:none"></div>
 
 <!-- ═══ CHAT OVERLAY ═══ -->
 <div id="chatOverlay" style="display:none;position:fixed;inset:0;z-index:500;flex-direction:column;background:#0a0a0a">
