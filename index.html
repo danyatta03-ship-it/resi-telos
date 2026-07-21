@@ -4009,7 +4009,7 @@ function renderAnoList(){
     html+='<span style="font-size:9px;color:#555;flex:1">'+xe(a.operator||'')+(a.role?' ('+a.role+')':'')+'</span>';
     if(_pk.length) html+='<button data-id="'+xe(a.id)+'" onclick="dlAnoAllPhotos(this.dataset.id)" style="background:rgba(59,159,212,.1);color:#3B9FD4;border:1px solid rgba(59,159,212,.3);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">&#11015; Scarica foto'+(_pk.length>1?' ('+_pk.length+')':'')+'</button>';
 
-    html+='<button data-id="'+xe(a.id)+'" onclick="doAnoMail(this.dataset.id)" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">&#9993; Mail cliente</button>';
+    html+='<button data-id="'+xe(a.id)+'" onclick="doAnoMail(this.dataset.id)" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">&#9993; Mail</button>';
     html+='<button data-id="'+xe(a.id)+'" onclick="exportAnoXls(this.dataset.id)" style="background:rgba(59,159,212,.1);color:#3B9FD4;border:1px solid rgba(59,159,212,.3);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">&#128190; Excel</button>';
     html+='<button data-id="'+xe(a.id)+'" onclick="deleteAno(this.dataset.id)" style="background:rgba(224,85,85,.08);color:#E05555;border:1px solid rgba(224,85,85,.2);border-radius:6px;padding:5px 9px;font-size:11px;cursor:pointer;-webkit-appearance:none;font-family:inherit">&#10005;</button>';
     html+='</div>';
@@ -5615,7 +5615,9 @@ var ANOMALIA_MOTIVI = {
     'ATTESA COMUNICAZIONE FORNITORE': 'In attesa di risposta dal fornitore: ricontattare entro 5 giorni lavorativi',
   };
 
-function generateAnoMail(a) {
+function generateAnoMail(a, who) {
+  if(!a) return;
+  who = who || 'agente';    // default retrocompatibile: se qualcuno chiama senza who, resta la vecchia mail agente
   loadEmails();
   // Resolve client name and email
   var email='', clientCode='', clientName='';
@@ -5660,26 +5662,52 @@ function generateAnoMail(a) {
   if(rifBollaMatch) rifBolla = rifBollaMatch[0];
 
   var NL='\n';
-  var body =
-    'Ciao '+agenteNome+','+NL+
-    'abbiamo ricevuto un reso in '+(a.causale||'ANOMALIA')+' dal cliente '+
-      (clientName||displayName)+' (cc '+clientCode+') tramite DDT reso n. '+
-      (a.rma||'-')+' del '+(dataFmt||'-')+
+  var body;
+  if(who==='cliente'){
+    // Template CLIENTE (voi/Lei, formale). Destinatario = email cliente (CON_EMAILS)
+    body =
+      'Spett.le '+(clientName||displayName)+','+NL+NL+
+      'con la presente Vi informiamo che in data '+(dataFmt||'-')+
+      ' abbiamo ricevuto la Vostra spedizione di reso'+
+      (a.rma?' (DDT n. '+a.rma+')':'')+
       (rifBolla?', in riferimento alla '+rifBolla+(dataFmt?' del '+dataFmt:''):'')+
-      ' del seguente particolare:'+NL+NL+
-    '- '+descArt+(codArt&&descArt.indexOf(codArt)<0?' con codice '+codArt:'')+NL+NL+
-    'Per poter procedere con l\'accredito al cliente, avremo gentilmente bisogno di '+motivo.toLowerCase()+'.'+NL+
-    'Restiamo in attesa di un tuo gentile riscontro.'+NL+
-    'Grazie per la collaborazione.'+NL+NL+
-    'Cordiali Saluti e Buon Lavoro'+NL+
-    (operatoreFirma||'Reparto Resi - Telos SPA');
+      ', contenente il seguente particolare:'+NL+NL+
+      '- '+descArt+(codArt&&descArt.indexOf(codArt)<0?' con codice '+codArt:'')+' - quantità '+(a.qty||1)+NL+NL+
+      'Al fine di poter procedere con l\'accredito, La preghiamo cortesemente di trasmetterci '+motivo.toLowerCase()+'.'+NL+NL+
+      'Restiamo in attesa di un Vostro gentile riscontro e ringraziamo per la collaborazione.'+NL+NL+
+      'Cordiali saluti,'+NL+
+      (operatoreFirma||'Reparto Resi')+NL+
+      'TELOS SPA - Reparto Resi';
+    // Destinatario: email del cliente in rubrica CON_EMAILS
+  } else {
+    // Template AGENTE (esistente, tono confidenziale)
+    body =
+      'Ciao '+agenteNome+','+NL+
+      'abbiamo ricevuto un reso in '+(a.causale||'ANOMALIA')+' dal cliente '+
+        (clientName||displayName)+' (cc '+clientCode+') tramite DDT reso n. '+
+        (a.rma||'-')+' del '+(dataFmt||'-')+
+        (rifBolla?', in riferimento alla '+rifBolla+(dataFmt?' del '+dataFmt:''):'')+
+        ' del seguente particolare:'+NL+NL+
+      '- '+descArt+(codArt&&descArt.indexOf(codArt)<0?' con codice '+codArt:'')+NL+NL+
+      'Per poter procedere con l\'accredito al cliente, avremo gentilmente bisogno di '+motivo.toLowerCase()+'.'+NL+
+      'Restiamo in attesa di un tuo gentile riscontro.'+NL+
+      'Grazie per la collaborazione.'+NL+NL+
+      'Cordiali Saluti e Buon Lavoro'+NL+
+      (operatoreFirma||'Reparto Resi - Telos SPA');
+  }
 
-  // Uso email/telefono dell'agente se in rubrica (email destinatario e WhatsApp)
+  // Destinatario email + eventuale telefono per WhatsApp:
+  //   - CLIENTE: uso solo CON_EMAILS del cliente (già in "email")
+  //   - AGENTE: fallback sull'anagrafica agente
   var agInfo = agenteInfo(a.agente||'');
-  if(agInfo && agInfo.mail && !email) email = agInfo.mail;
-  var agTel = agInfo && agInfo.tel ? agInfo.tel : '';
-
-  if(!email && !agTel) toast('Nessun contatto: aggiungi email/telefono dell\'agente '+agenteNome,'b');
+  var agTel = '';
+  if(who==='agente'){
+    if(agInfo && agInfo.mail && !email) email = agInfo.mail;
+    agTel = agInfo && agInfo.tel ? agInfo.tel : '';
+    if(!email && !agTel) toast('Nessun contatto: aggiungi email/telefono dell\'agente '+agenteNome,'b');
+  } else {
+    if(!email) toast('Nessuna email cliente per '+(clientName||clientCode)+': aggiungila in CONTATTI','b');
+  }
 
   var _photoKeys = (a.photoKeys&&a.photoKeys.length)?a.photoKeys:(a.photoKey?[a.photoKey]:[]);
   function doOpen(finalBody){
@@ -5687,12 +5715,12 @@ function generateAnoMail(a) {
     // (necessario: dopo la generazione AI asincrona il "gesto utente" è scaduto
     //  e il browser bloccherebbe l'apertura del client di posta).
     // Carica le foto anomalia: mailto NON può allegare → l'utente le scarica/copia dall'anteprima.
-    var ctx = { agenteNome: agenteNome, agenteFullName: (a.agente||''), agTel: agTel };
+    var ctx = { who:who, agenteNome: agenteNome, agenteFullName: (a.agente||''), agTel: agTel, clienteNome: (clientName||displayName) };
     if(!_photoKeys.length){ showMailPreview(email, subj, finalBody||body, [], ctx); return; }
     Promise.all(_photoKeys.map(function(k){ return idbGet('anophoto_'+k).then(function(v){return v||null;}).catch(function(){return null;}); }))
       .then(function(ph){ showMailPreview(email, subj, finalBody||body, ph.filter(Boolean), ctx); });
   }
-  // Usiamo il template diretto (agente): niente AI e niente riferimenti fornitore
+  // Usiamo il template diretto: niente AI e niente riferimenti fornitore
   doOpen(body);
 }
 
@@ -5706,9 +5734,12 @@ function showMailPreview(email, subj, bodyText, photos, ctx){
   var inner=document.createElement('div');
   inner.style.cssText='background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:16px;width:100%;max-width:520px;margin:auto';
   var h='';
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">✉ Email cliente</div><button onclick="document.getElementById(\'mailPrevBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer;-webkit-appearance:none">✕</button></div>';
+  var _who = (ctx && ctx.who) ? ctx.who : '';
+  var _title = _who==='cliente' ? '🏢 Email al CLIENTE' : (_who==='agente' ? '👤 Email all\'AGENTE' : '✉ Email');
+  var _phPlaceholder = _who==='cliente' ? 'email del cliente (aggiungila in CONTATTI se vuota)' : (_who==='agente' ? 'email dell\'agente (aggiungila nella rubrica agenti se vuota)' : 'email destinatario');
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:'+(_who==='cliente'?'#2ecc71':'#3B9FD4')+'">'+_title+'</div><button onclick="document.getElementById(\'mailPrevBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer;-webkit-appearance:none">✕</button></div>';
   h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:3px">A (DESTINATARIO)</div>';
-  h+='<input id="mpTo" value="'+xe(email||'')+'" placeholder="email cliente (se vuoto, aggiungila in CONTATTI)" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid '+((email)?'#333':'#7a4a1a')+';padding:9px 11px;font-size:13px;border-radius:8px;outline:none;margin-bottom:8px;display:block">';
+  h+='<input id="mpTo" value="'+xe(email||'')+'" placeholder="'+_phPlaceholder+'" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid '+((email)?'#333':'#7a4a1a')+';padding:9px 11px;font-size:13px;border-radius:8px;outline:none;margin-bottom:8px;display:block">';
   h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:3px">OGGETTO</div>';
   h+='<input id="mpSubj" value="'+xe(subj||'')+'" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;margin-bottom:8px;display:block">';
   h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:3px">TESTO</div>';
@@ -5934,8 +5965,29 @@ document.addEventListener('click', function(e){
 function doAnoMail(id){
   var a=null;
   for(var i=0;i<ANOMALIE_STORE.length;i++) if(ANOMALIE_STORE[i].id===id){a=ANOMALIE_STORE[i];break;}
-  if(a) generateAnoMail(a);
+  if(!a) return;
+  // Chooser destinatario: prima di generare la mail chiedo AGENTE o CLIENTE.
+  var old=document.getElementById('mailWhoBox'); if(old) old.remove();
+  var box=document.createElement('div'); box.id='mailWhoBox';
+  box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1500;display:flex;align-items:center;justify-content:center;padding:14px';
+  var agenteNome=(a.agente||a._who||'').split(/[\s\.]+/)[0]||'agente';
+  var clienteNome='';
+  var sogg=(a.sogg||'').trim();
+  var di=sogg.indexOf(' - ');
+  if(di>0) clienteNome=sogg.slice(di+3).trim();
+  else if(typeof CLI_DATA!=='undefined' && CLI_DATA && CLI_DATA[sogg]) clienteNome=(CLI_DATA[sogg].split('|')[0]||'').trim();
+  clienteNome=clienteNome||'cliente';
+  box.innerHTML=
+    '<div style="background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:20px;width:100%;max-width:340px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">✉ A chi mandi la mail?</div><button onclick="document.getElementById(\'mailWhoBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer;-webkit-appearance:none">✕</button></div>'+
+      '<div style="font-size:11px;color:#888;margin-bottom:14px">Scegli il destinatario — il testo verrà precompilato di conseguenza.</div>'+
+      '<button onclick="document.getElementById(\'mailWhoBox\').remove();generateAnoMail(_anoLast(\''+xe(id)+'\'), \'agente\')" style="width:100%;background:rgba(59,159,212,.15);color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:10px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:10px">👤 AGENTE <span style="font-size:11px;font-weight:400;opacity:.75;display:block;margin-top:2px">'+xe(agenteNome)+'</span></button>'+
+      '<button onclick="document.getElementById(\'mailWhoBox\').remove();generateAnoMail(_anoLast(\''+xe(id)+'\'), \'cliente\')" style="width:100%;background:rgba(46,204,113,.15);color:#2ecc71;border:1.5px solid #2ecc71;border-radius:10px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">🏢 CLIENTE <span style="font-size:11px;font-weight:400;opacity:.75;display:block;margin-top:2px">'+xe(clienteNome)+'</span></button>'+
+    '</div>';
+  document.body.appendChild(box);
 }
+// Ritrova l'anomalia per id (serve al chooser che vive fuori scope)
+function _anoLast(id){ for(var i=0;i<ANOMALIE_STORE.length;i++) if(ANOMALIE_STORE[i].id===id) return ANOMALIE_STORE[i]; return null; }
 
 // ── Sync: import existing LISTA anomalie into ANOMALIE_STORE ─────
 function syncListToAnomalie(){
