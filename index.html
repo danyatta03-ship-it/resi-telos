@@ -4902,7 +4902,7 @@ var globalSearchOpen = false;
 
 
 function doGlobalSearch(){
-  var q=((document.getElementById('globalSearchInp')||{}).value||'').trim().toLowerCase();
+  var q=((document.getElementById('globalSearchInline')||{}).value||'').trim().toLowerCase();
   var res=document.getElementById('globalSearchRes');
   if(!res)return;
   if(q.length<2){res.innerHTML='<div style="color:#666;padding:12px">Digita almeno 2 caratteri...</div>';return;}
@@ -4927,17 +4927,18 @@ function doGlobalSearch(){
   }
   if(arcRes.length) sections.push({title:'ARCHIVIO ('+arcRes.length+')',items:arcRes,color:'#5BB8E0'});
 
-  // DB Trimestre
+  // DB Trimestre — cerca TUTTO lo storico e risolve il nome cliente dal codice soggetto
+  function _nomeCliDB(sogg){ if(!sogg||typeof CLI_DATA==='undefined')return ''; var raw=CLI_DATA[sogg]||CLI_DATA[String(sogg).replace(/^0+/,'')]; return raw?(raw.split('|')[0]||''):''; }
   var dbRes=[];
   if(DB_TRI){
-    for(var i=0;i<Math.min(DB_TRI.length,500);i++){
+    for(var i=0;i<DB_TRI.length;i++){
       var r=DB_TRI[i];
-      var hay=((r.cod||'')+(r.sogg||'')+(r.forn||'')+(r.causale||'')+(r.pre||'')).toLowerCase();
-      if(hay.indexOf(q)>=0) dbRes.push({row:r,src:'Storico'});
-      if(dbRes.length>=10)break;
+      var hay=((r.cod||'')+(r.sogg||'')+_nomeCliDB(r.sogg)+(r.forn||'')+(r.causale||'')+(r.pre||'')+(r.rma||'')+(r.agente||'')).toLowerCase();
+      if(hay.indexOf(q)>=0) dbRes.push({key:r._key||('tri_'+i), row:r, src:'Storico'});
+      if(dbRes.length>=30)break;
     }
   }
-  if(dbRes.length) sections.push({title:'STORICO TRIMESTRE ('+dbRes.length+')',items:dbRes,color:'#999'});
+  if(dbRes.length) sections.push({title:'STORICO TRIMESTRE ('+dbRes.length+(dbRes.length>=30?'+':'')+')',items:dbRes,color:'#d0b370'});
 
   // Ubicazioni
   loadUBI();
@@ -4970,16 +4971,17 @@ function doGlobalSearch(){
     for(var ii=0;ii<items.length;ii++){
       var it=items[ii];
       if(it.loc){
-        // Ubicazione result
-        html+='<div onclick="closeGlobalSearch();gTab(\'pgUbi\')" style="padding:8px 12px;border-bottom:1px solid #1a1a1a;cursor:pointer">';
-        html+='<div style="font-size:13px;font-weight:700;color:#fff">'+xe(it.loc.name)+'</div>';
+        // Ubicazione result → apre la pagina UBICAZIONI e scrolla sullo scaffale
+        html+='<div onclick="gsOpenUbi(\''+xe(it.id||'').replace(/\x27/g,"\\\'")+'\')" style="padding:8px 12px;border-bottom:1px solid #1a1a1a;cursor:pointer">';
+        html+='<div style="font-size:13px;font-weight:700;color:#fff">🗺️ '+xe(it.loc.name)+'</div>';
         if(it.item)html+='<div style="font-size:10px;color:#999;font-family:monospace">'+xe(it.item.cod||'')+'</div>';
         html+='</div>';
       } else {
-        // Row result
+        // Row result → apre la scheda MODIFICA (dell\'articolo, dell\'archivio o dello storico)
         var r=it.row;
-        html+='<div onclick="closeGlobalSearch()" style="padding:8px 12px;border-bottom:1px solid #1a1a1a;cursor:pointer">';
-        html+='<div style="font-size:12px;font-weight:700;color:#3B9FD4;font-family:monospace">'+xe(r.pre?r.pre+' ':'')+xe(r.cod||'')+'</div>';
+        var k = it.key || r._key || '';
+        html+='<div onclick="gsOpenRow(\''+xe(k).replace(/\x27/g,"\\\'")+'\')" style="padding:8px 12px;border-bottom:1px solid #1a1a1a;cursor:pointer">';
+        html+='<div style="font-size:12px;font-weight:700;color:#3B9FD4;font-family:monospace">'+xe(r.pre?r.pre+' ':'')+xe(r.cod||'')+(r._frozen?' <span style="font-size:9px;color:#d0b370">🗄 STORICO</span>':(it.src==='Archivio'?' <span style="font-size:9px;color:#999">📁 ARCHIVIO</span>':''))+'</div>';
         html+='<div style="font-size:11px;color:#E0E0E0">'+xe(r.sogg||r.forn||'')+'</div>';
         html+='<div style="font-size:10px;color:#999">'+xe(r.causale||'')+(r.fase?' · '+xe(r.fase):'')+'</div>';
         html+='</div>';
@@ -4987,6 +4989,31 @@ function doGlobalSearch(){
     }
   }
   res.innerHTML=html;
+}
+
+// ── Click su un risultato: apre la scheda giusta invece di sparire lasciando lo schermo vuoto
+function gsOpenRow(key){
+  closeGlobalSearch();
+  if(!key){ toast('Chiave non disponibile per questo risultato','y'); return; }
+  // Se è un record di archivio, portalo temporaneamente in rows per la scheda
+  if(String(key).indexOf('tri_')!==0 && !rows[key] && typeof arch!=='undefined' && arch[key]){
+    var saved = rows[key];  // dovrebbe essere undefined
+    rows[key] = arch[key];  // esposto per editRow (read only via canEditRow su non-frozen)
+    try{ editRow(key); }catch(e){}
+    setTimeout(function(){ if(saved===undefined) delete rows[key]; else rows[key]=saved; }, 300);
+    return;
+  }
+  try{ editRow(key); }catch(e){ toast('Impossibile aprire: '+e.message,'r'); }
+}
+
+function gsOpenUbi(id){
+  closeGlobalSearch();
+  gTab('pgUbi');
+  if(!id) return;
+  setTimeout(function(){
+    var el = document.getElementById('ubi_'+id);
+    if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.transition='background .5s'; el.style.background='rgba(59,159,212,.15)'; setTimeout(function(){ el.style.background=''; }, 1500); }
+  }, 250);
 }
 
 // ── ALERT FORNITORI (notifiche push browser) ─────────────────────
@@ -6122,31 +6149,36 @@ function doGlobalSearch(){
   if(q.length<2){res.style.display='none';return;}
   res.style.display='block';
   // Search lista, archivio, db_tri, ubicazioni
+  // Risolve il NOME CLIENTE dal codice soggetto (per cercare "TARICCO" oltre a "009820")
+  function _nomeCli(sogg){ if(!sogg||typeof CLI_DATA==='undefined')return ''; var raw=CLI_DATA[sogg]||CLI_DATA[String(sogg).replace(/^0+/,'')]; return raw?(raw.split('|')[0]||''):''; }
   var sections=[];
   var listRes=[];
   for(var k in rows){
     var r=rows[k];
-    var hay=((r.cod||'')+(r.sogg||'')+(r.forn||'')+(r.causale||'')+(r.pre||'')).toLowerCase();
+    var hay=((r.cod||'')+(r.sogg||'')+_nomeCli(r.sogg)+(r.forn||'')+(r.causale||'')+(r.pre||'')+(r.rma||'')+(r.agente||'')).toLowerCase();
     if(hay.indexOf(q)>=0)listRes.push({r:r,go:"gsGoRow('"+k+"')"});
-    if(listRes.length>=5)break;
+    if(listRes.length>=8)break;
   }
   if(listRes.length)sections.push({title:'LISTA',items:listRes,col:'#3B9FD4'});
   var arcRes=[];
   for(var k in arch){
     var r=arch[k];
-    var hay=((r.cod||'')+(r.sogg||'')+(r.forn||'')+(r.causale||'')).toLowerCase();
+    var hay=((r.cod||'')+(r.sogg||'')+_nomeCli(r.sogg)+(r.forn||'')+(r.causale||'')).toLowerCase();
     if(hay.indexOf(q)>=0)arcRes.push({r:r,go:"gsGoArc('"+k+"')"});
     if(arcRes.length>=5)break;
   }
   if(arcRes.length)sections.push({title:'ARCHIVIO',items:arcRes,col:'#5BB8E0'});
   if(DB_TRI){
     var dbRes=[];
-    for(var i=0;i<DB_TRI.length&&dbRes.length<5;i++){
+    for(var i=0;i<DB_TRI.length&&dbRes.length<15;i++){
       var r=DB_TRI[i];
-      var hay=((r.cod||'')+(r.sogg||'')+(r.forn||'')+(r.causale||'')+(r.pre||'')).toLowerCase();
-      if(hay.indexOf(q)>=0)dbRes.push({r:r,go:''});
+      var hay=((r.cod||'')+(r.sogg||'')+_nomeCli(r.sogg)+(r.forn||'')+(r.causale||'')+(r.pre||'')+(r.rma||'')+(r.agente||'')).toLowerCase();
+      if(hay.indexOf(q)>=0){
+        var tk = r._key || ('tri_'+i);
+        dbRes.push({r:r, go:"gsGoTri('"+tk+"')"});
+      }
     }
-    if(dbRes.length)sections.push({title:'STORICO',items:dbRes,col:'#999'});
+    if(dbRes.length)sections.push({title:'STORICO TRIMESTRE',items:dbRes,col:'#d0b370'});
   }
   loadUBI();
   var ubiRes=[];
@@ -6200,6 +6232,13 @@ function gsGoArc(key){
   closeGlobalBar();
   gTab('pgArc');
   setTimeout(function(){gsFlash(document.getElementById('arc_'+key),'#5BB8E0');},350);
+}
+function gsGoTri(key){
+  closeGlobalBar();
+  if(!key || typeof DB_TRI==='undefined') return;
+  // editRow legge il record dallo storico e applica eventuali override
+  try{ editRow(key); }
+  catch(e){ toast('Impossibile aprire il record storico: '+e.message,'r'); }
 }
 function gsGoUbi(id){
   closeGlobalBar();
