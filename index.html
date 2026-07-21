@@ -443,6 +443,9 @@ select option {
         <input id="hSogg" placeholder="es. 009820 o ROSSI AUTO" autocomplete="off" oninput="uv(this);onSogg(this.value)" >
         <div class="cli-tip" id="cliTip"></div>
       </div>
+      <div class="f"><label><span>AGENTE <span style="color:var(--txt3);font-weight:400;font-size:10px">(auto dal cliente)</span></span></label>
+        <input id="hAge" placeholder="si compila da solo scegliendo il cliente" autocomplete="off" oninput="uv(this);syncHAgeToCAge(this.value)">
+      </div>
     </div>
   </div>
 
@@ -532,7 +535,7 @@ select option {
           <div class="f"><label><span>DATA CONTATTO</span><span style="font-size:8px;color:var(--grn)"> auto</span></label><input type="date" id="cDCon"></div>
         </div>
         <div class="r2">
-          <div class="f"><label><span>AGENTE</span></label><input id="cAge" placeholder="MARIO ROSSI" autocomplete="off" oninput="uv(this)"></div>
+          <div class="f"><label><span>AGENTE</span></label><input id="cAge" placeholder="MARIO ROSSI" autocomplete="off" oninput="uv(this);syncCAgeToHAge(this.value)"></div>
           <div class="f"><label><span>DOC. RICEVUTI</span></label><select id="cDocR"><option value="">—</option><option>VERO</option><option>FALSO</option></select></div>
         </div>
         <div class="f"><label><span>NOTE</span></label><textarea id="cNote" placeholder="Annotazioni..."></textarea></div>
@@ -1573,15 +1576,28 @@ function pickSogg(cod, nome){
     tip.style.display='block';
   }
   if(vet){var vu=document.getElementById('cVUsc');if(vu&&!vu.value){vu.value=vet;}}
-  // Auto-fill agente commerciale dall'anagrafica ufficiale (61k clienti)
+  // Auto-fill agente commerciale dall'anagrafica ufficiale (61k clienti).
+  // Compilo entrambe le caselle: quella nel blocco DATA LISTATO (hAge, sempre visibile)
+  // e quella in IDENTIFICAZIONE (cAge, usata da addRow) restando in sync.
   try{
     var age = agentByClient(cod);
     if(age){
+      var ha = document.getElementById('hAge');
+      if(ha && !ha.value){ ha.value = age.toUpperCase(); if(typeof uv==='function') uv(ha); }
       var ae = document.getElementById('cAge');
-      if(ae && !ae.value){ ae.value = age; if(typeof uv==='function') uv(ae); }
+      if(ae && !ae.value){ ae.value = age.toUpperCase(); if(typeof uv==='function') uv(ae); }
     }
   }catch(e){}
   checkSupplierCutoff(vet);
+}
+// Sincronizzazione hAge -> cAge (la casella in IDENTIFICAZIONE resta la fonte per addRow)
+function syncHAgeToCAge(val){
+  var ae = document.getElementById('cAge');
+  if(ae) ae.value = (val||'').toUpperCase();
+}
+function syncCAgeToHAge(val){
+  var ha = document.getElementById('hAge');
+  if(ha) ha.value = (val||'').toUpperCase();
 }
 
 function onVetUsc(vet) {
