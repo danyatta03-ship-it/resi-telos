@@ -376,7 +376,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v25 · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v26 · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -444,7 +444,7 @@ select option {
         <div class="cli-tip" id="cliTip"></div>
       </div>
       <div class="f"><label><span>AGENTE <span style="color:var(--txt3);font-weight:400;font-size:10px">(auto dal cliente)</span></span></label>
-        <input id="hAge" placeholder="si compila da solo scegliendo il cliente" autocomplete="off" oninput="uv(this);syncHAgeToCAge(this.value)">
+        <input id="hAge" placeholder="si compila da solo scegliendo il cliente" autocomplete="off" oninput="uv(this)">
       </div>
     </div>
   </div>
@@ -534,10 +534,7 @@ select option {
           </div>
           <div class="f"><label><span>DATA CONTATTO</span><span style="font-size:8px;color:var(--grn)"> auto</span></label><input type="date" id="cDCon"></div>
         </div>
-        <div class="r2">
-          <div class="f"><label><span>AGENTE</span></label><input id="cAge" placeholder="MARIO ROSSI" autocomplete="off" oninput="uv(this);syncCAgeToHAge(this.value)"></div>
-          <div class="f"><label><span>DOC. RICEVUTI</span></label><select id="cDocR"><option value="">—</option><option>VERO</option><option>FALSO</option></select></div>
-        </div>
+        <div class="f"><label><span>DOC. RICEVUTI</span></label><select id="cDocR"><option value="">—</option><option>VERO</option><option>FALSO</option></select></div>
         <div class="f"><label><span>NOTE</span></label><textarea id="cNote" placeholder="Annotazioni..."></textarea></div>
       </div>
     </div>
@@ -863,7 +860,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v25</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v26</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -1576,28 +1573,16 @@ function pickSogg(cod, nome){
     tip.style.display='block';
   }
   if(vet){var vu=document.getElementById('cVUsc');if(vu&&!vu.value){vu.value=vet;}}
-  // Auto-fill agente commerciale dall'anagrafica ufficiale (61k clienti).
-  // Compilo entrambe le caselle: quella nel blocco DATA LISTATO (hAge, sempre visibile)
-  // e quella in IDENTIFICAZIONE (cAge, usata da addRow) restando in sync.
+  // Auto-fill agente commerciale dall'anagrafica ufficiale (61k clienti) nel
+  // campo hAge subito sotto SOGGETTO — unico posto in cui compare l'agente.
   try{
     var age = agentByClient(cod);
     if(age){
       var ha = document.getElementById('hAge');
       if(ha && !ha.value){ ha.value = age.toUpperCase(); if(typeof uv==='function') uv(ha); }
-      var ae = document.getElementById('cAge');
-      if(ae && !ae.value){ ae.value = age.toUpperCase(); if(typeof uv==='function') uv(ae); }
     }
   }catch(e){}
   checkSupplierCutoff(vet);
-}
-// Sincronizzazione hAge -> cAge (la casella in IDENTIFICAZIONE resta la fonte per addRow)
-function syncHAgeToCAge(val){
-  var ae = document.getElementById('cAge');
-  if(ae) ae.value = (val||'').toUpperCase();
-}
-function syncCAgeToHAge(val){
-  var ha = document.getElementById('hAge');
-  if(ha) ha.value = (val||'').toUpperCase();
 }
 
 function onVetUsc(vet) {
@@ -1721,7 +1706,7 @@ function addRow() {
     anomalia:gv('cAno'),tipoDoc:tipoDoc,fase:fase,stato:stato,
     datSta:gv('cDSta'),rma:gv('cRma'),
     contatto:gv('cCon'),datCon:gv('cDCon'),
-    agente:gv('cAge'),docRic:gv('cDocR'),
+    agente:gv('hAge'),docRic:gv('cDocR'),
     datDoc:'',note:gv('cNote'),photo:pendName||'',photoThumb:pendThumb||'',photoKeys:pendPhotos.map(function(p){return p.name;}),
     _who:deviceName,_role:ROLE,motivoNR:''
   };
@@ -1738,7 +1723,7 @@ function addRow() {
     applyMB();
 
     // Reset article fields
-    var ri=['cPre','cCod','cFor','cRma','cAge','cNote'];
+    var ri=['cPre','cCod','cFor','cRma','cNote'];
     for(var i=0;i<ri.length;i++){var el=document.getElementById(ri[i]);if(el)el.value='';}
     document.getElementById('cQty').value='1';
     document.getElementById('cPrc').value='0';
