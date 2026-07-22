@@ -179,6 +179,15 @@ textarea{resize:none;min-height:52px}
 .htab{display:flex;gap:0;margin-bottom:11px;background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rad);overflow:hidden}
 .htab-btn{flex:1;border:none;background:none;color:var(--txt3);font-size:10px;font-weight:700;padding:9px;cursor:pointer;font-family:inherit;transition:all .2s}
 .htab-btn.on{background:var(--grn);color:#000}
+.usub-row{display:flex;gap:5px}
+.usub-btn{flex:1 1 0;min-width:0;background:#111;color:var(--txt3);border:1px solid var(--brd);border-radius:8px;padding:9px 6px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usub-btn.on{background:rgba(59,159,212,.15);color:#3B9FD4;border:1.5px solid #3B9FD4}
+/* Su PC i sub-tab e i bottoni footer hanno larghezza uniforme e più respiro */
+@media (min-width:900px){
+  .usub-btn{padding:11px 10px;font-size:13px}
+  .htab-btn{font-size:12px;padding:11px}
+  .bfab{font-size:15px}
+}
 .hc{background:var(--bg1);border:1px solid var(--brd);border-radius:var(--rad);padding:9px 11px;margin-bottom:7px}
 .hch{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 .hcd{font-size:11px;font-weight:700;color:var(--grn);font-family:monospace}
@@ -380,7 +389,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v29 · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v30 · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -419,10 +428,15 @@ select option {
   <button class="tab on" id="tabIns"  onclick="gTab('pgIns')">RICEVIM.</button>
   <button class="tab"    id="tabList" onclick="gTab('pgList')">LISTA <span class="nbadge" id="nbadge" style="display:none">0</span></button>
   <button class="tab"    id="tabAno"  onclick="gTab('pgAno')">ANOMALIE</button>
-  <button class="tab"    id="tabUbi"  onclick="gTab('pgUbi')">UBICAZIONI</button>
+  <button class="tab"    id="tabUbi"  onclick="gTab('pgUbi')">LOGISTICA</button>
+  <button class="tab"    id="tabTri"  onclick="gTab('pgTri')">TRIMESTRE</button>
   <button class="tab"    id="tabHist" onclick="gTab('pgHist')">STORICO</button>
-  <button class="tab"    id="tabArc"  onclick="gTab('pgArc')">ARCHIVIO</button>
   <button class="tab"    id="tabCon"  onclick="gTab('pgCon')">CONTATTI</button>
+</div>
+
+<!-- ═══ TRIMESTRE (tab principale v30) — il pannello hPanDB viene spostato qui al boot ═══ -->
+<div class="pg" id="pgTri" style="display:none">
+  <div id="pgTriHost"></div>
 </div>
 
 <!-- ═══ INSERT ═══ -->
@@ -650,31 +664,61 @@ select option {
 </div>
 
 
-<!-- ═══ UBICAZIONI ═══ -->
+<!-- ═══ LOGISTICA (UBICAZIONI + LOGISTICA fornitori/corrieri + FOTO PACCO) ═══ -->
 <div class="pg" id="pgUbi" style="display:none">
 
-  <!-- Header con scanner e crea -->
-  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:stretch">
-    <input id="ubiNameInput" placeholder="Es. SCAFFALE-A1, CASSETTO-B3..." oninput="this.value=this.value.toUpperCase()"
-      style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:11px 12px;font-size:14px;border-radius:9px;outline:none;font-family:inherit;-webkit-appearance:none">
-    <button onclick="createUbi()" style="background:#3d1800;color:#3B9FD4;border:2px solid rgba(59,159,212,.5);border-radius:9px;padding:0 16px;font-size:18px;font-weight:700;cursor:pointer;-webkit-appearance:none;flex-shrink:0">+</button>
+  <!-- Sub-tabs LOGISTICA -->
+  <div class="usub-row" style="display:flex;gap:5px;margin-bottom:12px">
+    <button class="usub-btn on" id="uTabUbi"  onclick="swUbiTab('ubi')">&#128230; Ubicazioni</button>
+    <button class="usub-btn"    id="uTabLog"  onclick="swUbiTab('log')">&#128667; Fornitori</button>
+    <button class="usub-btn"    id="uTabFoto" onclick="swUbiTab('foto')">&#128248; Foto pacco</button>
   </div>
 
-  <!-- Scanner rapido per cercare ubicazione -->
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <button onclick="scanForUbi()" style="flex:1;background:#0a1a0a;color:#3B9FD4;border:1px solid rgba(59,159,212,.3);border-radius:9px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">
-      &#128248; Scansiona QR ubicazione
-    </button>
-    <button onclick="scanItemToUbi()" id="ubiScanItemBtn" style="flex:1;background:#1a0800;color:#3B9FD4;border:1px solid rgba(59,159,212,.3);border-radius:9px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">
-      &#128230; Assegna articolo
-    </button>
+  <!-- SUB-PANEL: Ubicazioni -->
+  <div id="uSubUbi">
+    <!-- Header con scanner e crea -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:stretch">
+      <input id="ubiNameInput" placeholder="Es. SCAFFALE-A1, CASSETTO-B3..." oninput="this.value=this.value.toUpperCase()"
+        style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:11px 12px;font-size:14px;border-radius:9px;outline:none;font-family:inherit;-webkit-appearance:none">
+      <button onclick="createUbi()" style="background:#3d1800;color:#3B9FD4;border:2px solid rgba(59,159,212,.5);border-radius:9px;padding:0 16px;font-size:18px;font-weight:700;cursor:pointer;-webkit-appearance:none;flex-shrink:0">+</button>
+    </div>
+
+    <!-- Scanner rapido per cercare ubicazione -->
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="scanForUbi()" style="flex:1;background:#0a1a0a;color:#3B9FD4;border:1px solid rgba(59,159,212,.3);border-radius:9px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">
+        &#128248; Scansiona QR ubicazione
+      </button>
+      <button onclick="scanItemToUbi()" id="ubiScanItemBtn" style="flex:1;background:#1a0800;color:#3B9FD4;border:1px solid rgba(59,159,212,.3);border-radius:9px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">
+        &#128230; Assegna articolo
+      </button>
+    </div>
+
+    <!-- Filtro ubicazioni -->
+    <input id="ubiSearch" oninput="renderUbiList()" placeholder="Cerca ubicazione..."
+      style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 12px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:10px;display:block">
+
+    <div id="ubiList"></div>
   </div>
 
-  <!-- Filtro ubicazioni -->
-  <input id="ubiSearch" oninput="renderUbiList()" placeholder="Cerca ubicazione..." 
-    style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 12px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:10px;display:block">
+  <!-- SUB-PANEL: Logistica fornitori/corrieri/regole (hPanForn spostato qui al boot) -->
+  <div id="uSubLog" style="display:none"><div id="uSubLogHost"></div></div>
 
-  <div id="ubiList"></div>
+  <!-- SUB-PANEL: Foto pacco in evasione -->
+  <div id="uSubFoto" style="display:none">
+    <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:800;color:#3B9FD4;margin-bottom:4px">📸 Foto pacco in evasione</div>
+      <div style="font-size:10px;color:var(--txt2);line-height:1.5;margin-bottom:10px">Fotografa il pacco prima di spedirlo: la foto resta salvata come prova di spedizione, taggata con codice/cliente/data. Utile in caso di contestazioni dal fornitore.</div>
+      <input id="pkgTag" placeholder="Codice / cliente / rif. (opzionale)" oninput="this.value=this.value.toUpperCase()"
+        style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">
+      <input type="file" id="pkgPhotoInput" accept="image/*" capture="environment" onchange="savePkgPhoto(this)" style="display:none">
+      <button onclick="document.getElementById('pkgPhotoInput').click()" style="width:100%;background:#003820;color:#3B9FD4;border:2px solid #3B9FD4;padding:13px;font-size:15px;font-weight:800;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit">📷 Scatta / carica foto pacco</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:#3B9FD4">FOTO SALVATE (<span id="pkgCount">0</span>)</div>
+      <button onclick="clearPkgPhotos()" class="sb sr" style="padding:6px 10px;font-size:11px">Svuota</button>
+    </div>
+    <div id="pkgList"></div>
+  </div>
 </div>
 
 <!-- POST-SCAN POPUP: chiedi PRE e QTÀ -->
@@ -816,12 +860,12 @@ select option {
 <div class="pg" id="pgHist" style="display:none">
   <div class="htab">
     <button class="htab-btn on" id="hTabDash" onclick="swHTab('dash')">📊 DASH</button>
-    <button class="htab-btn" id="hTabDB" onclick="swHTab('db')">🗄 TRIMESTRE</button>
-    <button class="htab-btn" id="hTabForn" onclick="swHTab('forn')">&#128230; LOGISTICA</button>
-    <button class="htab-btn" id="hTabRie" onclick="swHTab('rie')">📈 RIEPILOGO</button>
+    <button class="htab-btn" id="hTabArc" onclick="swHTab('arc')">🗄 ARCHIVIO</button>
     <button class="htab-btn" id="hTabGal" onclick="swHTab('gal')">🖼 GALLERIA</button>
     <button class="htab-btn" id="hTabExp" onclick="swHTab('exp')">💾 EXPORT</button>
   </div>
+  <!-- host per il pannello ARCHIVIO (contenuto di pgArc spostato qui al boot) -->
+  <div id="hPanArc" style="display:none"><div id="hPanArcHost"></div></div>
 
   <div id="hPanDash"><div id="turnoBox" style="background:#111;border:1px solid #2a2a2a;border-left:3px solid #3B9FD4;border-radius:8px;padding:10px 12px;margin-bottom:10px;display:none"></div><div id="dashExtra" style="margin-bottom:12px"></div>
     <div id="dashC"></div>
@@ -849,7 +893,7 @@ select option {
     <!-- Export tutto + contatore -->
     <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
       <span id="dbCount" style="font-size:11px;color:var(--txt2);flex:1"></span>
-      <button onclick="exportDBAll()" style="background:linear-gradient(135deg,#001a40,#003080);color:#3B9FD4;border:1px solid #004080;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">📥 Esporta tutto Excel</button>
+      <button onclick="exportDBAll()" style="background:linear-gradient(135deg,#001a40,#003080);color:#3B9FD4;border:1px solid #004080;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">📤 Esporta questa vista (filtrata)</button>
     </div>
     <!-- Tabella scrollabile (no paginazione) -->
     <div id="dbColFilters" style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:6px 8px;margin-bottom:6px"></div>
@@ -862,7 +906,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v29</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v30</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -1296,6 +1340,8 @@ function launchApp() {
     if(supDb.length===0) initDefaultSuppliers();
   } catch(e) {}
   initAutomations();
+  // v30: riorganizzazione tab — sposta i pannelli nelle nuove posizioni
+  try{ relocatePanels(); }catch(e){ try{console.warn('relocatePanels',e);}catch(_){} }
   // v28: FAB flottanti rimossi, i pulsanti Chat/AI vivono nel footer. Se AI non disponibile disabilito il bottone footer.
   var btnAi=document.getElementById('btnAiCop');
   if(btnAi){
@@ -1730,8 +1776,8 @@ function setDataContatto() {
 // NAVIGATION
 // ══════════════════════════════════════════════════
 function gTab(pg) {
-  var all=['pgIns','pgList','pgAno','pgUbi','pgHist','pgArc','pgCon'];
-  var tabs=['tabIns','tabList','tabAno','tabUbi','tabHist','tabArc','tabCon'];
+  var all=['pgIns','pgList','pgAno','pgUbi','pgTri','pgHist','pgCon'];
+  var tabs=['tabIns','tabList','tabAno','tabUbi','tabTri','tabHist','tabCon'];
   for(var i=0;i<all.length;i++){
     var p=document.getElementById(all[i]);if(p)p.style.display='none';
     var t=document.getElementById(tabs[i]);if(t)t.classList.remove('on');
@@ -1741,8 +1787,8 @@ function gTab(pg) {
   if(pg==='pgList'){listShown=LIST_PAGE;renderList();}
   if(pg==='pgQ'){queueShown=QUEUE_PAGE;renderQueue();}
   if(pg==='pgHist')swHTab('dash');
-  if(pg==='pgArc')renderArchive();
-  if(pg==='pgUbi')renderUbiList();
+  if(pg==='pgTri'){ try{ renderDB(1); }catch(e){} }
+  if(pg==='pgUbi')swUbiTab('ubi');
   if(pg==='pgAno'){syncListToAnomalie();renderAnoList();}
   if(pg==='pgCon')renderContatti();
 }
@@ -2362,8 +2408,8 @@ function renderArchive(){
     filt.push({k:keys[i],r:r});
   }
   filt.sort(function(a,b){return(b.r._archivedAt||0)-(a.r._archivedAt||0);});
-  var arcN=document.querySelector('#tabArc');
-  if(arcN) arcN.textContent='ARCHIVIO'+(filt.length?' ('+filt.length+')':'');
+  var arcN=document.querySelector('#hTabArc');
+  if(arcN) arcN.textContent='🗄 ARCHIVIO'+(filt.length?' ('+filt.length+')':'');
   if(!filt.length){el.innerHTML='<div class="empty"><div class="ei">\ud83d\udcc1</div><div>Archivio vuoto.<br>Archivia articoli con fase Finale.</div></div>';return;}
   var html='';
   for(var i=0;i<filt.length;i++){
@@ -2456,15 +2502,137 @@ function remDone(){try{localStorage.setItem('tremday',new Date().toISOString().s
 // STORICO TABS
 // ══════════════════════════════════════════════════
 function swHTab(t){
-  var P={dash:'hPanDash',db:'hPanDB',forn:'hPanForn',rie:'hPanRie',gal:'hPanGal',exp:'hPanExp'};
-  var B={dash:'hTabDash',db:'hTabDB',forn:'hTabForn',rie:'hTabRie',gal:'hTabGal',exp:'hTabExp'};
+  // Sub-tab STORICO v30: DASH (con RIEPILOGO integrato), ARCHIVIO, GALLERIA, EXPORT.
+  // (TRIMESTRE e LOGISTICA sono diventati tab principali; RIEPILOGO è unito a DASH.)
+  var P={dash:'hPanDash',arc:'hPanArc',gal:'hPanGal',exp:'hPanExp'};
+  var B={dash:'hTabDash',arc:'hTabArc',gal:'hTabGal',exp:'hTabExp'};
   for(var k in P){var p=document.getElementById(P[k]),b=document.getElementById(B[k]);if(!p||!b)continue;if(k===t){p.style.display='';b.classList.add('on');}else{p.style.display='none';b.classList.remove('on');}}
-  if(t==='dash'){renderDash();renderDashExtra();showTurnoInfo();}
-  if(t==='db')renderDB(1);
+  if(t==='dash'){ renderDash(); renderDashExtra(); showTurnoInfo(); try{ renderRiepilogo(); }catch(e){} }
+  if(t==='arc')renderArchive();
   if(t==='gal')renderGallery();
-  if(t==='forn'){setTimeout(function(){swLogTab('corrieri');},50);}
   if(t==='exp')renderHist();
-  if(t==='rie')renderRiepilogo();
+}
+// Sub-tab della pagina LOGISTICA (ex UBICAZIONI): ubicazioni / fornitori / foto pacco
+function swUbiTab(t){
+  var P={ubi:'uSubUbi', log:'uSubLog', foto:'uSubFoto'};
+  var B={ubi:'uTabUbi', log:'uTabLog', foto:'uTabFoto'};
+  for(var k in P){
+    var p=document.getElementById(P[k]), b=document.getElementById(B[k]);
+    if(p) p.style.display = (k===t)?'':'none';
+    if(b){ if(k===t)b.classList.add('on'); else b.classList.remove('on'); }
+  }
+  if(t==='ubi') renderUbiList();
+  else if(t==='log'){ setTimeout(function(){ swLogTab('corrieri'); }, 30); }
+  else if(t==='foto') renderPkgList();
+}
+
+// v30: sposta i pannelli esistenti nelle nuove posizioni una sola volta al boot.
+// Evita di tagliare/incollare blocchi giganti nell'HTML: fa la chirurgia DOM a runtime.
+var _relocated=false;
+function relocatePanels(){
+  if(_relocated) return; _relocated=true;
+  function mv(srcId, hostId){
+    var src=document.getElementById(srcId), host=document.getElementById(hostId);
+    if(src && host && src.parentNode!==host){ src.style.display=''; host.appendChild(src); }
+  }
+  // 1) TRIMESTRE: hPanDB → pgTriHost (tab principale)
+  mv('hPanDB','pgTriHost');
+  // 2) LOGISTICA fornitori/corrieri/regole: hPanForn → uSubLogHost (dentro UBICAZIONI)
+  mv('hPanForn','uSubLogHost');
+  // 3) ARCHIVIO: contenuto di pgArc → hPanArcHost (sub-tab di STORICO)
+  (function(){
+    var arc=document.getElementById('pgArc'), host=document.getElementById('hPanArcHost');
+    if(arc && host && host.childNodes.length===0){
+      while(arc.firstChild){ host.appendChild(arc.firstChild); }
+      arc.style.display='none';
+    }
+  })();
+  // 4) RIEPILOGO integrato in DASH: hPanRie → in coda a hPanDash con un separatore
+  (function(){
+    var rie=document.getElementById('hPanRie'), dash=document.getElementById('hPanDash');
+    if(rie && dash && rie.parentNode!==dash){
+      var sep=document.createElement('div');
+      sep.style.cssText='margin:18px 0 10px;border-top:1px solid var(--brd);padding-top:12px;font-size:11px;font-weight:800;letter-spacing:1.5px;color:var(--txt3)';
+      sep.textContent='📈 RIEPILOGO';
+      dash.appendChild(sep);
+      rie.style.display='';
+      dash.appendChild(rie);
+    }
+  })();
+}
+
+// ══════════════════════════════════════════════════
+// FOTO PACCO IN EVASIONE (v30) — prova di spedizione salvata in IndexedDB
+// ══════════════════════════════════════════════════
+var PKG_KEYS_LS='pkgphotos';
+function _pkgKeys(){ try{ return JSON.parse(localStorage.getItem(PKG_KEYS_LS)||'[]'); }catch(e){ return []; } }
+function _pkgSaveKeys(a){ try{ localStorage.setItem(PKG_KEYS_LS, JSON.stringify(a)); }catch(e){} }
+function savePkgPhoto(input){
+  var file=input.files&&input.files[0]; if(!file) return; input.value='';
+  var tag=((document.getElementById('pkgTag')||{}).value||'').trim();
+  var rd=new FileReader();
+  rd.onload=function(e){
+    // riduco la foto per non riempire lo storage
+    var img=new Image();
+    img.onload=function(){
+      var maxW=1024, sc=Math.min(1, maxW/img.width), w=Math.round(img.width*sc), h=Math.round(img.height*sc);
+      var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      var dataUrl=cv.toDataURL('image/jpeg',0.72);
+      var id='pkg_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+      var rec={ id:id, ts:Date.now(), tag:tag, by:(typeof deviceName!=='undefined'?deviceName:''), dataUrl:dataUrl };
+      idbSet('pkg:'+id, rec).then(function(){
+        var keys=_pkgKeys(); keys.unshift(id); _pkgSaveKeys(keys);
+        var tg=document.getElementById('pkgTag'); if(tg) tg.value='';
+        toast('📸 Foto pacco salvata'+(tag?' · '+tag:''),'b');
+        renderPkgList();
+      }).catch(function(){ toast('Errore salvataggio foto','r'); });
+    };
+    img.src=e.target.result;
+  };
+  rd.readAsDataURL(file);
+}
+function renderPkgList(){
+  var el=document.getElementById('pkgList'); if(!el) return;
+  var keys=_pkgKeys();
+  var cnt=document.getElementById('pkgCount'); if(cnt) cnt.textContent=keys.length;
+  if(!keys.length){ el.innerHTML='<div style="text-align:center;padding:22px;color:#666;font-size:12px">Nessuna foto pacco salvata.</div>'; return; }
+  el.innerHTML=keys.map(function(id){ return '<div id="pkgrow_'+id+'" style="display:flex;gap:10px;align-items:center;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:9px;padding:8px;margin-bottom:7px"><div id="pkgimg_'+id+'" style="width:60px;height:60px;border-radius:7px;background:#0a0a0a;flex-shrink:0;overflow:hidden"></div><div style="flex:1;min-width:0"><div id="pkgtag_'+id+'" style="font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div><div id="pkgts_'+id+'" style="font-size:10px;color:#666"></div></div><button onclick="dlPkgPhoto(\''+id+'\')" class="sb sg" style="padding:6px 9px;font-size:11px">📥</button><button onclick="delPkgPhoto(\''+id+'\')" class="sb sr" style="padding:6px 9px;font-size:11px">✕</button></div>'; }).join('');
+  keys.forEach(function(id){
+    idbGet('pkg:'+id).then(function(rec){
+      if(!rec) return;
+      var im=document.getElementById('pkgimg_'+id); if(im) im.innerHTML='<img src="'+rec.dataUrl+'" onclick="openPkgPhoto(\''+id+'\')" style="width:100%;height:100%;object-fit:cover;cursor:pointer">';
+      var tg=document.getElementById('pkgtag_'+id); if(tg) tg.textContent=rec.tag||'(senza rif.)';
+      var ts=document.getElementById('pkgts_'+id); if(ts) ts.textContent=new Date(rec.ts).toLocaleString('it-IT')+(rec.by?(' · '+rec.by):'');
+    });
+  });
+}
+function openPkgPhoto(id){
+  idbGet('pkg:'+id).then(function(rec){ if(!rec) return;
+    var box=document.createElement('div'); box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:1600;display:flex;align-items:center;justify-content:center;padding:14px;cursor:zoom-out';
+    box.onclick=function(){ box.remove(); };
+    box.innerHTML='<img src="'+rec.dataUrl+'" style="max-width:100%;max-height:100%;border-radius:10px">';
+    document.body.appendChild(box);
+  });
+}
+function dlPkgPhoto(id){
+  idbGet('pkg:'+id).then(function(rec){ if(!rec) return;
+    var a=document.createElement('a'); a.href=rec.dataUrl; a.download='pacco_'+(rec.tag||id).replace(/[^\w\-]+/g,'_')+'.jpg';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  });
+}
+function delPkgPhoto(id){
+  if(!confirm('Eliminare questa foto pacco?')) return;
+  idbDel('pkg:'+id).catch(function(){});
+  var keys=_pkgKeys().filter(function(k){ return k!==id; }); _pkgSaveKeys(keys);
+  renderPkgList();
+}
+function clearPkgPhotos(){
+  if(!confirm('Svuotare tutte le foto pacco?')) return;
+  var keys=_pkgKeys();
+  keys.forEach(function(id){ idbDel('pkg:'+id).catch(function(){}); });
+  _pkgSaveKeys([]);
+  renderPkgList();
 }
 
 // ══════════════════════════════════════════════════
@@ -6544,8 +6712,8 @@ function gsGoRow(key){
 }
 function gsGoArc(key){
   closeGlobalBar();
-  gTab('pgArc');
-  setTimeout(function(){gsFlash(document.getElementById('arc_'+key),'#5BB8E0');},350);
+  gTab('pgHist');            // archivio è ora un sub-tab di STORICO
+  setTimeout(function(){ swHTab('arc'); setTimeout(function(){gsFlash(document.getElementById('arc_'+key),'#5BB8E0');},150); },50);
 }
 function gsGoTri(key){
   closeGlobalBar();
