@@ -389,7 +389,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v30 · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v31 · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -415,14 +415,14 @@ select option {
   <button id="fbBtn" onclick="openFBModal()" style="background:none;border:none;font-size:14px;cursor:pointer;padding:2px 4px;flex-shrink:0" title="Configura Firebase sync">&#128293;</button>
 </div>
 
-<div id="globalSearchBar" style="position:fixed;top:48px;left:0;right:0;z-index:98;background:var(--bg1);border-bottom:2px solid rgba(59,159,212,.3);padding:6px 10px 8px;">
+<div id="globalSearchBar" style="position:fixed;top:48px;left:0;right:0;z-index:140;background:var(--bg1);border-bottom:2px solid rgba(59,159,212,.3);padding:6px 10px 8px;">
   <div style="display:flex;gap:8px;align-items:center">
     <span style="color:#3B9FD4;font-size:16px;flex-shrink:0">&#128269;</span>
     <input id="globalSearchInline" oninput="doGlobalSearch()" placeholder="Cerca codice, cliente, fornitore, ubicazione..."
       autocomplete="off" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid rgba(59,159,212,.4);padding:8px 12px;font-size:14px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none">
     <button onclick="clearGlobalBar()" style="background:none;border:none;color:#555;font-size:18px;cursor:pointer;flex-shrink:0;padding:2px 6px">&#10005;</button>
   </div>
-  <div id="globalSearchRes" style="max-height:40vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#111;border:1px solid #2a2a2a;border-radius:8px;margin-top:6px;display:none"></div>
+  <div id="globalSearchRes" style="position:relative;z-index:141;max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#0f0f0f;border:1px solid #2a2a2a;border-radius:8px;margin-top:6px;display:none;box-shadow:0 8px 24px rgba(0,0,0,.6)"></div>
 </div>
 <div class="tabs" id="mainTabs" style="display:none">
   <button class="tab on" id="tabIns"  onclick="gTab('pgIns')">RICEVIM.</button>
@@ -906,7 +906,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v30</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v31</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -5289,124 +5289,7 @@ function duplicaRow(key){
 }
 
 // ── RICERCA GLOBALE ──────────────────────────────────────────────
-var globalSearchOpen = false;
-
-
-
-function doGlobalSearch(){
-  var q=((document.getElementById('globalSearchInline')||{}).value||'').trim().toLowerCase();
-  var res=document.getElementById('globalSearchRes');
-  if(!res)return;
-  if(q.length<2){res.innerHTML='<div style="color:#666;padding:12px">Digita almeno 2 caratteri...</div>';return;}
-
-  var sections=[];
-
-  // Lista corrente
-  var listRes=[];
-  for(var k in rows){
-    var r=rows[k];
-    var hay=((r.cod||'')+(r.sogg||'')+(r.forn||'')+(r.causale||'')+(r.pre||'')).toLowerCase();
-    if(hay.indexOf(q)>=0) listRes.push({key:k,row:r,src:'Lista'});
-  }
-  if(listRes.length) sections.push({title:'LISTA ('+listRes.length+')',items:listRes,color:'#3B9FD4'});
-
-  // Archivio
-  var arcRes=[];
-  for(var k in arch){
-    var r=arch[k];
-    var hay=((r.cod||'')+(r.sogg||'')+(r.forn||'')+(r.causale||'')).toLowerCase();
-    if(hay.indexOf(q)>=0) arcRes.push({key:k,row:r,src:'Archivio'});
-  }
-  if(arcRes.length) sections.push({title:'ARCHIVIO ('+arcRes.length+')',items:arcRes,color:'#5BB8E0'});
-
-  // DB Trimestre — cerca TUTTO lo storico e risolve il nome cliente dal codice soggetto
-  function _nomeCliDB(sogg){ if(!sogg||typeof CLI_DATA==='undefined')return ''; var raw=CLI_DATA[sogg]||CLI_DATA[String(sogg).replace(/^0+/,'')]; return raw?(raw.split('|')[0]||''):''; }
-  var dbRes=[];
-  if(DB_TRI){
-    for(var i=0;i<DB_TRI.length;i++){
-      var r=DB_TRI[i];
-      var hay=((r.cod||'')+(r.sogg||'')+_nomeCliDB(r.sogg)+(r.forn||'')+(r.causale||'')+(r.pre||'')+(r.rma||'')+(r.agente||'')).toLowerCase();
-      if(hay.indexOf(q)>=0) dbRes.push({key:r._key||('tri_'+i), row:r, src:'Storico'});
-      if(dbRes.length>=30)break;
-    }
-  }
-  if(dbRes.length) sections.push({title:'STORICO TRIMESTRE ('+dbRes.length+(dbRes.length>=30?'+':'')+')',items:dbRes,color:'#d0b370'});
-
-  // Ubicazioni
-  loadUBI();
-  var ubiRes=[];
-  for(var id in UBI){
-    var loc=UBI[id];
-    if(loc.name.toLowerCase().indexOf(q)>=0){
-      ubiRes.push({id:id,loc:loc,src:'Ubicazione'});
-    } else if(loc.items){
-      for(var j=0;j<loc.items.length;j++){
-        if((loc.items[j].cod||'').toLowerCase().indexOf(q)>=0){
-          ubiRes.push({id:id,loc:loc,src:'Ubicazione',item:loc.items[j]});
-          break;
-        }
-      }
-    }
-  }
-  if(ubiRes.length) sections.push({title:'UBICAZIONI ('+ubiRes.length+')',items:ubiRes,color:'#3B9FD4'});
-
-  if(!sections.length){
-    res.innerHTML='<div style="color:#666;padding:12px">Nessun risultato per "'+xe(q)+'"</div>';
-    return;
-  }
-
-  var html='';
-  for(var si=0;si<sections.length;si++){
-    var sec=sections[si];
-    html+='<div style="font-size:9px;font-weight:700;color:'+sec.color+';letter-spacing:1px;padding:8px 12px 4px;background:#0a0a0a;position:sticky;top:0">'+sec.title+'</div>';
-    var items=sec.items.slice(0,8);
-    for(var ii=0;ii<items.length;ii++){
-      var it=items[ii];
-      if(it.loc){
-        // Ubicazione result → apre la pagina UBICAZIONI e scrolla sullo scaffale
-        html+='<div onclick="gsOpenUbi(\''+xe(it.id||'').replace(/\x27/g,"\\\'")+'\')" style="padding:8px 12px;border-bottom:1px solid #1a1a1a;cursor:pointer">';
-        html+='<div style="font-size:13px;font-weight:700;color:#fff">🗺️ '+xe(it.loc.name)+'</div>';
-        if(it.item)html+='<div style="font-size:10px;color:#999;font-family:monospace">'+xe(it.item.cod||'')+'</div>';
-        html+='</div>';
-      } else {
-        // Row result → apre la scheda MODIFICA (dell\'articolo, dell\'archivio o dello storico)
-        var r=it.row;
-        var k = it.key || r._key || '';
-        html+='<div onclick="gsOpenRow(\''+xe(k).replace(/\x27/g,"\\\'")+'\')" style="padding:8px 12px;border-bottom:1px solid #1a1a1a;cursor:pointer">';
-        html+='<div style="font-size:12px;font-weight:700;color:#3B9FD4;font-family:monospace">'+xe(r.pre?r.pre+' ':'')+xe(r.cod||'')+(r._frozen?' <span style="font-size:9px;color:#d0b370">🗄 STORICO</span>':(it.src==='Archivio'?' <span style="font-size:9px;color:#999">📁 ARCHIVIO</span>':''))+'</div>';
-        html+='<div style="font-size:11px;color:#E0E0E0">'+xe(r.sogg||r.forn||'')+'</div>';
-        html+='<div style="font-size:10px;color:#999">'+xe(r.causale||'')+(r.fase?' · '+xe(r.fase):'')+'</div>';
-        html+='</div>';
-      }
-    }
-  }
-  res.innerHTML=html;
-}
-
-// ── Click su un risultato: apre la scheda giusta invece di sparire lasciando lo schermo vuoto
-function gsOpenRow(key){
-  closeGlobalSearch();
-  if(!key){ toast('Chiave non disponibile per questo risultato','y'); return; }
-  // Se è un record di archivio, portalo temporaneamente in rows per la scheda
-  if(String(key).indexOf('tri_')!==0 && !rows[key] && typeof arch!=='undefined' && arch[key]){
-    var saved = rows[key];  // dovrebbe essere undefined
-    rows[key] = arch[key];  // esposto per editRow (read only via canEditRow su non-frozen)
-    try{ editRow(key); }catch(e){}
-    setTimeout(function(){ if(saved===undefined) delete rows[key]; else rows[key]=saved; }, 300);
-    return;
-  }
-  try{ editRow(key); }catch(e){ toast('Impossibile aprire: '+e.message,'r'); }
-}
-
-function gsOpenUbi(id){
-  closeGlobalSearch();
-  gTab('pgUbi');
-  if(!id) return;
-  setTimeout(function(){
-    var el = document.getElementById('ubi_'+id);
-    if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.transition='background .5s'; el.style.background='rgba(59,159,212,.15)'; setTimeout(function(){ el.style.background=''; }, 1500); }
-  }, 250);
-}
+// RICERCA GLOBALE: implementazione unica piu in basso (doGlobalSearch + gsGo*)
 
 // ── ALERT FORNITORI (notifiche push browser) ─────────────────────
 var _supAlertInterval = null;
@@ -6616,12 +6499,13 @@ function clearGlobalBar(){
   if(res){res.style.display='none';res.innerHTML='';}
 }
 function closeGlobalBar(){
-  var bar=document.getElementById('globalSearchBar');
+  // NB: la barra resta SEMPRE visibile (è fissa in alto). Chiudo solo i risultati
+  // e svuoto l'input. In passato nascondevo tutta la barra e non tornava più.
   var res=document.getElementById('globalSearchRes');
   var inp=document.getElementById('globalSearchInline');
-  if(bar)bar.style.display='none';
-  if(res)res.style.display='none';
+  if(res){res.style.display='none';res.innerHTML='';}
   if(inp)inp.value='';
+  try{ if(inp) inp.blur(); }catch(e){}
 }
 function doGlobalSearch(){
   var inp=document.getElementById('globalSearchInline');
