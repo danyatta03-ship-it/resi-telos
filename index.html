@@ -392,7 +392,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v33i · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v33j · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -925,7 +925,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v33i</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v33j</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -8831,7 +8831,13 @@ function scanFotoFallback(){
 .admNavItem .ic{font-size:16px;width:20px;text-align:center}
 #admSide .bot{padding:12px 14px;border-top:1px solid #1c2432;display:flex;flex-direction:column;gap:6px}
 #admMain{flex:1;display:flex;flex-direction:column;min-width:0}
-#admTop{padding:14px 24px;border-bottom:1px solid #1c2432;display:flex;align-items:center;gap:14px;background:#0e1319}
+#admTop{padding:12px 16px;border-bottom:1px solid #1c2432;display:flex;align-items:center;gap:10px;background:#0e1319;flex-wrap:wrap}
+#admTop #admSearch{min-width:140px}
+@media(max-width:640px){
+  #admTop{padding:10px 12px;gap:8px}
+  #admBc{width:100%;order:-1;margin-bottom:2px}
+  #admSearch{flex:1 1 100%;order:2}
+}
 #admBc{font-size:12px;color:#5c6b7d}
 #admBc b{color:#c6d4e2;font-weight:700}
 #admSearch{flex:1;max-width:420px;background:#0a0d12;color:#e6ecf3;border:1px solid #1c2432;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;font-family:inherit}
