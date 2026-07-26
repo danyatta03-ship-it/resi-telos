@@ -1,95 +1,93 @@
-// Proxy Vercel Serverless Function per Gemini/OpenAI-compat.
-// Le chiavi risiedono SOLO in variabili d'ambiente Vercel (GEMINI_KEYS, GEMINI_MODELS)
-// e non sono mai visibili al browser. Il client chiama /api/gemini con lo stesso body
-// che userebbe con https://generativelanguage.googleapis.com/v1beta/openai/chat/completions;
-// il proxy prova tutte le chiavi × modelli con fallback su 429 (quota) e restituisce la
-// risposta grezza dell'endpoint OpenAI-compat.
+// Proxy Vercel Serverless Function per Gemini (OpenAI-compat endpoint).
+// Ultra-difensivo: cattura ogni errore e risponde sempre JSON, mai crash.
 
 const UPSTREAM = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
-function setCors(res){
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Cache-Control', 'no-store');
-}
 function readEnvList(name, fallback){
-  const raw = process.env[name] || fallback || '';
-  return raw.split(/[,\s]+/).map(s => s.trim()).filter(Boolean);
+  try {
+    var raw = (process.env && process.env[name]) || fallback || '';
+    return String(raw).split(/[,\s]+/).map(function(s){return s.trim();}).filter(Boolean);
+  } catch(e) { return fallback ? [fallback] : []; }
 }
 
-module.exports = async (req, res) => {
-  setCors(res);
-
-  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
-
-  const KEYS = readEnvList('GEMINI_KEYS', process.env.GEMINI_API_KEY || process.env.GEMINI_KEY || '');
-  const MODELS = readEnvList('GEMINI_MODELS', 'gemini-2.5-flash-lite,gemini-2.0-flash');
-
-  if (req.method === 'GET') {
+module.exports = async function handler(req, res){
+  try {
+    // CORS + no-cache
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Content-Type', 'application/json');
-    res.status(200).end(JSON.stringify({ ok: KEYS.length > 0, keys: KEYS.length, models: MODELS }));
-    return;
-  }
 
-  if (req.method !== 'POST') { res.status(405).end('Method Not Allowed'); return; }
+    var method = (req.method || 'GET').toUpperCase();
 
-  if (!KEYS.length) {
-    res.setHeader('Content-Type', 'application/json');
-    res.status(200).end(JSON.stringify({ error: { code: 503, message: 'AI proxy non configurato: definire GEMINI_KEYS (o GEMINI_API_KEY) in Vercel' } }));
-    return;
-  }
+    if (method === 'OPTIONS') { res.status(204).end(''); return; }
 
-  // Vercel automaticamente fa il parsing del body JSON, ma per sicurezza gestisco entrambi i casi
-  let body = req.body;
-  if (typeof body === 'string') { try { body = JSON.parse(body || '{}'); } catch { res.status(400).end('invalid json'); return; } }
-  if (!body || typeof body !== 'object') body = {};
+    var KEYS = readEnvList('GEMINI_KEYS', (process.env && (process.env.GEMINI_API_KEY || process.env.GEMINI_KEY)) || '');
+    var MODELS = readEnvList('GEMINI_MODELS', 'gemini-2.5-flash-lite,gemini-2.0-flash');
 
-  const messages = body.messages;
-  if (!Array.isArray(messages) || !messages.length) {
-    res.setHeader('Content-Type', 'application/json');
-    res.status(400).end(JSON.stringify({ error: { message: 'messages mancanti' } }));
-    return;
-  }
-  const temperature = body.temperature != null ? body.temperature : 0.3;
-  const requestedModel = body.model;
-  const models = requestedModel
-    ? [requestedModel, ...MODELS.filter(m => m !== requestedModel)]
-    : MODELS.slice();
+    if (method === 'GET') {
+      res.status(200).end(JSON.stringify({ ok: KEYS.length > 0, keys: KEYS.length, models: MODELS, runtime: process.version }));
+      return;
+    }
 
-  let lastErr = 'nessun tentativo', quotaHit = false;
+    if (method !== 'POST') { res.status(405).end(JSON.stringify({ error: { message: 'Method Not Allowed' } })); return; }
 
-  for (const model of models) {
-    for (const key of KEYS) {
-      try {
-        const r = await fetch(UPSTREAM, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-          body: JSON.stringify({ model, temperature, messages })
-        });
-        const j = await r.json().catch(() => null);
-        if (!j) { lastErr = 'risposta non-JSON'; continue; }
-        const errObj = j.error || (Array.isArray(j) && j[0] && j[0].error);
-        if (errObj) {
-          lastErr = errObj.message || 'errore AI';
-          const code = errObj.code || r.status;
-          if (code === 429 || /quota|rate.?limit/i.test(lastErr)) { quotaHit = true; continue; }
-          continue;
+    if (!KEYS.length) {
+      res.status(200).end(JSON.stringify({ error: { code: 503, message: 'AI proxy non configurato: manca GEMINI_KEYS o GEMINI_API_KEY nelle env vars Vercel' } }));
+      return;
+    }
+
+    var body = req.body;
+    if (typeof body === 'string') { try { body = JSON.parse(body); } catch(_) { body = null; } }
+    if (!body || typeof body !== 'object') body = {};
+
+    var messages = body.messages;
+    if (!Array.isArray(messages) || !messages.length) {
+      res.status(200).end(JSON.stringify({ error: { message: 'messages mancanti nel body' } }));
+      return;
+    }
+
+    var temperature = (body.temperature != null) ? body.temperature : 0.3;
+    var requestedModel = body.model;
+    var models = requestedModel ? [requestedModel].concat(MODELS.filter(function(m){return m!==requestedModel;})) : MODELS.slice();
+
+    var lastErr = 'nessun tentativo', quotaHit = false;
+
+    for (var i = 0; i < models.length; i++) {
+      for (var k = 0; k < KEYS.length; k++) {
+        try {
+          var r = await fetch(UPSTREAM, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + KEYS[k] },
+            body: JSON.stringify({ model: models[i], temperature: temperature, messages: messages })
+          });
+          var j = null;
+          try { j = await r.json(); } catch(_) { j = null; }
+          if (!j) { lastErr = 'risposta non-JSON (HTTP '+r.status+')'; continue; }
+          var errObj = j.error || (Array.isArray(j) && j[0] && j[0].error);
+          if (errObj) {
+            lastErr = errObj.message || 'errore AI';
+            var code = errObj.code || r.status;
+            if (code === 429 || /quota|rate.?limit/i.test(String(lastErr))) { quotaHit = true; }
+            continue;
+          }
+          var payload = Array.isArray(j) ? j[0] : j;
+          var content = payload && payload.choices && payload.choices[0] && payload.choices[0].message && payload.choices[0].message.content;
+          if (content) { res.status(200).end(JSON.stringify(payload)); return; }
+          lastErr = 'risposta vuota';
+        } catch(e) {
+          lastErr = (e && e.message) || 'errore rete';
         }
-        const payload = Array.isArray(j) ? j[0] : j;
-        const content = payload && payload.choices && payload.choices[0] && payload.choices[0].message && payload.choices[0].message.content;
-        if (content) {
-          res.setHeader('Content-Type', 'application/json');
-          res.status(200).end(JSON.stringify(payload));
-          return;
-        }
-        lastErr = 'risposta vuota';
-      } catch (e) {
-        lastErr = (e && e.message) || 'errore rete';
       }
     }
-  }
 
-  res.setHeader('Content-Type', 'application/json');
-  res.status(200).end(JSON.stringify({ error: { message: quotaHit ? 'Limite giornaliero AI gratuito esaurito su tutte le chiavi' : lastErr } }));
+    res.status(200).end(JSON.stringify({ error: { message: quotaHit ? 'Quota giornaliera esaurita su tutte le chiavi' : lastErr } }));
+  } catch(fatal) {
+    // Ultima linea di difesa: se anche il framework fallisce, non far crashare la funzione
+    try {
+      res.setHeader('Content-Type', 'application/json');
+      res.status(200).end(JSON.stringify({ error: { message: 'proxy error: ' + ((fatal && fatal.message) || String(fatal)) } }));
+    } catch(_) {}
+  }
 };

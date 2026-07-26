@@ -1,6 +1,9 @@
 {
   "cleanUrls": false,
   "trailingSlash": false,
+  "buildCommand": null,
+  "outputDirectory": ".",
+  "installCommand": "echo 'skip install'",
   "headers": [
     {
       "source": "/sw.js",
