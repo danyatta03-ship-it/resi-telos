@@ -1,0 +1,5 @@
+server.js
+netlify/
+data/
+node_modules/
+.git/
