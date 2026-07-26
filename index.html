@@ -390,7 +390,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v32 · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v33 · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -923,7 +923,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v32</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v33</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -1336,13 +1336,26 @@ function startApp() {
   var nm = document.getElementById('popName').value.trim();
   var err = document.getElementById('popErr');
   if(!nm) { err.textContent='Inserisci il tuo nome.'; err.style.display='block'; return; }
-  if(!selRoleVal) { err.textContent='Seleziona un ruolo.'; err.style.display='block'; return; }
   err.style.display='none';
-  deviceName = nm.toUpperCase();
-  ROLE = selRoleVal;
-  try{sessionStorage.setItem('devname',deviceName);sessionStorage.setItem('devrole',ROLE);}catch(e){}
-  document.getElementById('initPopup').style.display='none';
-  launchApp();
+  function _continueNormal(){
+    if(!selRoleVal) { err.textContent='Seleziona un ruolo.'; err.style.display='block'; return; }
+    deviceName = nm.toUpperCase();
+    ROLE = selRoleVal;
+    try{sessionStorage.setItem('devname',deviceName);sessionStorage.setItem('devrole',ROLE);}catch(e){}
+    document.getElementById('initPopup').style.display='none';
+    launchApp();
+  }
+  // Admin PIN nascosto: se il "nome" digitato è il PIN admin, entro nel pannello.
+  // Confronto tramite hash SHA-256 (Web Crypto) → il PIN non è mai in chiaro nel codice.
+  if(typeof admCheckPin==='function'){
+    admCheckPin(nm).then(function(isAdmin){
+      if(isAdmin){
+        document.getElementById('popName').value='';
+        document.getElementById('initPopup').style.display='none';
+        admBoot();
+      } else { _continueNormal(); }
+    }).catch(_continueNormal);
+  } else { _continueNormal(); }
 }
 
 function launchApp() {
@@ -8777,6 +8790,917 @@ function scanFotoFallback(){
     </div>
   </div>
 </div>
+
+<!-- ═══ ADMIN PANEL v33 — centro di controllo (accesso via PIN nel campo nome) ═══ -->
+<style id="admStyle">
+#admWrap{position:fixed;inset:0;z-index:2000;background:#0a0d12;color:#e6ecf3;display:none;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif}
+#admWrap.on{display:flex}
+#admWrap *{box-sizing:border-box}
+#admWrap ::-webkit-scrollbar{width:8px;height:8px}
+#admWrap ::-webkit-scrollbar-thumb{background:#2a3546;border-radius:4px}
+#admSide{width:230px;background:#0e1319;border-right:1px solid #1c2432;display:flex;flex-direction:column;flex-shrink:0}
+#admBrand{padding:16px 18px;border-bottom:1px solid #1c2432}
+#admBrand .t{font-size:11px;color:#5b8fd6;font-weight:800;letter-spacing:2px}
+#admBrand .n{font-size:16px;font-weight:800;color:#fff;margin-top:2px}
+#admBrand .v{font-size:10px;color:#4c5a6e;margin-top:1px}
+#admNav{flex:1;overflow-y:auto;padding:10px 0}
+.admNavItem{display:flex;align-items:center;gap:10px;padding:11px 18px;cursor:pointer;font-size:13px;font-weight:600;color:#8899a8;border-left:3px solid transparent;transition:all .12s}
+.admNavItem:hover{background:#131a24;color:#c6d4e2}
+.admNavItem.on{background:#131a24;color:#7db8ff;border-left-color:#3b9fd4}
+.admNavItem .ic{font-size:16px;width:20px;text-align:center}
+#admSide .bot{padding:12px 14px;border-top:1px solid #1c2432;display:flex;flex-direction:column;gap:6px}
+#admMain{flex:1;display:flex;flex-direction:column;min-width:0}
+#admTop{padding:14px 24px;border-bottom:1px solid #1c2432;display:flex;align-items:center;gap:14px;background:#0e1319}
+#admBc{font-size:12px;color:#5c6b7d}
+#admBc b{color:#c6d4e2;font-weight:700}
+#admSearch{flex:1;max-width:420px;background:#0a0d12;color:#e6ecf3;border:1px solid #1c2432;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;font-family:inherit}
+#admSearch:focus{border-color:#3b9fd4}
+#admBody{flex:1;overflow-y:auto;padding:22px 26px;background:#0a0d12}
+.admCard{background:#0e1319;border:1px solid #1c2432;border-radius:12px;padding:18px;margin-bottom:14px}
+.admCard h3{margin:0 0 4px;font-size:15px;font-weight:800;color:#fff}
+.admCard .sub{font-size:11px;color:#5c6b7d;margin-bottom:12px}
+.admGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.admStat{background:#0e1319;border:1px solid #1c2432;border-radius:10px;padding:14px}
+.admStat .k{font-size:10px;color:#5c6b7d;font-weight:700;letter-spacing:1px}
+.admStat .v{font-size:22px;font-weight:800;color:#fff;margin-top:4px}
+.admStat .d{font-size:11px;color:#7db8ff;margin-top:2px}
+.admBtn{background:#1c2b3f;color:#7db8ff;border:1px solid #2a4468;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .12s}
+.admBtn:hover{background:#243654;color:#a5cbf5}
+.admBtn.pri{background:linear-gradient(135deg,#1c4d80,#155a95);color:#fff;border-color:#3b9fd4}
+.admBtn.pri:hover{background:linear-gradient(135deg,#255e99,#1a6ab0)}
+.admBtn.dan{background:#3a1c1c;color:#ff8a8a;border-color:#6a2a2a}
+.admBtn.dan:hover{background:#4a2323}
+.admBtn.gh{background:transparent;color:#8899a8;border-color:#1c2432}
+.admBtn.gh:hover{color:#c6d4e2;border-color:#2a3546}
+.admIn{background:#0a0d12;color:#e6ecf3;border:1px solid #1c2432;border-radius:7px;padding:9px 11px;font-size:13px;outline:none;font-family:inherit;width:100%}
+.admIn:focus{border-color:#3b9fd4}
+.admIn[readonly]{opacity:.6}
+.admLbl{font-size:10px;color:#5c6b7d;font-weight:700;letter-spacing:1px;margin-bottom:4px;display:block;text-transform:uppercase}
+.admRow{display:flex;gap:10px;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap}
+.admRow>*{flex:1;min-width:140px}
+.admTable{width:100%;border-collapse:collapse;font-size:12px}
+.admTable th{text-align:left;padding:9px 10px;background:#131a24;color:#7db8ff;font-weight:700;font-size:10px;letter-spacing:1px;border-bottom:1px solid #1c2432}
+.admTable td{padding:10px;border-bottom:1px solid #1c2432;color:#c6d4e2;vertical-align:middle}
+.admTable tr:hover td{background:#131a24}
+.admChip{display:inline-block;padding:2px 8px;font-size:10px;font-weight:700;border-radius:11px;background:#1c2b3f;color:#7db8ff}
+.admChip.on{background:#12331d;color:#5ce080}
+.admChip.off{background:#3a1c1c;color:#ff8a8a}
+.admChip.role{background:#2a1c3f;color:#c58aff}
+.admSw{position:relative;display:inline-block;width:38px;height:20px;vertical-align:middle}
+.admSw input{opacity:0;width:0;height:0}
+.admSw span{position:absolute;inset:0;background:#2a3546;border-radius:20px;cursor:pointer;transition:.15s}
+.admSw span:before{content:'';position:absolute;height:14px;width:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+.admSw input:checked+span{background:#3b9fd4}
+.admSw input:checked+span:before{transform:translateX(18px)}
+.admIco{background:transparent;border:none;color:#8899a8;cursor:pointer;padding:5px 7px;font-size:14px;border-radius:5px}
+.admIco:hover{background:#1c2432;color:#fff}
+.admIco.dan:hover{background:#3a1c1c;color:#ff8a8a}
+#admToast{position:fixed;bottom:20px;right:20px;z-index:2100;background:#12331d;color:#5ce080;padding:11px 16px;border-radius:8px;font-size:13px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.4);display:none;border:1px solid #1e5a35}
+#admToast.err{background:#3a1c1c;color:#ff8a8a;border-color:#6a2a2a}
+#admConfirm{position:fixed;inset:0;z-index:2200;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:20px}
+#admConfirm.on{display:flex}
+#admConfirm .box{background:#0e1319;border:1px solid #1c2432;border-radius:12px;padding:22px;max-width:400px;width:100%}
+#admConfirm h4{margin:0 0 8px;font-size:16px;font-weight:800;color:#fff}
+#admConfirm p{margin:0 0 16px;font-size:13px;color:#8899a8;line-height:1.5}
+.admSection{display:none}
+.admSection.on{display:block}
+@media(max-width:820px){
+  #admSide{width:60px}
+  #admBrand,.admNavItem span:not(.ic),#admSide .bot{display:none}
+  .admNavItem{justify-content:center;padding:12px 0}
+  .admNavItem .ic{width:auto}
+}
+</style>
+<div id="admWrap">
+  <aside id="admSide">
+    <div id="admBrand">
+      <div class="t">RESI TELOS</div>
+      <div class="n">Admin Panel</div>
+      <div class="v">v33 · centro di controllo</div>
+    </div>
+    <nav id="admNav">
+      <div class="admNavItem on" data-sec="dash" onclick="admGo('dash')"><span class="ic">📊</span><span>Dashboard</span></div>
+      <div class="admNavItem" data-sec="users" onclick="admGo('users')"><span class="ic">👥</span><span>Utenti</span></div>
+      <div class="admNavItem" data-sec="suppliers" onclick="admGo('suppliers')"><span class="ic">🏭</span><span>Fornitori</span></div>
+      <div class="admNavItem" data-sec="agents" onclick="admGo('agents')"><span class="ic">💼</span><span>Agenti</span></div>
+      <div class="admNavItem" data-sec="portals" onclick="admGo('portals')"><span class="ic">🔗</span><span>Portali</span></div>
+      <div class="admNavItem" data-sec="mail" onclick="admGo('mail')"><span class="ic">✉️</span><span>Template Email</span></div>
+      <div class="admNavItem" data-sec="cats" onclick="admGo('cats')"><span class="ic">🏷️</span><span>Categorie</span></div>
+      <div class="admNavItem" data-sec="stati" onclick="admGo('stati')"><span class="ic">🎯</span><span>Stati Reso</span></div>
+      <div class="admNavItem" data-sec="config" onclick="admGo('config')"><span class="ic">⚙️</span><span>Configurazione</span></div>
+      <div class="admNavItem" data-sec="log" onclick="admGo('log')"><span class="ic">📜</span><span>Log Modifiche</span></div>
+    </nav>
+    <div class="bot">
+      <button class="admBtn gh" onclick="admChangePin()" style="width:100%">🔑 Cambia PIN</button>
+      <button class="admBtn gh" onclick="admLogout()" style="width:100%">🚪 Esci</button>
+    </div>
+  </aside>
+  <main id="admMain">
+    <div id="admTop">
+      <div id="admBc">Admin · <b id="admBcSec">Dashboard</b></div>
+      <input id="admSearch" placeholder="🔍 Ricerca globale (utenti, fornitori, template…)" oninput="admGlobalSearch(this.value)">
+    </div>
+    <div id="admBody"><!-- riempito da admGo() --></div>
+  </main>
+</div>
+<div id="admToast"></div>
+<div id="admConfirm"><div class="box">
+  <h4 id="admCfTtl">Conferma</h4>
+  <p id="admCfMsg">Sei sicuro?</p>
+  <div style="display:flex;gap:9px;justify-content:flex-end">
+    <button class="admBtn gh" onclick="admCfHide()">Annulla</button>
+    <button class="admBtn dan" id="admCfOk">Conferma</button>
+  </div>
+</div></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// ADMIN PANEL v33 — accesso via PIN nel campo nome del popup iniziale
+// PIN è sempre confrontato via SHA-256; il valore in chiaro non compare mai
+// nel sorgente. Il pannello è invisibile agli utenti normali.
+// ══════════════════════════════════════════════════════════════
+
+// Hash SHA-256 del PIN corrente. All'avvio provo a leggere l'hash aggiornato
+// da Firebase o localStorage (l'admin può cambiare il PIN dal pannello);
+// se manca uso il default che è stato hardcodato al primo deploy.
+var ADM_PIN_HASH = '92cf4b9034b653432b922dcd907b2f11b4a30051007e2c7552ca391796043f9d';
+var ADM_CFG = null;
+var ADM_SEC = 'dash';
+var ADM_IDLE_TIMER = null;
+var ADM_IDLE_MS = 15*60*1000; // logout auto dopo 15 min
+
+// ── SHA-256 via Web Crypto (async) ────────────────────────────
+function admSha256(txt){
+  if(!(window.crypto && window.crypto.subtle)) return Promise.resolve('');
+  var buf = new TextEncoder().encode(String(txt||''));
+  return crypto.subtle.digest('SHA-256', buf).then(function(hash){
+    var bytes = new Uint8Array(hash);
+    var hex = '';
+    for(var i=0;i<bytes.length;i++){ hex += ('00'+bytes[i].toString(16)).slice(-2); }
+    return hex;
+  });
+}
+
+// Verifica PIN: prima aggiorna l'hash da storage (potrebbe essere cambiato)
+function admCheckPin(input){
+  var txt = String(input||'');
+  if(txt.length < 8) return Promise.resolve(false); // early skip
+  return admLoadPinHash().then(function(){
+    return admSha256(txt).then(function(h){ return h === ADM_PIN_HASH; });
+  });
+}
+
+function admLoadPinHash(){
+  return new Promise(function(res){
+    try{
+      var local = localStorage.getItem('adm_pin_hash');
+      if(local) ADM_PIN_HASH = local;
+    }catch(e){}
+    if(typeof FB_REF !== 'undefined' && FB_REF){
+      try{
+        firebase.database().ref('admin/pinHash').once('value').then(function(snap){
+          var v = snap.val(); if(v && typeof v === 'string' && v.length===64) ADM_PIN_HASH = v;
+          res();
+        }).catch(function(){ res(); });
+      }catch(e){ res(); }
+    } else { res(); }
+  });
+}
+
+// ── Boot & UI ─────────────────────────────────────────────────
+function admBoot(){
+  admLoad().then(function(){
+    document.getElementById('admWrap').classList.add('on');
+    admGo('dash');
+    admResetIdle();
+    // listener attività per l'idle timeout
+    ['mousemove','keydown','click','touchstart'].forEach(function(ev){
+      document.getElementById('admWrap').addEventListener(ev, admResetIdle, true);
+    });
+    admToast('Pannello amministratore aperto','ok');
+  });
+}
+function admResetIdle(){
+  if(ADM_IDLE_TIMER) clearTimeout(ADM_IDLE_TIMER);
+  ADM_IDLE_TIMER = setTimeout(function(){
+    admLogout();
+    admToast('Sessione scaduta per inattività','err');
+  }, ADM_IDLE_MS);
+}
+function admLogout(){
+  if(ADM_IDLE_TIMER){ clearTimeout(ADM_IDLE_TIMER); ADM_IDLE_TIMER=null; }
+  document.getElementById('admWrap').classList.remove('on');
+  var ip = document.getElementById('initPopup');
+  if(ip) ip.style.display='';
+}
+function admGo(sec){
+  ADM_SEC = sec;
+  var items = document.querySelectorAll('.admNavItem');
+  for(var i=0;i<items.length;i++) items[i].classList.toggle('on', items[i].dataset.sec===sec);
+  var titles = {dash:'Dashboard',users:'Utenti',suppliers:'Fornitori',agents:'Agenti',portals:'Portali',mail:'Template Email',cats:'Categorie',stati:'Stati Reso',config:'Configurazione',log:'Log Modifiche'};
+  document.getElementById('admBcSec').textContent = titles[sec]||sec;
+  var body = document.getElementById('admBody');
+  var render = window['admRender_'+sec];
+  body.innerHTML = render ? render() : '<div class="admCard"><h3>In arrivo</h3><div class="sub">Sezione non ancora implementata.</div></div>';
+  if(typeof window['admAfter_'+sec] === 'function') window['admAfter_'+sec]();
+}
+function admToast(msg, kind){
+  var t = document.getElementById('admToast');
+  t.textContent = msg;
+  t.classList.toggle('err', kind==='err');
+  t.style.display='block';
+  clearTimeout(admToast._t);
+  admToast._t = setTimeout(function(){ t.style.display='none'; }, 3200);
+}
+function admConfirm(title, msg, onOk){
+  document.getElementById('admCfTtl').textContent = title;
+  document.getElementById('admCfMsg').textContent = msg;
+  var ok = document.getElementById('admCfOk');
+  ok.onclick = function(){ admCfHide(); try{ onOk(); }catch(e){ admToast(e.message,'err'); } };
+  document.getElementById('admConfirm').classList.add('on');
+}
+function admCfHide(){ document.getElementById('admConfirm').classList.remove('on'); }
+function admEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+// ── Persistenza ibrida (Firebase se disponibile, altrimenti localStorage) ──
+function admDefaults(){
+  return {
+    users: [],
+    suppliers: (typeof supDb!=='undefined' && supDb.length) ? supDb.slice() : [],
+    agents: [],
+    portals: [],
+    mailTpl: [
+      {id:'presa', nome:'Richiesta Presa', subject:'RICHIESTA PRESA · {{fornitore}} · {{colli}} coll{{plurCol}}',
+        body:'Buongiorno,\n\nAbbiamo {{colli}} coll{{plurCol}} pronti al ritiro\nAspetto: {{aspetto}}\nIndirizzo per il ritiro: {{indirizzo}}\n\nIn attesa di un vostro gentile riscontro\nCordiali saluti', firma:'', attach:''},
+      {id:'ano_agente', nome:'Anomalia → Agente', subject:'Anomalia reso {{cod}} · cliente {{cliente}}',
+        body:'Ciao {{agente}},\n\nAbbiamo un problema sul reso del cliente {{cliente}}:\n· codice: {{cod}}\n· qty: {{qty}}\n· causale: {{causale}}\n· anomalia: {{anomalia}}\n\nPuoi verificare?\n\nGrazie', firma:'', attach:''},
+      {id:'ano_forn', nome:'Anomalia → Fornitore', subject:'Reso {{cod}} · RMA {{rma}}',
+        body:'Buongiorno,\n\nSegnaliamo anomalia su reso:\n· codice: {{cod}}\n· qty: {{qty}}\n· causale: {{causale}}\n· anomalia: {{anomalia}}\n\nIn attesa di riscontro,\ncordiali saluti', firma:'', attach:''}
+    ],
+    categories: ['Ricambi','Elettronica','Meccanica','Carrozzeria','Consumabili','Accessori'],
+    stati: (typeof STATI!=='undefined') ? JSON.parse(JSON.stringify(STATI)) : {},
+    stateColors: { 'DA GESTIRE':'#E6B03C', 'RICHIESTA':'#3B9FD4', 'RNC':'#5BB8E0', 'STALLO':'#E05555', 'ANOMALIA':'#E05555', 'CHIUDERE':'#2ECC71', 'PRESA':'#2ECC71', 'NOTA CREDITO':'#8859E5' },
+    general: {
+      companyName: 'TELOS SPA',
+      address: 'Via Aosta 5, 10078 Venaria Reale (TO)',
+      phone: '', email: 'resi.torino@telosgroup.it',
+      logoData: '',
+      color1: '#3B9FD4', color2: '#2ECC71',
+      emailSignature: 'Cordiali saluti\nUfficio Resi TELOS SPA\nVia Aosta 5, Venaria Reale (TO)',
+      ocrEnabled: true, aiEnabled: true,
+      timeoutFB: 9, notifyOnFail: true,
+      slaWarn: 7, slaCrit: 14
+    },
+    log: []
+  };
+}
+function admLoad(){
+  return new Promise(function(res){
+    // 1) prova Firebase
+    if(typeof FB_REF !== 'undefined' && FB_REF){
+      try{
+        firebase.database().ref('admin/config').once('value').then(function(snap){
+          var v = snap.val();
+          ADM_CFG = admMergeDefaults(v);
+          _admApplyToApp();
+          res();
+        }).catch(function(){ _admLoadLocal(res); });
+        return;
+      }catch(e){}
+    }
+    _admLoadLocal(res);
+  });
+}
+function _admLoadLocal(res){
+  var v = null;
+  try{ v = JSON.parse(localStorage.getItem('admcfg')||'null'); }catch(e){}
+  ADM_CFG = admMergeDefaults(v);
+  _admApplyToApp();
+  res();
+}
+function admMergeDefaults(v){
+  var d = admDefaults();
+  if(!v || typeof v !== 'object') return d;
+  Object.keys(d).forEach(function(k){ if(v[k]!=null) d[k]=v[k]; });
+  return d;
+}
+function admSave(){
+  if(!ADM_CFG) return Promise.resolve();
+  try{ localStorage.setItem('admcfg', JSON.stringify(ADM_CFG)); }catch(e){}
+  _admApplyToApp();
+  if(typeof FB_REF !== 'undefined' && FB_REF){
+    try{
+      return firebase.database().ref('admin/config').set(ADM_CFG).then(function(){ return true; }).catch(function(){ return false; });
+    }catch(e){}
+  }
+  return Promise.resolve(true);
+}
+// Applica le parti "vive" della config all'app (fornitori, stati, ecc.)
+function _admApplyToApp(){
+  if(!ADM_CFG) return;
+  try{
+    if(Array.isArray(ADM_CFG.suppliers) && typeof supDb!=='undefined'){
+      supDb.length = 0;
+      for(var i=0;i<ADM_CFG.suppliers.length;i++) supDb.push(ADM_CFG.suppliers[i]);
+      try{ localStorage.setItem('supdb', JSON.stringify(supDb)); }catch(e){}
+    }
+    if(ADM_CFG.stati && typeof STATI!=='undefined'){
+      Object.keys(ADM_CFG.stati).forEach(function(f){ STATI[f] = ADM_CFG.stati[f].slice(); });
+    }
+    if(ADM_CFG.general){
+      if(typeof SLA_WARN!=='undefined') SLA_WARN = +ADM_CFG.general.slaWarn || SLA_WARN;
+      if(typeof SLA_CRIT!=='undefined') SLA_CRIT = +ADM_CFG.general.slaCrit || SLA_CRIT;
+    }
+  }catch(e){}
+}
+function admLog(section, action, field, from, to){
+  if(!ADM_CFG) return;
+  ADM_CFG.log = ADM_CFG.log || [];
+  ADM_CFG.log.unshift({
+    ts: Date.now(), user: 'ADMIN', section: section, action: action,
+    field: field||'', from: from==null?'':String(from).slice(0,200), to: to==null?'':String(to).slice(0,200)
+  });
+  if(ADM_CFG.log.length > 500) ADM_CFG.log.length = 500;
+}
+function admCommit(section, action, msg){
+  admSave().then(function(ok){
+    if(ok!==false) admToast(msg||'Salvato','ok');
+    else admToast('Salvato localmente (Firebase non disponibile)','err');
+  });
+}
+
+// ══ SEZIONI ═══════════════════════════════════════════════════
+
+// ── DASHBOARD ──
+function admRender_dash(){
+  var c = ADM_CFG || admDefaults();
+  return '<div class="admGrid">' +
+    _admStat('Utenti registrati', (c.users||[]).length, (c.users||[]).filter(function(u){return u.active!==false;}).length+' attivi') +
+    _admStat('Fornitori', (c.suppliers||[]).length, (c.suppliers||[]).filter(function(s){return s.active!==false;}).length+' attivi') +
+    _admStat('Agenti', (c.agents||[]).length, '') +
+    _admStat('Template email', (c.mailTpl||[]).length, '') +
+    _admStat('Categorie', (c.categories||[]).length, '') +
+    _admStat('Log modifiche', (c.log||[]).length, 'ultime salvate') +
+    '</div>' +
+    '<div class="admCard" style="margin-top:16px"><h3>Benvenuto</h3>' +
+    '<div class="sub">Questo è il centro di controllo dell\'applicazione Resi Telos. Da qui puoi gestire ogni configurazione senza modificare il codice.</div>' +
+    '<div style="display:flex;gap:9px;flex-wrap:wrap"><button class="admBtn pri" onclick="admGo(\'users\')">👥 Gestisci utenti</button>' +
+    '<button class="admBtn" onclick="admGo(\'suppliers\')">🏭 Fornitori</button>' +
+    '<button class="admBtn" onclick="admGo(\'mail\')">✉️ Template email</button>' +
+    '<button class="admBtn" onclick="admGo(\'config\')">⚙️ Configurazione</button></div>' +
+    '<div style="margin-top:14px;padding:10px 12px;background:#131a24;border-radius:8px;font-size:11px;color:#8899a8;line-height:1.6">' +
+    '💡 <b style="color:#7db8ff">Ambiente:</b> ' +
+    ((typeof FB_REF!=='undefined' && FB_REF) ? '<span style="color:#5ce080">Sincronizzato con Firebase</span> — le modifiche saranno visibili a tutti i dispositivi.' : '<span style="color:#e6b03c">Solo locale</span> — configura Firebase per la sincronizzazione centralizzata.') +
+    '</div></div>';
+}
+function _admStat(k,v,d){ return '<div class="admStat"><div class="k">'+admEsc(k)+'</div><div class="v">'+admEsc(v)+'</div>'+(d?'<div class="d">'+admEsc(d)+'</div>':'')+'</div>'; }
+
+// ══ le sezioni CRUD sono definite nel prossimo blocco ══
+</script>
+
+<script>
+// ══ Sezioni CRUD del pannello Admin ══════════════════════════════════
+
+// ── UTENTI ──
+function admRender_users(){
+  var users = (ADM_CFG.users||[]);
+  var h = '<div class="admCard"><h3>Utenti</h3><div class="sub">Anagrafica utenti con ruolo. All\'avvio dell\'app l\'operatore si sceglie da un elenco.</div>' +
+    '<button class="admBtn pri" onclick="admUserEdit(-1)">➕ Nuovo utente</button></div>' +
+    '<div class="admCard"><table class="admTable"><thead><tr><th>Nome</th><th>Ruolo</th><th>Stato</th><th style="width:130px">Azioni</th></tr></thead><tbody id="admUsersTb">';
+  if(!users.length) h += '<tr><td colspan="4" style="text-align:center;color:#5c6b7d;padding:24px">Nessun utente registrato. Clicca "Nuovo utente" per iniziare.</td></tr>';
+  users.forEach(function(u,i){
+    h += '<tr><td><b style="color:#fff">'+admEsc(u.name)+'</b>'+(u.email?'<br><span style="font-size:10px;color:#5c6b7d">'+admEsc(u.email)+'</span>':'')+'</td>'+
+      '<td><span class="admChip role">'+admEsc(_roleLbl(u.role))+'</span></td>'+
+      '<td><span class="admChip '+(u.active!==false?'on':'off')+'">'+(u.active!==false?'ATTIVO':'DISATTIVATO')+'</span></td>'+
+      '<td><button class="admIco" title="Modifica" onclick="admUserEdit('+i+')">✏️</button>'+
+      '<button class="admIco" title="Reset password" onclick="admUserResetPwd('+i+')">🔑</button>'+
+      '<button class="admIco" title="'+(u.active!==false?'Disattiva':'Attiva')+'" onclick="admUserToggle('+i+')">'+(u.active!==false?'⏸':'▶️')+'</button>'+
+      '<button class="admIco dan" title="Elimina" onclick="admUserDel('+i+')">🗑</button></td></tr>';
+  });
+  h += '</tbody></table></div>';
+  return h;
+}
+function _roleLbl(r){return {RIC:'Ricevimento',UFF:'Ufficio',MAG:'Coordinatore',ADM:'Admin'}[r]||r||'—';}
+function admUserEdit(i){
+  var users = ADM_CFG.users = ADM_CFG.users||[];
+  var u = i>=0 ? users[i] : {name:'',role:'RIC',email:'',phone:'',active:true};
+  var h = '<div class="admCard"><h3>'+(i>=0?'Modifica utente':'Nuovo utente')+'</h3>'+
+    '<div class="admRow"><div><label class="admLbl">Nome operatore</label><input class="admIn" id="uNm" value="'+admEsc(u.name)+'" placeholder="Mario Rossi"></div>' +
+    '<div><label class="admLbl">Ruolo</label><select class="admIn" id="uRl"><option value="RIC"'+(u.role==='RIC'?' selected':'')+'>Ricevimento</option><option value="UFF"'+(u.role==='UFF'?' selected':'')+'>Ufficio</option><option value="MAG"'+(u.role==='MAG'?' selected':'')+'>Coordinatore</option><option value="ADM"'+(u.role==='ADM'?' selected':'')+'>Admin</option></select></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Email</label><input class="admIn" id="uEm" value="'+admEsc(u.email||'')+'"></div>'+
+    '<div><label class="admLbl">Telefono</label><input class="admIn" id="uPh" value="'+admEsc(u.phone||'')+'"></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Note</label><input class="admIn" id="uNt" value="'+admEsc(u.notes||'')+'"></div>'+
+    '<div style="max-width:150px"><label class="admLbl">Stato</label><div style="padding:9px 0"><label class="admSw"><input type="checkbox" id="uAc"'+(u.active!==false?' checked':'')+'><span></span></label> <span id="uAcL" style="font-size:12px;color:#c6d4e2">'+(u.active!==false?'Attivo':'Disattivato')+'</span></div></div></div>'+
+    '<div style="display:flex;gap:9px;margin-top:12px"><button class="admBtn pri" onclick="admUserSave('+i+')">💾 Salva</button>'+
+    '<button class="admBtn gh" onclick="admGo(\'users\')">Annulla</button></div></div>';
+  document.getElementById('admBody').innerHTML = h;
+  var ac = document.getElementById('uAc');
+  if(ac) ac.addEventListener('change', function(){ document.getElementById('uAcL').textContent = ac.checked?'Attivo':'Disattivato'; });
+}
+function admUserSave(i){
+  var users = ADM_CFG.users = ADM_CFG.users||[];
+  var nm = document.getElementById('uNm').value.trim();
+  if(!nm){ admToast('Nome obbligatorio','err'); return; }
+  var neu = { name:nm.toUpperCase(), role:document.getElementById('uRl').value,
+    email:document.getElementById('uEm').value.trim(), phone:document.getElementById('uPh').value.trim(),
+    notes:document.getElementById('uNt').value.trim(), active:document.getElementById('uAc').checked };
+  if(i>=0){
+    var old = users[i];
+    Object.keys(neu).forEach(function(k){
+      if(String(old[k]||'')!==String(neu[k]||'')) admLog('users','update','user['+nm+'].'+k, old[k], neu[k]);
+    });
+    users[i] = neu;
+    admCommit('users','update','Utente aggiornato');
+  } else {
+    users.push(neu);
+    admLog('users','create','user', '', nm);
+    admCommit('users','create','Utente creato');
+  }
+  admGo('users');
+}
+function admUserDel(i){
+  var u = ADM_CFG.users[i]; if(!u) return;
+  admConfirm('Eliminare utente?','Vuoi eliminare "'+u.name+'"? L\'operazione è irreversibile.', function(){
+    admLog('users','delete','user', u.name, '');
+    ADM_CFG.users.splice(i,1);
+    admCommit('users','delete','Utente eliminato');
+    admGo('users');
+  });
+}
+function admUserToggle(i){
+  var u = ADM_CFG.users[i]; if(!u) return;
+  var was = u.active!==false; u.active = !was;
+  admLog('users','toggle','user['+u.name+'].active', was, u.active);
+  admCommit('users','toggle', u.active?'Utente attivato':'Utente disattivato');
+  admGo('users');
+}
+function admUserResetPwd(i){
+  var u = ADM_CFG.users[i]; if(!u) return;
+  admConfirm('Reset password','La password verrà rimossa. L\'utente accederà normalmente col nome (finché non ne imposti una nuova).', function(){
+    delete u.pwdHash;
+    admLog('users','reset_pwd','user['+u.name+']', '***', '(rimossa)');
+    admCommit('users','reset_pwd','Password rimossa');
+  });
+}
+
+// ── FORNITORI ──
+function admRender_suppliers(){
+  var lst = (ADM_CFG.suppliers||[]);
+  var h = '<div class="admCard"><h3>Fornitori</h3><div class="sub">Anagrafica fornitori con logo, contatti, portali e note.</div>'+
+    '<button class="admBtn pri" onclick="admSupEdit(-1)">➕ Nuovo fornitore</button></div>'+
+    '<div class="admCard"><table class="admTable"><thead><tr><th>Nome</th><th>Cod</th><th>Email</th><th>Categorie</th><th>Stato</th><th style="width:120px">Azioni</th></tr></thead><tbody>';
+  if(!lst.length) h += '<tr><td colspan="6" style="text-align:center;color:#5c6b7d;padding:24px">Nessun fornitore.</td></tr>';
+  lst.forEach(function(s,i){
+    h += '<tr><td><b style="color:#fff">'+admEsc(s.name||'')+'</b>'+(s.ref?'<br><span style="font-size:10px;color:#5c6b7d">'+admEsc(s.ref)+'</span>':'')+'</td>'+
+      '<td>'+admEsc(s.code||'')+'</td>'+
+      '<td style="font-size:11px">'+admEsc(s.mail||'')+'</td>'+
+      '<td style="font-size:10px">'+((s.categories||[]).map(admEsc).join(', ')||'—')+'</td>'+
+      '<td><span class="admChip '+(s.active!==false?'on':'off')+'">'+(s.active!==false?'ATT':'DIS')+'</span></td>'+
+      '<td><button class="admIco" onclick="admSupEdit('+i+')">✏️</button>'+
+      '<button class="admIco" onclick="admSupToggle('+i+')">'+(s.active!==false?'⏸':'▶️')+'</button>'+
+      '<button class="admIco dan" onclick="admSupDel('+i+')">🗑</button></td></tr>';
+  });
+  h += '</tbody></table></div>';
+  return h;
+}
+function admSupEdit(i){
+  var s = i>=0 ? ADM_CFG.suppliers[i] : {name:'',code:'',mail:'',tel:'',ref:'',portalUrl:'',note:'',logoData:'',categories:[],active:true};
+  var cats = (ADM_CFG.categories||[]);
+  var h = '<div class="admCard"><h3>'+(i>=0?'Modifica fornitore':'Nuovo fornitore')+'</h3>'+
+    '<div class="admRow"><div><label class="admLbl">Nome</label><input class="admIn" id="sNm" value="'+admEsc(s.name||'')+'"></div>'+
+    '<div><label class="admLbl">Codice</label><input class="admIn" id="sCd" value="'+admEsc(s.code||'')+'"></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Email</label><input class="admIn" id="sEm" value="'+admEsc(s.mail||'')+'"></div>'+
+    '<div><label class="admLbl">Telefono</label><input class="admIn" id="sTl" value="'+admEsc(s.tel||'')+'"></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Referente</label><input class="admIn" id="sRf" value="'+admEsc(s.ref||'')+'"></div>'+
+    '<div><label class="admLbl">URL portale</label><input class="admIn" id="sUrl" value="'+admEsc(s.portalUrl||'')+'"></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Logo (data URL o URL)</label><input class="admIn" id="sLg" value="'+admEsc(s.logoData||'')+'"></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Categorie</label>'+
+    '<div id="sCats">'+cats.map(function(c){var sel=(s.categories||[]).indexOf(c)>=0;return '<label style="display:inline-flex;align-items:center;gap:5px;margin:2px 8px 2px 0;font-size:12px;color:#c6d4e2"><input type="checkbox" value="'+admEsc(c)+'"'+(sel?' checked':'')+'> '+admEsc(c)+'</label>';}).join('')+'</div>'+
+    (cats.length?'':'<div style="font-size:11px;color:#5c6b7d">Nessuna categoria definita. Aggiungine dalla sezione Categorie.</div>')+
+    '</div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Note</label><input class="admIn" id="sNt" value="'+admEsc(s.note||'')+'"></div>'+
+    '<div style="max-width:150px"><label class="admLbl">Stato</label><div style="padding:9px 0"><label class="admSw"><input type="checkbox" id="sAc"'+(s.active!==false?' checked':'')+'><span></span></label></div></div></div>'+
+    '<div style="display:flex;gap:9px;margin-top:12px"><button class="admBtn pri" onclick="admSupSave('+i+')">💾 Salva</button>'+
+    '<button class="admBtn gh" onclick="admGo(\'suppliers\')">Annulla</button></div></div>';
+  document.getElementById('admBody').innerHTML = h;
+}
+function admSupSave(i){
+  var lst = ADM_CFG.suppliers = ADM_CFG.suppliers||[];
+  var nm = document.getElementById('sNm').value.trim();
+  if(!nm){ admToast('Nome obbligatorio','err'); return; }
+  var cats = [];
+  document.querySelectorAll('#sCats input:checked').forEach(function(el){ cats.push(el.value); });
+  var neu = {
+    name: nm.toUpperCase(), code: document.getElementById('sCd').value.trim(),
+    mail: document.getElementById('sEm').value.trim().toLowerCase(), tel: document.getElementById('sTl').value.trim(),
+    ref: document.getElementById('sRf').value.trim().toUpperCase(), portalUrl: document.getElementById('sUrl').value.trim(),
+    logoData: document.getElementById('sLg').value.trim(), note: document.getElementById('sNt').value.trim(),
+    categories: cats, active: document.getElementById('sAc').checked
+  };
+  if(i>=0){ var old = lst[i]; lst[i] = Object.assign({}, old, neu); admLog('suppliers','update','sup['+nm+']', JSON.stringify(old).slice(0,200), JSON.stringify(neu).slice(0,200)); admCommit('suppliers','update','Fornitore aggiornato'); }
+  else { lst.push(neu); admLog('suppliers','create','sup', '', nm); admCommit('suppliers','create','Fornitore creato'); }
+  admGo('suppliers');
+}
+function admSupDel(i){
+  var s = ADM_CFG.suppliers[i]; if(!s) return;
+  admConfirm('Eliminare fornitore?','Vuoi eliminare "'+s.name+'"?', function(){
+    admLog('suppliers','delete','sup', s.name, '');
+    ADM_CFG.suppliers.splice(i,1); admCommit('suppliers','delete','Fornitore eliminato'); admGo('suppliers');
+  });
+}
+function admSupToggle(i){
+  var s = ADM_CFG.suppliers[i]; if(!s) return;
+  var was = s.active!==false; s.active = !was;
+  admLog('suppliers','toggle','sup['+s.name+'].active', was, s.active);
+  admCommit('suppliers','toggle', s.active?'Fornitore attivato':'Fornitore disattivato');
+  admGo('suppliers');
+}
+
+// ── AGENTI ──
+function admRender_agents(){
+  var lst = ADM_CFG.agents||[];
+  var h = '<div class="admCard"><h3>Agenti</h3><div class="sub">Anagrafica agenti con assegnazioni fornitori/clienti.</div>'+
+    '<button class="admBtn pri" onclick="admAgentEdit(-1)">➕ Nuovo agente</button></div>'+
+    '<div class="admCard"><table class="admTable"><thead><tr><th>Nome</th><th>Email</th><th>Telefono</th><th>Fornitori</th><th>Stato</th><th style="width:120px">Azioni</th></tr></thead><tbody>';
+  if(!lst.length) h += '<tr><td colspan="6" style="text-align:center;color:#5c6b7d;padding:24px">Nessun agente.</td></tr>';
+  lst.forEach(function(a,i){
+    h += '<tr><td><b style="color:#fff">'+admEsc(a.name)+'</b></td><td style="font-size:11px">'+admEsc(a.email||'')+'</td><td style="font-size:11px">'+admEsc(a.phone||'')+'</td>'+
+      '<td style="font-size:10px">'+((a.suppliers||[]).length||0)+' assegnati</td>'+
+      '<td><span class="admChip '+(a.active!==false?'on':'off')+'">'+(a.active!==false?'ATT':'DIS')+'</span></td>'+
+      '<td><button class="admIco" onclick="admAgentEdit('+i+')">✏️</button>'+
+      '<button class="admIco" onclick="admAgentToggle('+i+')">'+(a.active!==false?'⏸':'▶️')+'</button>'+
+      '<button class="admIco dan" onclick="admAgentDel('+i+')">🗑</button></td></tr>';
+  });
+  h += '</tbody></table></div>';
+  return h;
+}
+function admAgentEdit(i){
+  var a = i>=0 ? ADM_CFG.agents[i] : {name:'',email:'',phone:'',suppliers:[],clients:'',active:true};
+  var sups = ADM_CFG.suppliers||[];
+  var h = '<div class="admCard"><h3>'+(i>=0?'Modifica agente':'Nuovo agente')+'</h3>'+
+    '<div class="admRow"><div><label class="admLbl">Nome</label><input class="admIn" id="aNm" value="'+admEsc(a.name||'')+'"></div>'+
+    '<div><label class="admLbl">Email</label><input class="admIn" id="aEm" value="'+admEsc(a.email||'')+'"></div>'+
+    '<div><label class="admLbl">Telefono</label><input class="admIn" id="aPh" value="'+admEsc(a.phone||'')+'"></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Fornitori assegnati</label>'+
+    '<div id="aSups" style="max-height:200px;overflow-y:auto;background:#0a0d12;border:1px solid #1c2432;border-radius:7px;padding:9px">'+
+    (sups.length ? sups.map(function(s){var sel=(a.suppliers||[]).indexOf(s.name)>=0;return '<label style="display:block;margin:3px 0;font-size:12px;color:#c6d4e2"><input type="checkbox" value="'+admEsc(s.name)+'"'+(sel?' checked':'')+'> '+admEsc(s.name)+'</label>';}).join('') : '<span style="color:#5c6b7d;font-size:11px">Nessun fornitore</span>')+
+    '</div></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Clienti (codici separati da virgola)</label><input class="admIn" id="aCl" value="'+admEsc(a.clients||'')+'"></div>'+
+    '<div style="max-width:150px"><label class="admLbl">Stato</label><div style="padding:9px 0"><label class="admSw"><input type="checkbox" id="aAc"'+(a.active!==false?' checked':'')+'><span></span></label></div></div></div>'+
+    '<div style="display:flex;gap:9px;margin-top:12px"><button class="admBtn pri" onclick="admAgentSave('+i+')">💾 Salva</button>'+
+    '<button class="admBtn gh" onclick="admGo(\'agents\')">Annulla</button></div></div>';
+  document.getElementById('admBody').innerHTML = h;
+}
+function admAgentSave(i){
+  var lst = ADM_CFG.agents = ADM_CFG.agents||[];
+  var nm = document.getElementById('aNm').value.trim();
+  if(!nm){ admToast('Nome obbligatorio','err'); return; }
+  var sups=[]; document.querySelectorAll('#aSups input:checked').forEach(function(el){ sups.push(el.value); });
+  var neu = { name:nm.toUpperCase(), email:document.getElementById('aEm').value.trim(), phone:document.getElementById('aPh').value.trim(),
+    suppliers:sups, clients:document.getElementById('aCl').value.trim(), active:document.getElementById('aAc').checked };
+  if(i>=0){ lst[i] = neu; admLog('agents','update','agent['+nm+']', '', ''); admCommit('agents','update','Agente aggiornato'); }
+  else { lst.push(neu); admLog('agents','create','agent', '', nm); admCommit('agents','create','Agente creato'); }
+  admGo('agents');
+}
+function admAgentDel(i){
+  var a = ADM_CFG.agents[i]; if(!a) return;
+  admConfirm('Eliminare agente?','"'+a.name+'"?', function(){
+    admLog('agents','delete','agent', a.name, ''); ADM_CFG.agents.splice(i,1); admCommit('agents','delete','Agente eliminato'); admGo('agents');
+  });
+}
+function admAgentToggle(i){
+  var a = ADM_CFG.agents[i]; if(!a) return;
+  a.active = !(a.active!==false); admLog('agents','toggle','agent['+a.name+'].active', !a.active, a.active);
+  admCommit('agents','toggle', a.active?'Attivato':'Disattivato'); admGo('agents');
+}
+
+// ── PORTALI ──
+function admRender_portals(){
+  var lst = ADM_CFG.portals||[];
+  var h = '<div class="admCard"><h3>Portali fornitori</h3><div class="sub">Collegamenti ai portali web. Le credenziali NON sono salvate: verranno chieste al momento del bisogno per motivi di sicurezza.</div>'+
+    '<button class="admBtn pri" onclick="admPortalEdit(-1)">➕ Nuovo portale</button></div>'+
+    '<div class="admCard"><table class="admTable"><thead><tr><th>Nome</th><th>URL</th><th>Note</th><th style="width:120px">Azioni</th></tr></thead><tbody>';
+  if(!lst.length) h += '<tr><td colspan="4" style="text-align:center;color:#5c6b7d;padding:24px">Nessun portale.</td></tr>';
+  lst.forEach(function(p,i){
+    h += '<tr><td><b style="color:#fff">'+admEsc(p.name)+'</b></td>'+
+      '<td><a href="'+admEsc(p.url)+'" target="_blank" rel="noopener" style="color:#3b9fd4;font-size:11px;text-decoration:none">'+admEsc(p.url)+' ↗</a></td>'+
+      '<td style="font-size:11px;color:#8899a8">'+admEsc(p.note||'')+'</td>'+
+      '<td><button class="admIco" onclick="admPortalEdit('+i+')">✏️</button>'+
+      '<button class="admIco dan" onclick="admPortalDel('+i+')">🗑</button></td></tr>';
+  });
+  h += '</tbody></table></div>';
+  return h;
+}
+function admPortalEdit(i){
+  var p = i>=0 ? ADM_CFG.portals[i] : {name:'',url:'',note:''};
+  var h = '<div class="admCard"><h3>'+(i>=0?'Modifica portale':'Nuovo portale')+'</h3>'+
+    '<div class="admRow"><div><label class="admLbl">Nome fornitore/portale</label><input class="admIn" id="pNm" value="'+admEsc(p.name||'')+'"></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">URL</label><input class="admIn" id="pUrl" value="'+admEsc(p.url||'')+'" placeholder="https://..."></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Note (formato credenziali, procedura, ecc. — MAI la password)</label><input class="admIn" id="pNt" value="'+admEsc(p.note||'')+'"></div></div>'+
+    '<div style="padding:10px 12px;background:#3a2c1c;border:1px solid #6a5024;color:#e6b03c;border-radius:7px;font-size:11px;margin-bottom:10px">⚠️ <b>Sicurezza:</b> non inserire mai username e password nelle note. Salva solo URL e istruzioni.</div>'+
+    '<div style="display:flex;gap:9px"><button class="admBtn pri" onclick="admPortalSave('+i+')">💾 Salva</button>'+
+    '<button class="admBtn gh" onclick="admGo(\'portals\')">Annulla</button></div></div>';
+  document.getElementById('admBody').innerHTML = h;
+}
+function admPortalSave(i){
+  var lst = ADM_CFG.portals = ADM_CFG.portals||[];
+  var nm = document.getElementById('pNm').value.trim();
+  var url = document.getElementById('pUrl').value.trim();
+  if(!nm || !url){ admToast('Nome e URL obbligatori','err'); return; }
+  var neu = { name:nm, url:url, note:document.getElementById('pNt').value.trim() };
+  if(i>=0){ lst[i] = neu; admLog('portals','update','portal['+nm+']', '', url); admCommit('portals','update','Portale aggiornato'); }
+  else { lst.push(neu); admLog('portals','create','portal', '', nm); admCommit('portals','create','Portale creato'); }
+  admGo('portals');
+}
+function admPortalDel(i){
+  var p = ADM_CFG.portals[i]; if(!p) return;
+  admConfirm('Eliminare portale?','"'+p.name+'"?', function(){
+    admLog('portals','delete','portal', p.name, ''); ADM_CFG.portals.splice(i,1); admCommit('portals','delete','Portale eliminato'); admGo('portals');
+  });
+}
+
+// ── TEMPLATE EMAIL ──
+function admRender_mail(){
+  var lst = ADM_CFG.mailTpl||[];
+  var h = '<div class="admCard"><h3>Template email</h3><div class="sub">Modelli riutilizzabili per le comunicazioni. Le variabili {{nome}} vengono sostituite al momento.</div>'+
+    '<button class="admBtn pri" onclick="admMailEdit(-1)">➕ Nuovo template</button></div>'+
+    '<div class="admCard"><table class="admTable"><thead><tr><th>ID</th><th>Nome</th><th>Oggetto</th><th style="width:120px">Azioni</th></tr></thead><tbody>';
+  if(!lst.length) h += '<tr><td colspan="4" style="text-align:center;color:#5c6b7d;padding:24px">Nessun template.</td></tr>';
+  lst.forEach(function(t,i){
+    h += '<tr><td><code style="color:#7db8ff;font-size:11px">'+admEsc(t.id)+'</code></td><td><b style="color:#fff">'+admEsc(t.nome)+'</b></td>'+
+      '<td style="font-size:11px;color:#8899a8">'+admEsc((t.subject||'').slice(0,60))+'</td>'+
+      '<td><button class="admIco" onclick="admMailEdit('+i+')">✏️</button>'+
+      '<button class="admIco dan" onclick="admMailDel('+i+')">🗑</button></td></tr>';
+  });
+  h += '</tbody></table></div>';
+  return h;
+}
+function admMailEdit(i){
+  var t = i>=0 ? ADM_CFG.mailTpl[i] : {id:'',nome:'',subject:'',body:'',firma:'',attach:''};
+  var vars = ['fornitore','cliente','agente','cod','qty','causale','anomalia','rma','aspetto','indirizzo','colli','plurCol','data','operatore'];
+  var h = '<div class="admCard"><h3>'+(i>=0?'Modifica template':'Nuovo template')+'</h3>'+
+    '<div class="admRow"><div><label class="admLbl">ID (identificatore tecnico)</label><input class="admIn" id="tId" value="'+admEsc(t.id)+'" '+(i>=0?'readonly':'')+' placeholder="es. presa"></div>'+
+    '<div><label class="admLbl">Nome descrittivo</label><input class="admIn" id="tNm" value="'+admEsc(t.nome||'')+'" placeholder="es. Richiesta presa fornitore"></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Oggetto</label><input class="admIn" id="tSj" value="'+admEsc(t.subject||'')+'"></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Corpo email</label><textarea class="admIn" id="tBd" style="min-height:180px;font-family:inherit;resize:vertical">'+admEsc(t.body||'')+'</textarea></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Firma (sovrascrive quella generale)</label><textarea class="admIn" id="tFr" style="min-height:80px;font-family:inherit;resize:vertical">'+admEsc(t.firma||'')+'</textarea></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Allegati automatici (comma-separated: foto, doc, dettaglio)</label><input class="admIn" id="tAt" value="'+admEsc(t.attach||'')+'" placeholder="es. foto, dettaglio"></div></div>'+
+    '<div style="padding:10px 12px;background:#131a24;border-radius:7px;font-size:11px;color:#8899a8;margin-bottom:10px"><b style="color:#7db8ff">Variabili disponibili:</b> '+vars.map(function(v){return '<code style="color:#5ce080">{{'+v+'}}</code>';}).join(' · ')+'</div>'+
+    '<div style="display:flex;gap:9px"><button class="admBtn pri" onclick="admMailSave('+i+')">💾 Salva</button>'+
+    '<button class="admBtn gh" onclick="admGo(\'mail\')">Annulla</button></div></div>';
+  document.getElementById('admBody').innerHTML = h;
+}
+function admMailSave(i){
+  var lst = ADM_CFG.mailTpl = ADM_CFG.mailTpl||[];
+  var id = document.getElementById('tId').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  var nm = document.getElementById('tNm').value.trim();
+  if(!id || !nm){ admToast('ID e Nome obbligatori','err'); return; }
+  if(i<0 && lst.some(function(x){return x.id===id;})){ admToast('ID già esistente','err'); return; }
+  var neu = { id:id, nome:nm, subject:document.getElementById('tSj').value, body:document.getElementById('tBd').value,
+    firma:document.getElementById('tFr').value, attach:document.getElementById('tAt').value.trim() };
+  if(i>=0){ var old = lst[i]; lst[i] = neu; admLog('mail','update','tpl['+id+']', old.subject, neu.subject); admCommit('mail','update','Template aggiornato'); }
+  else { lst.push(neu); admLog('mail','create','tpl', '', id); admCommit('mail','create','Template creato'); }
+  admGo('mail');
+}
+function admMailDel(i){
+  var t = ADM_CFG.mailTpl[i]; if(!t) return;
+  admConfirm('Eliminare template?','"'+t.nome+'"?', function(){
+    admLog('mail','delete','tpl', t.id, ''); ADM_CFG.mailTpl.splice(i,1); admCommit('mail','delete','Template eliminato'); admGo('mail');
+  });
+}
+
+// ── CATEGORIE ──
+function admRender_cats(){
+  var lst = ADM_CFG.categories||[];
+  var h = '<div class="admCard"><h3>Categorie</h3><div class="sub">Categorie merceologiche per classificare i fornitori.</div>'+
+    '<div class="admRow" style="margin-top:8px"><input class="admIn" id="catNew" placeholder="Nuova categoria" onkeydown="if(event.key===\'Enter\')admCatAdd()"><button class="admBtn pri" style="flex:0" onclick="admCatAdd()">➕ Aggiungi</button></div></div>'+
+    '<div class="admCard" style="padding:0"><ul id="catList" style="list-style:none;margin:0;padding:0">';
+  if(!lst.length) h += '<li style="padding:24px;text-align:center;color:#5c6b7d">Nessuna categoria.</li>';
+  lst.forEach(function(c,i){
+    h += '<li style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #1c2432">'+
+      '<span style="color:#5c6b7d;font-size:11px;width:24px">#'+(i+1)+'</span>'+
+      '<span style="flex:1;color:#fff">'+admEsc(c)+'</span>'+
+      '<button class="admIco" title="Su" onclick="admCatMove('+i+',-1)">⬆</button>'+
+      '<button class="admIco" title="Giù" onclick="admCatMove('+i+',1)">⬇</button>'+
+      '<button class="admIco" title="Rinomina" onclick="admCatRename('+i+')">✏️</button>'+
+      '<button class="admIco dan" onclick="admCatDel('+i+')">🗑</button></li>';
+  });
+  h += '</ul></div>';
+  return h;
+}
+function admCatAdd(){
+  var v = document.getElementById('catNew').value.trim();
+  if(!v){ return; }
+  if((ADM_CFG.categories||[]).indexOf(v)>=0){ admToast('Categoria già esistente','err'); return; }
+  ADM_CFG.categories = ADM_CFG.categories||[]; ADM_CFG.categories.push(v);
+  admLog('cats','create','cat', '', v); admCommit('cats','create','Categoria aggiunta'); admGo('cats');
+}
+function admCatDel(i){
+  var v = ADM_CFG.categories[i]; if(v==null) return;
+  admConfirm('Eliminare categoria?','"'+v+'"?', function(){
+    admLog('cats','delete','cat', v, ''); ADM_CFG.categories.splice(i,1); admCommit('cats','delete','Categoria eliminata'); admGo('cats');
+  });
+}
+function admCatMove(i, dir){
+  var lst = ADM_CFG.categories; if(!lst) return;
+  var j = i+dir; if(j<0||j>=lst.length) return;
+  var t = lst[i]; lst[i] = lst[j]; lst[j] = t;
+  admLog('cats','reorder','cat['+t+']', i, j); admCommit('cats','reorder','Ordine aggiornato'); admGo('cats');
+}
+function admCatRename(i){
+  var v = ADM_CFG.categories[i]; if(v==null) return;
+  var neu = prompt('Nuovo nome per "'+v+'":', v);
+  if(neu==null) return;
+  neu = neu.trim(); if(!neu||neu===v) return;
+  admLog('cats','rename','cat', v, neu); ADM_CFG.categories[i] = neu; admCommit('cats','rename','Categoria rinominata'); admGo('cats');
+}
+
+// ── STATI RESO ──
+function admRender_stati(){
+  var st = ADM_CFG.stati||{}; var colors = ADM_CFG.stateColors||{};
+  var fasi = Object.keys(st);
+  var h = '<div class="admCard"><h3>Stati reso</h3><div class="sub">Gli stati disponibili per ogni fase. Puoi crearne di nuovi, rinominarli, riordinarli e cambiare i colori.</div></div>';
+  fasi.forEach(function(fase){
+    var arr = st[fase]||[];
+    h += '<div class="admCard"><h3>'+admEsc(fase)+'</h3>'+
+      '<div class="admRow"><input class="admIn" id="sti_'+admEsc(fase)+'" placeholder="Nuovo stato" onkeydown="if(event.key===\'Enter\')admStatoAdd(\''+admEsc(fase)+'\')"><button class="admBtn pri" style="flex:0" onclick="admStatoAdd(\''+admEsc(fase)+'\')">➕</button></div>'+
+      '<ul style="list-style:none;margin:0;padding:0">';
+    arr.forEach(function(s,i){
+      var col = _admStColor(s, colors);
+      h += '<li style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1c2432">'+
+        '<span style="width:14px;height:14px;border-radius:3px;background:'+col+';display:inline-block"></span>'+
+        '<span style="flex:1;color:#fff;font-size:12px">'+admEsc(s)+'</span>'+
+        '<button class="admIco" onclick="admStatoMove(\''+admEsc(fase)+'\','+i+',-1)">⬆</button>'+
+        '<button class="admIco" onclick="admStatoMove(\''+admEsc(fase)+'\','+i+',1)">⬇</button>'+
+        '<button class="admIco" onclick="admStatoRename(\''+admEsc(fase)+'\','+i+')">✏️</button>'+
+        '<button class="admIco dan" onclick="admStatoDel(\''+admEsc(fase)+'\','+i+')">🗑</button></li>';
+    });
+    h += '</ul></div>';
+  });
+  h += '<div class="admCard"><h3>Colori parole-chiave</h3><div class="sub">Se lo stato contiene una di queste parole, viene colorato di conseguenza.</div>';
+  Object.keys(colors).forEach(function(k){
+    h += '<div class="admRow"><div style="max-width:200px"><label class="admLbl">'+admEsc(k)+'</label><input class="admIn" type="color" value="'+admEsc(colors[k])+'" onchange="admStColor(\''+admEsc(k)+'\',this.value)"></div></div>';
+  });
+  h += '</div>';
+  return h;
+}
+function _admStColor(state, colors){
+  var s = String(state||'').toUpperCase();
+  var keys = Object.keys(colors||{});
+  for(var i=0;i<keys.length;i++){ if(s.indexOf(keys[i])>=0) return colors[keys[i]]; }
+  return '#3b9fd4';
+}
+function admStatoAdd(fase){
+  var el = document.getElementById('sti_'+fase); var v = (el.value||'').trim();
+  if(!v) return;
+  ADM_CFG.stati[fase] = ADM_CFG.stati[fase]||[];
+  if(ADM_CFG.stati[fase].indexOf(v)>=0){ admToast('Stato già esistente','err'); return; }
+  ADM_CFG.stati[fase].push(v);
+  admLog('stati','create','stato['+fase+']', '', v); admCommit('stati','create','Stato aggiunto'); admGo('stati');
+}
+function admStatoDel(fase, i){
+  var v = ADM_CFG.stati[fase][i]; if(v==null) return;
+  admConfirm('Eliminare stato?','"'+v+'"?', function(){
+    admLog('stati','delete','stato['+fase+']', v, ''); ADM_CFG.stati[fase].splice(i,1); admCommit('stati','delete','Stato eliminato'); admGo('stati');
+  });
+}
+function admStatoMove(fase, i, dir){
+  var lst = ADM_CFG.stati[fase]; var j = i+dir; if(j<0||j>=lst.length) return;
+  var t = lst[i]; lst[i] = lst[j]; lst[j] = t;
+  admLog('stati','reorder','stato['+fase+']', i, j); admCommit('stati','reorder','Riordinato'); admGo('stati');
+}
+function admStatoRename(fase, i){
+  var v = ADM_CFG.stati[fase][i]; if(v==null) return;
+  var neu = prompt('Nuovo nome:', v);
+  if(neu==null) return; neu = neu.trim(); if(!neu||neu===v) return;
+  admLog('stati','rename','stato['+fase+']', v, neu);
+  ADM_CFG.stati[fase][i] = neu; admCommit('stati','rename','Stato rinominato'); admGo('stati');
+}
+function admStColor(key, val){
+  ADM_CFG.stateColors[key] = val; admLog('stati','color','color['+key+']', '', val); admCommit('stati','color','Colore aggiornato');
+}
+
+// ── CONFIGURAZIONE GENERALE ──
+function admRender_config(){
+  var g = ADM_CFG.general||{};
+  return '<div class="admCard"><h3>Azienda</h3>'+
+    '<div class="admRow"><div><label class="admLbl">Nome azienda</label><input class="admIn" id="gCn" value="'+admEsc(g.companyName||'')+'"></div>'+
+    '<div><label class="admLbl">Email</label><input class="admIn" id="gEm" value="'+admEsc(g.email||'')+'"></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Telefono</label><input class="admIn" id="gPh" value="'+admEsc(g.phone||'')+'"></div>'+
+    '<div><label class="admLbl">Indirizzo</label><input class="admIn" id="gAd" value="'+admEsc(g.address||'')+'"></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Logo (data URL o URL)</label><input class="admIn" id="gLg" value="'+admEsc(g.logoData||'')+'"></div></div>'+
+    '<div class="admRow"><div style="max-width:180px"><label class="admLbl">Colore primario</label><input class="admIn" type="color" id="gC1" value="'+admEsc(g.color1||'#3B9FD4')+'"></div>'+
+    '<div style="max-width:180px"><label class="admLbl">Colore secondario</label><input class="admIn" type="color" id="gC2" value="'+admEsc(g.color2||'#2ECC71')+'"></div></div>'+
+    '</div>'+
+    '<div class="admCard"><h3>Firma email</h3>'+
+    '<div class="admRow"><div><textarea class="admIn" id="gSg" style="min-height:100px;font-family:inherit;resize:vertical">'+admEsc(g.emailSignature||'')+'</textarea></div></div></div>'+
+    '<div class="admCard"><h3>Parametri applicazione</h3>'+
+    '<div class="admRow"><div style="max-width:200px"><label class="admLbl">SLA giallo (giorni)</label><input class="admIn" type="number" id="gSw" value="'+admEsc(g.slaWarn||7)+'"></div>'+
+    '<div style="max-width:200px"><label class="admLbl">SLA rosso (giorni)</label><input class="admIn" type="number" id="gSc" value="'+admEsc(g.slaCrit||14)+'"></div>'+
+    '<div style="max-width:200px"><label class="admLbl">Timeout Firebase (s)</label><input class="admIn" type="number" id="gTo" value="'+admEsc(g.timeoutFB||9)+'"></div></div>'+
+    '<div class="admRow"><div><label style="display:flex;align-items:center;gap:8px;color:#c6d4e2;font-size:12px"><input type="checkbox" id="gOc"'+(g.ocrEnabled!==false?' checked':'')+'> OCR abilitato</label></div>'+
+    '<div><label style="display:flex;align-items:center;gap:8px;color:#c6d4e2;font-size:12px"><input type="checkbox" id="gAi"'+(g.aiEnabled!==false?' checked':'')+'> AI abilitata</label></div>'+
+    '<div><label style="display:flex;align-items:center;gap:8px;color:#c6d4e2;font-size:12px"><input type="checkbox" id="gNf"'+(g.notifyOnFail!==false?' checked':'')+'> Notifica errori</label></div></div></div>'+
+    '<div style="display:flex;gap:9px"><button class="admBtn pri" onclick="admConfigSave()">💾 Salva configurazione</button>'+
+    '<button class="admBtn gh" onclick="admGo(\'config\')">Ricarica</button></div>';
+}
+function admConfigSave(){
+  var g = ADM_CFG.general = ADM_CFG.general||{};
+  var old = JSON.stringify(g);
+  g.companyName = document.getElementById('gCn').value; g.email = document.getElementById('gEm').value;
+  g.phone = document.getElementById('gPh').value; g.address = document.getElementById('gAd').value;
+  g.logoData = document.getElementById('gLg').value;
+  g.color1 = document.getElementById('gC1').value; g.color2 = document.getElementById('gC2').value;
+  g.emailSignature = document.getElementById('gSg').value;
+  g.slaWarn = +document.getElementById('gSw').value||7; g.slaCrit = +document.getElementById('gSc').value||14;
+  g.timeoutFB = +document.getElementById('gTo').value||9;
+  g.ocrEnabled = document.getElementById('gOc').checked; g.aiEnabled = document.getElementById('gAi').checked;
+  g.notifyOnFail = document.getElementById('gNf').checked;
+  admLog('config','update','general', old.slice(0,200), JSON.stringify(g).slice(0,200));
+  admCommit('config','update','Configurazione salvata');
+}
+
+// ── LOG ──
+function admRender_log(){
+  var l = ADM_CFG.log||[];
+  var h = '<div class="admCard"><h3>Log modifiche</h3><div class="sub">Cronologia delle modifiche effettuate dal pannello admin. Le ultime 500 vengono conservate.</div>'+
+    '<div class="admRow"><input class="admIn" id="logFlt" placeholder="Filtra…" oninput="admLogFilter(this.value)"><button class="admBtn gh" style="flex:0" onclick="admLogExport()">📥 Esporta CSV</button></div></div>'+
+    '<div class="admCard" style="padding:0"><table class="admTable"><thead><tr><th>Data/ora</th><th>Sezione</th><th>Azione</th><th>Campo</th><th>Da</th><th>A</th><th>Utente</th></tr></thead><tbody id="admLogTb">';
+  if(!l.length) h += '<tr><td colspan="7" style="text-align:center;color:#5c6b7d;padding:24px">Nessuna modifica registrata.</td></tr>';
+  l.slice(0,200).forEach(function(e){
+    h += '<tr><td style="font-size:11px;color:#8899a8;white-space:nowrap">'+new Date(e.ts).toLocaleString('it-IT')+'</td>'+
+      '<td><span class="admChip">'+admEsc(e.section)+'</span></td>'+
+      '<td style="font-size:11px">'+admEsc(e.action)+'</td>'+
+      '<td style="font-size:11px;color:#7db8ff">'+admEsc(e.field||'')+'</td>'+
+      '<td style="font-size:11px;color:#e6b03c">'+admEsc((e.from||'').slice(0,60))+'</td>'+
+      '<td style="font-size:11px;color:#5ce080">'+admEsc((e.to||'').slice(0,60))+'</td>'+
+      '<td style="font-size:11px">'+admEsc(e.user||'')+'</td></tr>';
+  });
+  h += '</tbody></table></div>';
+  return h;
+}
+function admLogFilter(q){
+  q = (q||'').toLowerCase();
+  var rows = document.querySelectorAll('#admLogTb tr');
+  rows.forEach(function(tr){
+    tr.style.display = tr.textContent.toLowerCase().indexOf(q)>=0 ? '' : 'none';
+  });
+}
+function admLogExport(){
+  var l = ADM_CFG.log||[];
+  var csv = 'Data,Sezione,Azione,Campo,Da,A,Utente\n' + l.map(function(e){
+    function q(s){s = String(s==null?'':s).replace(/"/g,'""'); return '"'+s+'"';}
+    return [q(new Date(e.ts).toISOString()), q(e.section), q(e.action), q(e.field||''), q(e.from||''), q(e.to||''), q(e.user||'')].join(',');
+  }).join('\n');
+  var blob = new Blob([csv], {type:'text/csv'});
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'admin-log-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  admToast('CSV esportato','ok');
+}
+
+// ── CAMBIO PIN ──
+function admChangePin(){
+  var newp = prompt('Nuovo PIN (minimo 10 caratteri):');
+  if(newp==null) return;
+  newp = String(newp);
+  if(newp.length<10){ admToast('PIN troppo corto (min 10)','err'); return; }
+  var conf = prompt('Ripeti il nuovo PIN:');
+  if(conf!==newp){ admToast('I due PIN non corrispondono','err'); return; }
+  admSha256(newp).then(function(h){
+    ADM_PIN_HASH = h;
+    try{ localStorage.setItem('adm_pin_hash', h); }catch(e){}
+    if(typeof FB_REF !== 'undefined' && FB_REF){
+      try{ firebase.database().ref('admin/pinHash').set(h); }catch(e){}
+    }
+    admLog('security','change_pin','pinHash', '(nascosto)', '(nascosto)');
+    admCommit('security','change_pin','PIN aggiornato');
+  });
+}
+
+// ── RICERCA GLOBALE ──
+function admGlobalSearch(q){
+  q = (q||'').trim().toLowerCase();
+  if(!q){ admGo(ADM_SEC); return; }
+  var out = { users:[], suppliers:[], agents:[], mailTpl:[], portals:[], categories:[] };
+  (ADM_CFG.users||[]).forEach(function(u){ if(JSON.stringify(u).toLowerCase().indexOf(q)>=0) out.users.push(u); });
+  (ADM_CFG.suppliers||[]).forEach(function(s){ if(JSON.stringify(s).toLowerCase().indexOf(q)>=0) out.suppliers.push(s); });
+  (ADM_CFG.agents||[]).forEach(function(a){ if(JSON.stringify(a).toLowerCase().indexOf(q)>=0) out.agents.push(a); });
+  (ADM_CFG.mailTpl||[]).forEach(function(t){ if(JSON.stringify(t).toLowerCase().indexOf(q)>=0) out.mailTpl.push(t); });
+  (ADM_CFG.portals||[]).forEach(function(p){ if(JSON.stringify(p).toLowerCase().indexOf(q)>=0) out.portals.push(p); });
+  (ADM_CFG.categories||[]).forEach(function(c){ if(c.toLowerCase().indexOf(q)>=0) out.categories.push(c); });
+  var body = document.getElementById('admBody');
+  var h = '<div class="admCard"><h3>Risultati per "'+admEsc(q)+'"</h3><div class="sub">Ricerca in utenti, fornitori, agenti, template, portali e categorie.</div></div>';
+  var any = false;
+  Object.keys(out).forEach(function(k){
+    if(!out[k].length) return; any = true;
+    h += '<div class="admCard"><h3>'+_gsLabel(k)+' ('+out[k].length+')</h3><ul style="margin:0;padding-left:18px;color:#c6d4e2;font-size:13px;line-height:1.8">';
+    out[k].forEach(function(x){ h += '<li>'+admEsc(typeof x==='string'?x:(x.name||x.nome||x.id||JSON.stringify(x).slice(0,80)))+'</li>'; });
+    h += '</ul></div>';
+  });
+  if(!any) h += '<div class="admCard"><div class="sub">Nessun risultato.</div></div>';
+  body.innerHTML = h;
+}
+function _gsLabel(k){return {users:'Utenti',suppliers:'Fornitori',agents:'Agenti',mailTpl:'Template Email',portals:'Portali',categories:'Categorie'}[k]||k;}
+</script>
 
 </body>
 </html>
