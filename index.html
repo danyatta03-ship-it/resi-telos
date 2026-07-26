@@ -1383,6 +1383,8 @@ function launchApp() {
   initConn();
   // Auto-connessione Firebase: se è configurato si collega da solo ad ogni avvio (e resta connesso)
   ensureFB();
+  // v33: sync configurazione admin distribuita col bundle
+  try{ if(typeof admFetchBundleConfig==='function') admFetchBundleConfig(); }catch(e){}
   // Promemoria fine giornata (orario configurabile nelle impostazioni)
   setInterval(checkReminder,60000);
   setTimeout(checkReminder,5000);
@@ -9055,28 +9057,15 @@ function admDefaults(){
   };
 }
 function admLoad(){
+  // Sempre da locale: l'admin lavora offline e le modifiche non
+  // vengono mandate a Firebase in tempo reale (v33).
   return new Promise(function(res){
-    // 1) prova Firebase
-    if(typeof FB_REF !== 'undefined' && FB_REF){
-      try{
-        firebase.database().ref('admin/config').once('value').then(function(snap){
-          var v = snap.val();
-          ADM_CFG = admMergeDefaults(v);
-          _admApplyToApp();
-          res();
-        }).catch(function(){ _admLoadLocal(res); });
-        return;
-      }catch(e){}
-    }
-    _admLoadLocal(res);
+    var v = null;
+    try{ v = JSON.parse(localStorage.getItem('admcfg')||'null'); }catch(e){}
+    ADM_CFG = admMergeDefaults(v);
+    _admApplyToApp();
+    res();
   });
-}
-function _admLoadLocal(res){
-  var v = null;
-  try{ v = JSON.parse(localStorage.getItem('admcfg')||'null'); }catch(e){}
-  ADM_CFG = admMergeDefaults(v);
-  _admApplyToApp();
-  res();
 }
 function admMergeDefaults(v){
   var d = admDefaults();
@@ -9086,13 +9075,11 @@ function admMergeDefaults(v){
 }
 function admSave(){
   if(!ADM_CFG) return Promise.resolve();
+  ADM_CFG.ts = Date.now(); // marca temporale per confronto quando distribuito col bundle
   try{ localStorage.setItem('admcfg', JSON.stringify(ADM_CFG)); }catch(e){}
   _admApplyToApp();
-  if(typeof FB_REF !== 'undefined' && FB_REF){
-    try{
-      return firebase.database().ref('admin/config').set(ADM_CFG).then(function(){ return true; }).catch(function(){ return false; });
-    }catch(e){}
-  }
+  // v33: le modifiche sono locali. Verranno propagate agli altri utenti
+  // quando l'admin esporta admin-config.json e lo pubblica col nuovo ZIP Netlify.
   return Promise.resolve(true);
 }
 // Applica le parti "vive" della config all'app (fornitori, stati, ecc.)
@@ -9148,10 +9135,20 @@ function admRender_dash(){
     '<button class="admBtn" onclick="admGo(\'suppliers\')">🏭 Fornitori</button>' +
     '<button class="admBtn" onclick="admGo(\'mail\')">✉️ Template email</button>' +
     '<button class="admBtn" onclick="admGo(\'config\')">⚙️ Configurazione</button></div>' +
-    '<div style="margin-top:14px;padding:10px 12px;background:#131a24;border-radius:8px;font-size:11px;color:#8899a8;line-height:1.6">' +
-    '💡 <b style="color:#7db8ff">Ambiente:</b> ' +
-    ((typeof FB_REF!=='undefined' && FB_REF) ? '<span style="color:#5ce080">Sincronizzato con Firebase</span> — le modifiche saranno visibili a tutti i dispositivi.' : '<span style="color:#e6b03c">Solo locale</span> — configura Firebase per la sincronizzazione centralizzata.') +
-    '</div></div>';
+    '</div>' +
+    '<div class="admCard" style="border-color:#2a4468;background:#0f1826"><h3>📦 Pubblicazione modifiche</h3>' +
+    '<div class="sub" style="line-height:1.7">Il pannello lavora <b style="color:#7db8ff">offline</b>: ogni modifica è salvata subito solo su questo dispositivo. Per applicarla a tutti gli utenti:</div>' +
+    '<ol style="color:#c6d4e2;font-size:12px;line-height:1.8;margin:8px 0 12px;padding-left:20px">' +
+    '<li>Clicca <b>Esporta configurazione</b> → scarica <code style="color:#5ce080">admin-config.json</code>.</li>' +
+    '<li>Metti il file nella <b>cartella dell\'app</b> insieme a <code>index.html</code>.</li>' +
+    '<li>Ripubblica su Netlify (drag-and-drop dello ZIP).</li>' +
+    '<li>Alla prossima apertura, ogni utente adotta automaticamente la nuova config.</li></ol>' +
+    '<div style="display:flex;gap:9px;flex-wrap:wrap">' +
+    '<button class="admBtn pri" onclick="admExportBundle()">💾 Esporta configurazione</button>' +
+    '<button class="admBtn" onclick="admImportBundle()">📥 Importa da file</button>' +
+    '</div>' +
+    '<div style="margin-top:10px;font-size:11px;color:#5c6b7d">Ultima modifica locale: <b style="color:#7db8ff">' + (c.ts ? new Date(c.ts).toLocaleString('it-IT') : 'mai') + '</b></div>' +
+    '</div>';
 }
 function _admStat(k,v,d){ return '<div class="admStat"><div class="k">'+admEsc(k)+'</div><div class="v">'+admEsc(v)+'</div>'+(d?'<div class="d">'+admEsc(d)+'</div>':'')+'</div>'; }
 
@@ -9674,6 +9671,63 @@ function admChangePin(){
     admLog('security','change_pin','pinHash', '(nascosto)', '(nascosto)');
     admCommit('security','change_pin','PIN aggiornato');
   });
+}
+
+// ── SYNC DELLA CONFIG "BUNDLE" (admin-config.json distribuito nel deploy) ──
+// L'admin lavora offline; quando esporta il JSON e lo mette nello ZIP che
+// pubblica su Netlify, ogni altro client al prossimo aggiornamento fetcha
+// il file e — se il timestamp è più recente della sua copia — adotta.
+function admFetchBundleConfig(){
+  return fetch('./admin-config.json?ts=' + Date.now(), { cache: 'no-cache' })
+    .then(function(r){ if(!r.ok) throw new Error('no bundle'); return r.json(); })
+    .then(function(remote){
+      if(!remote || typeof remote !== 'object' || !remote.ts) return;
+      var local = null;
+      try{ local = JSON.parse(localStorage.getItem('admcfg')||'null'); }catch(e){}
+      var localTs = (local && local.ts) || 0;
+      if(remote.ts <= localTs) return;
+      try{ localStorage.setItem('admcfg', JSON.stringify(remote)); }catch(e){}
+      if(typeof admMergeDefaults === 'function') ADM_CFG = admMergeDefaults(remote);
+      if(typeof _admApplyToApp === 'function') _admApplyToApp();
+      try{ if(typeof toast === 'function') toast('Configurazione aggiornata dall\'amministratore','b'); }catch(e){}
+    })
+    .catch(function(){});
+}
+
+// ── ESPORTA / IMPORTA config (per il flow "offline → pubblica nel bundle") ──
+function admExportBundle(){
+  if(!ADM_CFG) return;
+  ADM_CFG.ts = Date.now();
+  try{ localStorage.setItem('admcfg', JSON.stringify(ADM_CFG)); }catch(e){}
+  var blob = new Blob([JSON.stringify(ADM_CFG, null, 2)], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'admin-config.json';
+  a.click();
+  admToast('admin-config.json esportato — mettilo nella cartella dell\'app e ripubblica su Netlify','ok');
+}
+function admImportBundle(){
+  var inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = function(){
+    var f = inp.files && inp.files[0]; if(!f) return;
+    var rd = new FileReader();
+    rd.onload = function(){
+      try{
+        var obj = JSON.parse(rd.result);
+        if(!obj || typeof obj !== 'object'){ admToast('File non valido','err'); return; }
+        ADM_CFG = admMergeDefaults(obj);
+        if(!ADM_CFG.ts) ADM_CFG.ts = Date.now();
+        try{ localStorage.setItem('admcfg', JSON.stringify(ADM_CFG)); }catch(e){}
+        _admApplyToApp();
+        admLog('config','import','admin-config.json','','ts='+ADM_CFG.ts);
+        admCommit('config','import','Configurazione importata');
+        admGo(ADM_SEC);
+      } catch(e){ admToast('JSON non valido: '+e.message,'err'); }
+    };
+    rd.readAsText(f);
+  };
+  inp.click();
 }
 
 // ── RICERCA GLOBALE ──

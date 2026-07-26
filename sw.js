@@ -3,7 +3,7 @@
 // App shell: network-first (aggiornamenti subito, offline dal cache)
 // Dati anagrafica/storico: cache-first con refresh in background
 // ═══════════════════════════════════════════════════════
-var CACHE = 'resi-telos-v33';
+var CACHE = 'resi-telos-v33b';
 var PRECACHE = [
   './',
   './index.html',
@@ -17,6 +17,7 @@ var PRECACHE = [
   './clients.json',
   './db_import.json',
   './client_agents.json',
+  './admin-config.json',
   './jsqr.js',
   './qrcode.min.js'
 ];
