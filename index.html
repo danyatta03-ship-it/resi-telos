@@ -390,7 +390,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v33 · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v33c · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -923,7 +923,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v33</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v33c</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -1383,8 +1383,17 @@ function launchApp() {
   initConn();
   // Auto-connessione Firebase: se è configurato si collega da solo ad ogni avvio (e resta connesso)
   ensureFB();
-  // v33: sync configurazione admin distribuita col bundle
-  try{ if(typeof admFetchBundleConfig==='function') admFetchBundleConfig(); }catch(e){}
+  // v33: carica config admin (default + eventuali modifiche locali) anche
+  // per gli utenti normali → sblocca portalForForn, supDb sincronizzati, ecc.
+  try{
+    if(typeof admLoad==='function'){
+      admLoad().then(function(){
+        if(typeof admFetchBundleConfig==='function') admFetchBundleConfig().then(function(){
+          try{ if(typeof renderList==='function') renderList(); }catch(e){}
+        });
+      });
+    }
+  }catch(e){}
   // Promemoria fine giornata (orario configurabile nelle impostazioni)
   setInterval(checkReminder,60000);
   setTimeout(checkReminder,5000);
@@ -2402,6 +2411,11 @@ function renderList(){
     if(canE) html+='<button class="sb sg" style="flex:1" onclick="editRow(\''+xe(r._key||'')+'\')">✎ Mod.</button>';
     else html+='<button class="sb sn" style="flex:1" disabled>🔒 Bloccato</button>';
     html+='<button class="sb ssb" onclick="showLog(\''+xe(r._key||'')+'\')" title="Log modifiche">📋</button>';
+    // Pulsante ECOMMERCE: appare solo se il fornitore è mappato a un portale
+    if(typeof portalForForn==='function'){
+      var _pf=portalForForn(r.forn);
+      if(_pf) html+='<button class="sb" style="background:rgba(76,175,80,.14);color:#5ce080;border:1px solid rgba(76,175,80,.45);font-weight:800;letter-spacing:.3px" onclick="event.stopPropagation();openPortal(\''+xe(_pf.url)+'\')" title="Apri il portale '+xe(_pf.name)+'">🛒 ECOMMERCE</button>';
+    }
     var _bk=canBack(r); if(_bk) html+='<button class="sb sy" onclick="sendBackFase(\''+xe(r._key||'')+'\')" title="Rimanda indietro">← '+xe(_bk)+'</button>';
     var _nf=canAdv(r); if(_nf) html+='<button class="auto-arrow" onclick="advFase(\''+xe(r._key||'')+'\',\''+xe(_nf)+'\')">→ '+xe(_nf)+'</button>';
     if(ROLE_PERMS[ROLE]&&ROLE_PERMS[ROLE].canArchive&&r.fase==='FINALE') html+='<button class="sb sy" onclick="archiveRow(\''+xe(r._key||'')+'\')" title="Archivia">📁</button>';
@@ -9030,7 +9044,19 @@ function admDefaults(){
     users: [],
     suppliers: (typeof supDb!=='undefined' && supDb.length) ? supDb.slice() : [],
     agents: [],
-    portals: [],
+    portals: [
+      {name:'DRA Auto Parts', url:'https://ecomm.drasrl.eu/', match:'DRA', note:'Carrozzeria, Termico'},
+      {name:'DasEurope', url:'https://ecomm.daseurope.com/user/login', match:'DAS|KUHNER|KAPPA3|EMPOLI', note:'Motorini, alternatori, alzacristalli, tergi'},
+      {name:'Repar Srl', url:'https://reparsrl.blusys.it/', match:'REPAR', note:''},
+      {name:'Dubhe Group', url:'https://shop.dubhegroup.com/it', match:'DUBHE', note:''},
+      {name:'Malospa', url:'https://www.malospa.it/system//VediMacro.phtml?IDMacro=575', match:'MALOSPA', note:''},
+      {name:'DiPa Commerce', url:'https://www.dipacommerce.com/customer/account/', match:'DIPA', note:''},
+      {name:'Denso', url:'https://serviceportal.denso-ts.com/home?p_p_id=com_liferay_login_web_portlet_LoginPortlet&p_p_lifecycle=0&p_p_state=normal&p_p_mode=view', match:'DENSO', note:''},
+      {name:'Centro Distribuzione Ricambi', url:'https://centrodistribuzionericambi.blusys.it/indx.php?p=Homericambisti&z=001947', match:'CENTRO DISTRIB|CDR', note:''},
+      {name:'e-Marelli', url:'https://www.e-marelli.com/index?lang=IT', match:'MARELLI', note:''},
+      {name:'Crystal Motor', url:'https://ecomm.crystalmotor.it/', match:'CRYSTAL', note:''},
+      {name:'Dira', url:'https://b2b.dira.it/it/', match:'DIRA', note:''}
+    ],
     mailTpl: [
       {id:'presa', nome:'Richiesta Presa', subject:'RICHIESTA PRESA · {{fornitore}} · {{colli}} coll{{plurCol}}',
         body:'Buongiorno,\n\nAbbiamo {{colli}} coll{{plurCol}} pronti al ritiro\nAspetto: {{aspetto}}\nIndirizzo per il ritiro: {{indirizzo}}\n\nIn attesa di un vostro gentile riscontro\nCordiali saluti', firma:'', attach:''},
@@ -9374,13 +9400,14 @@ function admAgentToggle(i){
 // ── PORTALI ──
 function admRender_portals(){
   var lst = ADM_CFG.portals||[];
-  var h = '<div class="admCard"><h3>Portali fornitori</h3><div class="sub">Collegamenti ai portali web. Le credenziali NON sono salvate: verranno chieste al momento del bisogno per motivi di sicurezza.</div>'+
+  var h = '<div class="admCard"><h3>Portali fornitori</h3><div class="sub">Collegamenti ai portali e-commerce. Il campo <b style="color:#7db8ff">Match</b> è il nome (o parte di esso) del fornitore che attiva il pulsante ECOMMERCE sulle card. Più parole si separano con "|".</div>'+
     '<button class="admBtn pri" onclick="admPortalEdit(-1)">➕ Nuovo portale</button></div>'+
-    '<div class="admCard"><table class="admTable"><thead><tr><th>Nome</th><th>URL</th><th>Note</th><th style="width:120px">Azioni</th></tr></thead><tbody>';
-  if(!lst.length) h += '<tr><td colspan="4" style="text-align:center;color:#5c6b7d;padding:24px">Nessun portale.</td></tr>';
+    '<div class="admCard"><table class="admTable"><thead><tr><th>Nome</th><th>URL</th><th>Match</th><th>Note</th><th style="width:120px">Azioni</th></tr></thead><tbody>';
+  if(!lst.length) h += '<tr><td colspan="5" style="text-align:center;color:#5c6b7d;padding:24px">Nessun portale.</td></tr>';
   lst.forEach(function(p,i){
     h += '<tr><td><b style="color:#fff">'+admEsc(p.name)+'</b></td>'+
-      '<td><a href="'+admEsc(p.url)+'" target="_blank" rel="noopener" style="color:#3b9fd4;font-size:11px;text-decoration:none">'+admEsc(p.url)+' ↗</a></td>'+
+      '<td><a href="'+admEsc(p.url)+'" target="_blank" rel="noopener" style="color:#3b9fd4;font-size:11px;text-decoration:none">'+admEsc((p.url||'').slice(0,45))+' ↗</a></td>'+
+      '<td style="font-size:11px;color:#5ce080"><code>'+admEsc(p.match||p.name||'')+'</code></td>'+
       '<td style="font-size:11px;color:#8899a8">'+admEsc(p.note||'')+'</td>'+
       '<td><button class="admIco" onclick="admPortalEdit('+i+')">✏️</button>'+
       '<button class="admIco dan" onclick="admPortalDel('+i+')">🗑</button></td></tr>';
@@ -9389,10 +9416,11 @@ function admRender_portals(){
   return h;
 }
 function admPortalEdit(i){
-  var p = i>=0 ? ADM_CFG.portals[i] : {name:'',url:'',note:''};
+  var p = i>=0 ? ADM_CFG.portals[i] : {name:'',url:'',match:'',note:''};
   var h = '<div class="admCard"><h3>'+(i>=0?'Modifica portale':'Nuovo portale')+'</h3>'+
     '<div class="admRow"><div><label class="admLbl">Nome fornitore/portale</label><input class="admIn" id="pNm" value="'+admEsc(p.name||'')+'"></div></div>'+
     '<div class="admRow"><div><label class="admLbl">URL</label><input class="admIn" id="pUrl" value="'+admEsc(p.url||'')+'" placeholder="https://..."></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Match (parole nel nome del fornitore che attivano il pulsante · separate da "|")</label><input class="admIn" id="pMt" value="'+admEsc(p.match||p.name||'')+'" placeholder="es. BOSCH|BOSCH SERVICE"></div></div>'+
     '<div class="admRow"><div><label class="admLbl">Note (formato credenziali, procedura, ecc. — MAI la password)</label><input class="admIn" id="pNt" value="'+admEsc(p.note||'')+'"></div></div>'+
     '<div style="padding:10px 12px;background:#3a2c1c;border:1px solid #6a5024;color:#e6b03c;border-radius:7px;font-size:11px;margin-bottom:10px">⚠️ <b>Sicurezza:</b> non inserire mai username e password nelle note. Salva solo URL e istruzioni.</div>'+
     '<div style="display:flex;gap:9px"><button class="admBtn pri" onclick="admPortalSave('+i+')">💾 Salva</button>'+
@@ -9404,10 +9432,31 @@ function admPortalSave(i){
   var nm = document.getElementById('pNm').value.trim();
   var url = document.getElementById('pUrl').value.trim();
   if(!nm || !url){ admToast('Nome e URL obbligatori','err'); return; }
-  var neu = { name:nm, url:url, note:document.getElementById('pNt').value.trim() };
+  var neu = { name:nm, url:url, match:document.getElementById('pMt').value.trim(), note:document.getElementById('pNt').value.trim() };
   if(i>=0){ lst[i] = neu; admLog('portals','update','portal['+nm+']', '', url); admCommit('portals','update','Portale aggiornato'); }
   else { lst.push(neu); admLog('portals','create','portal', '', nm); admCommit('portals','create','Portale creato'); }
   admGo('portals');
+}
+
+// Utility globale: cerca il portale che matcha il fornitore.
+// Usata dalle card della lista per mostrare il pulsante ECOMMERCE.
+function portalForForn(fn){
+  if(!fn) return null;
+  var s = String(fn).toUpperCase();
+  var list = (typeof ADM_CFG!=='undefined' && ADM_CFG && ADM_CFG.portals) || [];
+  for(var i=0;i<list.length;i++){
+    var p = list[i]; if(!p || !p.url) continue;
+    var m = String(p.match||p.name||'').toUpperCase();
+    if(!m) continue;
+    var parts = m.split('|').map(function(x){return x.trim();}).filter(Boolean);
+    for(var j=0;j<parts.length;j++){ if(parts[j] && s.indexOf(parts[j])>=0) return p; }
+  }
+  return null;
+}
+function openPortal(url){
+  if(!url) return;
+  try{ window.open(url, '_blank', 'noopener'); }catch(e){}
+  if(typeof toast==='function') toast('Apro il portale…','b');
 }
 function admPortalDel(i){
   var p = ADM_CFG.portals[i]; if(!p) return;
