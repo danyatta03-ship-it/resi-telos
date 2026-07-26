@@ -390,7 +390,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v33c · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v33d · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -923,7 +923,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v33c</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v33d</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -2280,13 +2280,15 @@ function qkSt(key,idx,fase){
   }
 }
 
-// ── Blocco RMA: in UFFICIO RESI la pratica DEVE avere il numero RMA/RNC ──
-// Senza RMA la richiesta al fornitore non è tracciabile: blocco a monte.
+// ── Blocco RMA: per passare da UFFICIO RESI a MAGAZZINO serve l'RMA/RNC.
+// L'RMA viene assegnato quando la pratica è in UFFICIO RESI: il blocco
+// scatta al passaggio successivo, non all'ingresso in UFFICIO.
 function requireRMA(r, fase){
-  if(fase!=='UFFICIO RESI') return true;
+  if(fase!=='MAGAZZINO') return true;
+  if(!r || r.fase!=='UFFICIO RESI') return true;
   var rma=((r&&r.rma)||'').trim();
   if(rma) return true;
-  toast('⛔ Serve il numero RMA/RNC per passare in UFFICIO RESI','r');
+  toast('⛔ Serve il numero RMA/RNC per passare a MAGAZZINO','r');
   return false;
 }
 function advFase(key,fase){
@@ -3640,9 +3642,10 @@ function svEdit(key){
     note:document.getElementById('ei_note')?document.getElementById('ei_note').value.trim():'',
     _lastEdit:deviceName,_lastEditTs:Date.now(),_lastEditRole:ROLE
   };
-  // Blocco: niente UFFICIO RESI senza RMA/RNC (vale anche salvando dalla scheda)
-  if(ch.fase==='UFFICIO RESI' && !(ch.rma||'').trim()){
-    toast('⛔ Serve il numero RMA/RNC per la fase UFFICIO RESI','r');
+  // Blocco: per passare da UFFICIO RESI a MAGAZZINO serve l'RMA/RNC
+  var _wasUff = rows[key] && rows[key].fase==='UFFICIO RESI';
+  if(_wasUff && ch.fase==='MAGAZZINO' && !(ch.rma||'').trim()){
+    toast('⛔ Serve il numero RMA/RNC per passare a MAGAZZINO','r');
     var _rmaEl=document.getElementById('ei_rma');
     if(_rmaEl){ try{ _rmaEl.focus(); _rmaEl.scrollIntoView({behavior:'smooth',block:'center'}); _rmaEl.style.border='1.5px solid #E05555'; }catch(e){} }
     return;
