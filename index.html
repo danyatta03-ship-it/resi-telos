@@ -390,7 +390,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v33d · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v33e · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -923,7 +923,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v33d</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v33e</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -9343,10 +9343,38 @@ function admSupToggle(i){
 }
 
 // ── AGENTI ──
+// Importa una tantum gli agenti dal database CLI_AGENTS (client_agents.json)
+// così l'admin trova l'anagrafica già popolata al primo accesso.
+function admAgentsSeed(){
+  if(!ADM_CFG) return 0;
+  if(Array.isArray(ADM_CFG.agents) && ADM_CFG.agents.length) return 0;
+  if(typeof CLI_AGENTS==='undefined' || !CLI_AGENTS || !Array.isArray(CLI_AGENTS.agents)) return 0;
+  var byAg = {};
+  if(CLI_AGENTS.m){
+    for(var cod in CLI_AGENTS.m){
+      var v = CLI_AGENTS.m[cod];
+      // v può essere un indice (numero) nell'array agents oppure direttamente il nome
+      var nm = (typeof v === 'number') ? CLI_AGENTS.agents[v] : v;
+      if(!nm) continue;
+      var k = String(nm).toUpperCase();
+      if(!byAg[k]) byAg[k]=[];
+      if(byAg[k].length<50) byAg[k].push(cod);
+    }
+  }
+  ADM_CFG.agents = CLI_AGENTS.agents.map(function(nm){
+    var k = String(nm).toUpperCase();
+    return { name:k, email:'', phone:'', suppliers:[], clients:(byAg[k]||[]).join(','), active:true };
+  });
+  return ADM_CFG.agents.length;
+}
 function admRender_agents(){
+  // Auto-seed al primo accesso: importa gli agenti dal DB client_agents.json
+  var seeded = admAgentsSeed();
+  if(seeded){ admLog('agents','import','from CLI_AGENTS','', String(seeded)); admSave(); }
   var lst = ADM_CFG.agents||[];
-  var h = '<div class="admCard"><h3>Agenti</h3><div class="sub">Anagrafica agenti con assegnazioni fornitori/clienti.</div>'+
-    '<button class="admBtn pri" onclick="admAgentEdit(-1)">➕ Nuovo agente</button></div>'+
+  var h = '<div class="admCard"><h3>Agenti</h3><div class="sub">Anagrafica agenti con assegnazioni fornitori/clienti. Popolata automaticamente dal database <code>client_agents.json</code>.</div>'+
+    '<div style="display:flex;gap:9px;flex-wrap:wrap"><button class="admBtn pri" onclick="admAgentEdit(-1)">➕ Nuovo agente</button>'+
+    '<button class="admBtn" onclick="admAgentsReimport()">🔄 Reimporta da database</button></div></div>'+
     '<div class="admCard"><table class="admTable"><thead><tr><th>Nome</th><th>Email</th><th>Telefono</th><th>Fornitori</th><th>Stato</th><th style="width:120px">Azioni</th></tr></thead><tbody>';
   if(!lst.length) h += '<tr><td colspan="6" style="text-align:center;color:#5c6b7d;padding:24px">Nessun agente.</td></tr>';
   lst.forEach(function(a,i){
@@ -9359,6 +9387,16 @@ function admRender_agents(){
   });
   h += '</tbody></table></div>';
   return h;
+}
+function admAgentsReimport(){
+  admConfirm('Reimportare agenti?','Sovrascrive l\'elenco attuale con quello del database. Le modifiche manuali (email, telefono, fornitori) andranno perse.', function(){
+    if(!ADM_CFG) return;
+    ADM_CFG.agents = [];
+    var n = admAgentsSeed();
+    admLog('agents','reimport','from CLI_AGENTS','', String(n));
+    admCommit('agents','reimport', n+' agenti importati');
+    admGo('agents');
+  });
 }
 function admAgentEdit(i){
   var a = i>=0 ? ADM_CFG.agents[i] : {name:'',email:'',phone:'',suppliers:[],clients:'',active:true};
