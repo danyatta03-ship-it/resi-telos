@@ -3,7 +3,7 @@
 // App shell: network-first (aggiornamenti subito, offline dal cache)
 // Dati anagrafica/storico: cache-first con refresh in background
 // ═══════════════════════════════════════════════════════
-var CACHE = 'resi-telos-v33j';
+var CACHE = 'resi-telos-v34';
 var PRECACHE = [
   './',
   './index.html',
@@ -17,6 +17,8 @@ var PRECACHE = [
   './clients.json',
   './db_import.json',
   './client_agents.json',
+  './cli_data.json',
+  './db_tri.json',
   './admin-config.json',
   './jsqr.js',
   './qrcode.min.js'
@@ -48,7 +50,7 @@ self.addEventListener('fetch', function(e) {
   var url = new URL(req.url);
   if (url.origin !== location.origin) return;
 
-  var isData = /(?:clients\.json|db_import\.json)$/.test(url.pathname);
+  var isData = /(?:clients\.json|db_import\.json|cli_data\.json|db_tri\.json|client_agents\.json)$/.test(url.pathname);
 
   if (isData) {
     // cache-first + aggiornamento in background (i dati cambiano di rado)
