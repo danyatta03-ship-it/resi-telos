@@ -123,7 +123,9 @@ textarea{resize:none;min-height:52px}
 .cp{background:rgba(224,224,224,.06);color:#E0E0E0;border:1px solid rgba(224,224,224,.15)}
 .ac-price{font-size:12px;font-weight:700;color:var(--yel);font-family:monospace;float:right}
 .ac-date{font-size:10px;color:var(--txt3);float:right;clear:right}
-.ac-acts{display:flex;gap:7px;margin-top:9px;padding-top:9px;border-top:1px solid var(--brd)}
+.ac-acts{display:flex;gap:7px;margin-top:9px;padding-top:9px;border-top:1px solid var(--brd);flex-wrap:wrap}
+.ac-acts>.sb,.ac-acts>.auto-arrow{flex:1 1 auto;min-width:0}
+.ac-acts>.sb.ssb{flex:0 0 auto}
 .ac-chk{width:16px;height:16px;cursor:pointer;flex-shrink:0;margin-right:3px;accent-color:var(--blu)}
 
 /* FILTER BAR */
@@ -390,7 +392,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v33f · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v33g · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -923,7 +925,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v33f</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v33g</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
