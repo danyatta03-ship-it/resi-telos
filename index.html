@@ -335,6 +335,7 @@ select option {
     <input id="fbU" placeholder="https://xxx-default-rtdb.europe-west1.firebasedatabase.app" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;margin-bottom:14px;display:block;-webkit-appearance:none">
     <div id="fbSt" style="display:none;font-size:11px;margin-bottom:10px;padding:8px;border-radius:6px;text-align:center"></div>
     <button id="fbGo" onclick="doFBConnect()" style="width:100%;background:#3d1800;color:#3B9FD4;border:2px solid #3B9FD4;padding:12px;font-size:14px;font-weight:700;border-radius:9px;cursor:pointer;font-family:inherit;-webkit-appearance:none">CONNETTI</button>
+    <button onclick="document.getElementById('fbModal').style.display='none';fbDiagnose()" style="width:100%;background:none;color:#3B9FD4;border:1px solid rgba(59,159,212,.4);padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px;-webkit-appearance:none;border-radius:8px">🩺 Diagnostica</button>
     <button onclick="document.getElementById('fbModal').style.display='none'" style="width:100%;background:none;color:#777;border:none;padding:10px;font-size:12px;cursor:pointer;font-family:inherit;margin-top:4px;-webkit-appearance:none">Chiudi</button>
   </div>
 </div>
@@ -389,7 +390,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v31 · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v32 · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -861,11 +862,27 @@ select option {
   <div class="htab">
     <button class="htab-btn on" id="hTabDash" onclick="swHTab('dash')">📊 DASH</button>
     <button class="htab-btn" id="hTabArc" onclick="swHTab('arc')">🗄 ARCHIVIO</button>
+    <button class="htab-btn" id="hTabTempi" onclick="swHTab('tempi')">⏱ TEMPI</button>
     <button class="htab-btn" id="hTabGal" onclick="swHTab('gal')">🖼 GALLERIA</button>
     <button class="htab-btn" id="hTabExp" onclick="swHTab('exp')">💾 EXPORT</button>
   </div>
   <!-- host per il pannello ARCHIVIO (contenuto di pgArc spostato qui al boot) -->
   <div id="hPanArc" style="display:none"><div id="hPanArcHost"></div></div>
+
+  <!-- ⏱ TEMPI / LOG DI PERIODO (v32) -->
+  <div id="hPanTempi" style="display:none">
+    <div style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap">
+      <select id="tmpPeriod" onchange="renderTempi()" style="background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:8px 10px;font-size:12px;border-radius:7px;-webkit-appearance:none;outline:none;font-family:inherit;flex:1;min-width:130px">
+        <option value="today">Oggi</option>
+        <option value="7">Ultimi 7 giorni</option>
+        <option value="30" selected>Ultimi 30 giorni</option>
+        <option value="90">Ultimi 90 giorni</option>
+        <option value="all">Tutto il periodo</option>
+      </select>
+      <button onclick="exportTempi()" style="background:linear-gradient(135deg,#001a40,#003080);color:#3B9FD4;border:1px solid #004080;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit;flex-shrink:0">📥 Esporta</button>
+    </div>
+    <div id="tempiContent"></div>
+  </div>
 
   <div id="hPanDash"><div id="turnoBox" style="background:#111;border:1px solid #2a2a2a;border-left:3px solid #3B9FD4;border-radius:8px;padding:10px 12px;margin-bottom:10px;display:none"></div><div id="dashExtra" style="margin-bottom:12px"></div>
     <div id="dashC"></div>
@@ -906,7 +923,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v31</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v32</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -2239,6 +2256,15 @@ function qkSt(key,idx,fase){
   }
 }
 
+// ── Blocco RMA: in UFFICIO RESI la pratica DEVE avere il numero RMA/RNC ──
+// Senza RMA la richiesta al fornitore non è tracciabile: blocco a monte.
+function requireRMA(r, fase){
+  if(fase!=='UFFICIO RESI') return true;
+  var rma=((r&&r.rma)||'').trim();
+  if(rma) return true;
+  toast('⛔ Serve il numero RMA/RNC per passare in UFFICIO RESI','r');
+  return false;
+}
 function advFase(key,fase){
   var r=rows[key];if(!r)return;
   var perms=ROLE_PERMS[ROLE]||{};
@@ -2246,6 +2272,11 @@ function advFase(key,fase){
   // così Ufficio/Magazzino possono chiudere a FINALE anche senza editare i campi della riga).
   if((perms.canAdvanceTo||[]).indexOf(fase)<0){
     toast('Ruolo '+ROLE+' non autorizzato a portare a '+fase,'r');return;
+  }
+  // Blocco: niente UFFICIO RESI senza RMA
+  if(!requireRMA(r,fase)){
+    try{ editRow(key); setTimeout(function(){ var el=document.getElementById('ei_rma'); if(el){ el.focus(); el.style.border='1.5px solid #E05555'; } },350); }catch(e){}
+    return;
   }
   var auto=AUTO_STATO[fase]||'';
   var ch={fase:fase,stato:auto,datSta:new Date().toISOString().slice(0,10),_lastEdit:deviceName,_role:ROLE};
@@ -2324,6 +2355,17 @@ function renderList(){
   for(var fi=0;fi<nShow;fi++){
     var r=filt[fi],fc=fCh(r.flusso),canE=canEditRow(r);
     html+='<div class="ac'+(bulkSel[r._key]?' sel':'')+(canE?'':' locked')+'" id="ac_'+(r._key||'')+'">';
+    // Spunta PRESA: compare solo sulle righe il cui STATO e' gia' stato modificato in UFFICIO RESI
+    // (pratica lavorata). Serve a selezionare i colli per la richiesta di presa al fornitore.
+    if(typeof presaEligible==='function' && presaEligible(r)){
+      var _pk2=r._key||'', _psel=!!(typeof presaSel!=='undefined' && presaSel[_pk2]);
+      var _pready=(r.fase==='MAGAZZINO' && r.stato==='CHIUDERE');
+      html+='<div onclick="event.stopPropagation();togglePresa(\''+_pk2+'\')" title="'+(_pready?'Seleziona per la richiesta di presa':'Selezionabile: la presa si invia quando lo stato e MAGAZZINO CHIUDERE')+'" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;background:'+(_psel?'rgba(46,204,113,.16)':'rgba(255,255,255,.03)')+';border:1px solid '+(_psel?'#2ecc71':'var(--brd2)')+';border-radius:7px;padding:4px 9px;margin-bottom:7px;-webkit-tap-highlight-color:transparent">'+
+        '<span style="font-size:14px;line-height:1;color:'+(_psel?'#2ecc71':'var(--txt3)')+'">'+(_psel?'\u2611':'\u2610')+'</span>'+
+        '<span style="font-size:10px;font-weight:800;letter-spacing:.5px;color:'+(_psel?'#2ecc71':'var(--txt3)')+'">PRESA</span>'+
+        (_pready?'':'<span style="font-size:9px;color:var(--txt3);opacity:.8">\u00b7 attende CHIUDERE</span>')+
+      '</div>';
+    }
     if(r._who)html+='<div class="ac-who">\ud83d\udc64 '+xe(r._who)+(r._lastEdit&&r._lastEdit!==r._who?' \u00b7 \u270e '+xe(r._lastEdit):'')+' <span style="color:var(--txt3);font-size:8px">'+xe(r.fase||'')+'</span>'+(r._log&&r._log.length?' <span style="color:var(--txt3)">·'+r._log.length+' mod.</span>':'')+'</div>';
     html+='<div style="display:flex;justify-content:space-between"><div>';
     html+='<div class="ac-sogg">'+xe(r.sogg||'\u2014')+'</div>';
@@ -2504,11 +2546,12 @@ function remDone(){try{localStorage.setItem('tremday',new Date().toISOString().s
 function swHTab(t){
   // Sub-tab STORICO v30: DASH (con RIEPILOGO integrato), ARCHIVIO, GALLERIA, EXPORT.
   // (TRIMESTRE e LOGISTICA sono diventati tab principali; RIEPILOGO è unito a DASH.)
-  var P={dash:'hPanDash',arc:'hPanArc',gal:'hPanGal',exp:'hPanExp'};
-  var B={dash:'hTabDash',arc:'hTabArc',gal:'hTabGal',exp:'hTabExp'};
+  var P={dash:'hPanDash',arc:'hPanArc',tempi:'hPanTempi',gal:'hPanGal',exp:'hPanExp'};
+  var B={dash:'hTabDash',arc:'hTabArc',tempi:'hTabTempi',gal:'hTabGal',exp:'hTabExp'};
   for(var k in P){var p=document.getElementById(P[k]),b=document.getElementById(B[k]);if(!p||!b)continue;if(k===t){p.style.display='';b.classList.add('on');}else{p.style.display='none';b.classList.remove('on');}}
   if(t==='dash'){ renderDash(); renderDashExtra(); showTurnoInfo(); try{ renderRiepilogo(); }catch(e){} }
   if(t==='arc')renderArchive();
+  if(t==='tempi')renderTempi();
   if(t==='gal')renderGallery();
   if(t==='exp')renderHist();
 }
@@ -2633,6 +2676,358 @@ function clearPkgPhotos(){
   keys.forEach(function(id){ idbDel('pkg:'+id).catch(function(){}); });
   _pkgSaveKeys([]);
   renderPkgList();
+}
+
+// ══════════════════════════════════════════════════
+// RICHIESTA PRESA (v32) — selezione colli + mail al fornitore
+// ══════════════════════════════════════════════════
+var presaSel = {};   // { rowKey: true }
+
+// La spunta compare quando lo STATO della riga e' gia' stato toccato in UFFICIO RESI
+// (o la pratica e' comunque arrivata a MAGAZZINO): sono i colli candidati alla presa.
+function statoModificatoInUfficio(r){
+  var log=(r&&r._log)||[];
+  for(var i=0;i<log.length;i++){
+    var l=log[i], ch=l&&l.changes;
+    if(!ch) continue;
+    // una modifica di stato avvenuta mentre la riga era (o passava) in UFFICIO RESI
+    if(ch.stato){
+      var faseAllora = (ch.fase && ch.fase.a) ? ch.fase.a : (r.fase||'');
+      var da = (ch.stato.da||''), a=(ch.stato.a||'');
+      if(faseAllora==='UFFICIO RESI') return true;
+      // stato tipico dell'ufficio (RICHIESTA…/RNC…) => la pratica e' passata di li'
+      if(/^(RICHIESTA|RNC)/.test(a) || /^(RICHIESTA|RNC)/.test(da)) return true;
+    }
+  }
+  return false;
+}
+function presaEligible(r){
+  if(!r || r._frozen) return false;
+  if(r.fase==='MAGAZZINO') return true;               // in magazzino e' sempre candidabile
+  return statoModificatoInUfficio(r);
+}
+function presaReady(r){ return !!(r && r.fase==='MAGAZZINO' && r.stato==='CHIUDERE'); }
+function togglePresa(key){
+  if(!key) return;
+  if(presaSel[key]) delete presaSel[key]; else presaSel[key]=true;
+  try{ renderList(); }catch(e){}
+  try{ updPresaBar(); }catch(e){}
+}
+function presaSelected(){
+  var out=[];
+  for(var k in presaSel){ if(rows[k]) out.push(rows[k]); }
+  return out;
+}
+// Barra fissa in basso con il conteggio + bottone RICHIEDI PRESA
+function updPresaBar(){
+  var sel=presaSelected();
+  var bar=document.getElementById('presaBar');
+  if(!sel.length){ if(bar) bar.remove(); return; }
+  var pronti=sel.filter(presaReady).length;
+  if(!bar){
+    bar=document.createElement('div'); bar.id='presaBar';
+    bar.style.cssText='position:fixed;left:0;right:0;bottom:62px;z-index:180;padding:8px 10px;background:var(--bg1);border-top:1px solid var(--brd2);display:flex;gap:8px;align-items:center;box-shadow:0 -6px 18px rgba(0,0,0,.5)';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML='<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:800;color:#2ecc71">'+sel.length+' coll'+(sel.length===1?'o':'i')+' selezionat'+(sel.length===1?'o':'i')+'</div>'+
+    '<div style="font-size:10px;color:var(--txt3)">'+pronti+' pront'+(pronti===1?'o':'i')+' (MAGAZZINO · CHIUDERE)</div></div>'+
+    '<button onclick="presaClear()" style="background:none;color:var(--txt3);border:1px solid var(--brd2);border-radius:8px;padding:9px 11px;font-size:12px;cursor:pointer;font-family:inherit;-webkit-appearance:none">Annulla</button>'+
+    '<button onclick="richiediPresa()" style="background:'+(pronti?'#0a3a2a':'#1a1a1a')+';color:'+(pronti?'#2ecc71':'#666')+';border:1.5px solid '+(pronti?'#2ecc71':'#333')+';border-radius:8px;padding:9px 14px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;-webkit-appearance:none">📦 Richiedi Presa</button>';
+}
+function presaClear(){ presaSel={}; try{renderList();}catch(e){} updPresaBar(); }
+
+// Costruisce e mostra la mail di richiesta presa (una per fornitore)
+function richiediPresa(){
+  var sel=presaSelected();
+  if(!sel.length){ toast('Nessun collo selezionato','y'); return; }
+  var pronti=sel.filter(presaReady);
+  var attesa=sel.length-pronti.length;
+  if(!pronti.length){
+    toast('⛔ La presa si richiede solo con stato MAGAZZINO · CHIUDERE ('+attesa+' in attesa)','r');
+    return;
+  }
+  if(attesa>0 && !confirm(attesa+' coll'+(attesa===1?'o non e pronto':'i non sono pronti')+' (stato diverso da MAGAZZINO · CHIUDERE).\n\nProcedo solo con i '+pronti.length+' pronti?')) return;
+
+  // Raggruppo per fornitore: ogni fornitore ha la sua mail e le sue regole
+  var byForn={};
+  pronti.forEach(function(r){ var f=(r.forn||'(senza fornitore)').toUpperCase(); (byForn[f]=byForn[f]||[]).push(r); });
+  var forns=Object.keys(byForn);
+  if(forns.length===1){ buildPresaMail(forns[0], byForn[forns[0]]); return; }
+  // Piu' fornitori: faccio scegliere
+  var old=document.getElementById('presaPickBox'); if(old) old.remove();
+  var box=document.createElement('div'); box.id='presaPickBox';
+  box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1500;display:flex;align-items:center;justify-content:center;padding:16px';
+  var h='<div style="background:#111;border:2px solid #2ecc71;border-radius:14px;padding:18px;width:100%;max-width:380px;max-height:82vh;overflow-y:auto">';
+  h+='<div style="font-size:15px;font-weight:800;color:#2ecc71;margin-bottom:4px">📦 Richiedi Presa</div>';
+  h+='<div style="font-size:11px;color:#888;margin-bottom:12px">I colli sono di fornitori diversi: si manda una mail per fornitore.</div>';
+  forns.forEach(function(f){
+    var n=byForn[f].length;
+    h+='<button onclick="document.getElementById(\'presaPickBox\').remove();buildPresaMail(\''+f.replace(/\x27/g,"\\\'")+'\',null)" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #2a2a2a;border-radius:9px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-bottom:7px;-webkit-appearance:none;font-family:inherit">'+xe(f)+' <span style="color:#2ecc71;font-size:11px">· '+n+' coll'+(n===1?'o':'i')+'</span></button>';
+  });
+  h+='<button onclick="document.getElementById(\'presaPickBox\').remove()" style="width:100%;background:none;color:#555;border:none;padding:9px;font-size:13px;cursor:pointer;font-family:inherit">Annulla</button></div>';
+  box.innerHTML=h; document.body.appendChild(box);
+}
+
+function buildPresaMail(forn, list){
+  if(!list){
+    list=presaSelected().filter(function(r){ return presaReady(r) && (r.forn||'(senza fornitore)').toUpperCase()===forn; });
+  }
+  if(!list.length){ toast('Nessun collo per '+forn,'y'); return; }
+  var nColli=list.length;
+  // Destinatario dalle regole fornitore (SUP_RULES), se presenti
+  var to='';
+  try{
+    var rule=(typeof findSupRule==='function')?findSupRule(forn):null;
+    if(rule && rule.rule && rule.rule.contatti) to=rule.rule.contatti.mail||'';
+  }catch(e){}
+  // …altrimenti dall'anagrafica corrieri/fornitori
+  if(!to){ try{ for(var i=0;i<supDb.length;i++){ if((supDb[i].name||'').toUpperCase()===forn && supDb[i].mail){ to=supDb[i].mail; break; } } }catch(e){} }
+
+  var NL='\n';
+  var righe=list.map(function(r){
+    return '- '+((r.pre?r.pre+' ':'')+(r.cod||''))+' x'+(r.qty||1)+(r.rma?(' · RMA '+r.rma):'');
+  }).join(NL);
+
+  var subj='RICHIESTA PRESA · '+forn+' · '+nColli+' coll'+(nColli===1?'o':'i');
+  var body=
+    'Buongiorno,'+NL+NL+
+    'Abbiamo '+nColli+' coll'+(nColli===1?'o':'i')+' pront'+(nColli===1?'o':'i')+' al ritiro'+NL+
+    'Aspetto: Scatola'+NL+
+    'Indirizzo per il ritiro: Telos Spa, Via Aosta 5 Venaria Reale, 10078, (TO)'+NL+NL+
+    'Dettaglio articoli:'+NL+righe+NL+NL+
+    'In attesa di un vostro gentile riscontro'+NL+
+    'Cordiali saluti'+NL+
+    (deviceName||'Reparto Resi · Telos SPA');
+
+  // Riuso l'anteprima mail gia' esistente, marcando il tipo per il log
+  window._presaKeys=list.map(function(r){ return r._key; });
+  showMailPreview(to, subj, body, [], {who:'presa', forn:forn, nColli:nColli});
+}
+
+// ══════════════════════════════════════════════════
+// LOG INVIO MAIL (v32) — traccia data/ora di ogni mail partita
+// ══════════════════════════════════════════════════
+function logMailSent(tipo, dest, keys, extra){
+  var ts=Date.now();
+  var when=new Date(ts).toLocaleString('it-IT');
+  (keys||[]).forEach(function(k){
+    var r=rows[k]; if(!r) return;
+    if(!r._log) r._log=[];
+    r._log.push({ts:ts, user:deviceName, role:ROLE, action:'MAIL '+String(tipo||'').toUpperCase(),
+                 changes:{destinatario:{da:'',a:dest||'(vuoto)'}}});
+    r._lastMailTs=ts; r._lastMailTipo=tipo; r._lastMailTo=dest||'';
+    try{ sendMsg({type:'update',key:k,changes:{_lastMailTs:ts,_lastMailTipo:tipo,_lastMailTo:dest||'',_lastEdit:deviceName}}); }catch(e){}
+  });
+  // Registro globale invii (visibile nel pannello TEMPI/LOG)
+  try{
+    var ml=JSON.parse(localStorage.getItem('maillog')||'[]');
+    ml.unshift({ts:ts, tipo:tipo, dest:dest||'', user:deviceName, n:(keys||[]).length, extra:extra||''});
+    localStorage.setItem('maillog', JSON.stringify(ml.slice(0,300)));
+  }catch(e){}
+  toast('✉ Registrato invio '+tipo+' · '+when,'b');
+}
+function getMailLog(){ try{ return JSON.parse(localStorage.getItem('maillog')||'[]'); }catch(e){ return []; } }
+
+// ══════════════════════════════════════════════════
+// ANALISI TEMPI DI FASE (v32)
+// Ricostruisce quanto tempo una pratica e' rimasta in ogni fase leggendo il _log.
+// ══════════════════════════════════════════════════
+function fmtDur(ms){
+  if(!ms || ms<0) return '—';
+  var m=Math.floor(ms/60000), h=Math.floor(m/60), d=Math.floor(h/24);
+  if(d>0) return d+'g '+(h%24)+'h';
+  if(h>0) return h+'h '+(m%60)+'m';
+  return m+'m';
+}
+function faseTimeline(r){
+  if(!r) return [];
+  var log=(r._log||[]).slice().sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+  var creato=null, eventi=[];
+  for(var i=0;i<log.length;i++){
+    var l=log[i];
+    if(l.action==='CREATO' && creato===null) creato=l.ts;
+    if(l.changes && l.changes.fase && l.changes.fase.a){
+      eventi.push({ts:l.ts, a:l.changes.fase.a, da:l.changes.fase.da||''});
+    }
+  }
+  var start = creato || r._ts || null;
+  if(!start) return [];
+  var tl=[], prevTs=start;
+  var prevFase = eventi.length ? (eventi[0].da || 'RICEVIMENTO') : (r.fase||'RICEVIMENTO');
+  for(var j=0;j<eventi.length;j++){
+    tl.push({fase:prevFase, from:prevTs, to:eventi[j].ts, ms:Math.max(0,eventi[j].ts-prevTs), chiusa:true});
+    prevTs=eventi[j].ts; prevFase=eventi[j].a;
+  }
+  tl.push({fase:prevFase, from:prevTs, to:null, ms:Math.max(0,Date.now()-prevTs), chiusa:false});
+  return tl;
+}
+// ── Pannello TEMPI: statistiche di permanenza + storico stati ─────
+function _tempiPeriodMs(){
+  var v=((document.getElementById('tmpPeriod')||{}).value)||'30';
+  if(v==='all') return 0;
+  if(v==='today'){ var d=new Date(); d.setHours(0,0,0,0); return Date.now()-d.getTime(); }
+  return parseInt(v,10)*86400000;
+}
+function tempiDataset(){
+  var win=_tempiPeriodMs(), cut=win?Date.now()-win:0;
+  var arr=[];
+  for(var k in rows){
+    var r=rows[k];
+    var ref=r._ts||0;
+    if(!ref && r.datArr){ var dd=new Date(r.datArr); if(!isNaN(dd)) ref=dd.getTime(); }
+    if(cut && ref && ref<cut) continue;
+    arr.push(r);
+  }
+  return arr;
+}
+function renderTempi(){
+  var el=document.getElementById('tempiContent'); if(!el) return;
+  var arr=tempiDataset();
+  if(!arr.length){ el.innerHTML='<div style="text-align:center;padding:26px;color:#666;font-size:12px">Nessuna pratica nel periodo scelto.</div>'; return; }
+
+  // Aggregato per fase: tempo totale, conteggio, media
+  var agg={}, aperte=[];
+  arr.forEach(function(r){
+    var tl=faseTimeline(r);
+    tl.forEach(function(t){
+      if(!agg[t.fase]) agg[t.fase]={ms:0,n:0,aperte:0};
+      agg[t.fase].ms+=t.ms; agg[t.fase].n++;
+      if(!t.chiusa) agg[t.fase].aperte++;
+    });
+    var cur=tl.length?tl[tl.length-1]:null;
+    if(cur && !cur.chiusa) aperte.push({r:r, ms:cur.ms, fase:cur.fase});
+  });
+  var fasi=Object.keys(agg);
+  fasi.forEach(function(f){ agg[f].avg=agg[f].n?Math.round(agg[f].ms/agg[f].n):0; });
+  var perMedia=fasi.slice().sort(function(a,b){ return agg[b].avg-agg[a].avg; });
+  var lenta=perMedia[0], veloce=perMedia[perMedia.length-1];
+
+  var h='';
+  // 1) Dove la pratica resta di piu' / di meno
+  h+='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+  if(lenta) h+='<div style="flex:1;min-width:150px;background:rgba(224,85,85,.07);border:1px solid rgba(224,85,85,.3);border-left:3px solid #E05555;border-radius:9px;padding:10px 12px">'+
+    '<div style="font-size:9px;font-weight:800;letter-spacing:1px;color:#E05555;margin-bottom:3px">RESTA PIÙ A LUNGO</div>'+
+    '<div style="font-size:14px;font-weight:800;color:#fff">'+xe(lenta)+'</div>'+
+    '<div style="font-size:11px;color:var(--txt2)">media '+fmtDur(agg[lenta].avg)+' · '+agg[lenta].n+' passaggi</div></div>';
+  if(veloce && veloce!==lenta) h+='<div style="flex:1;min-width:150px;background:rgba(46,204,113,.07);border:1px solid rgba(46,204,113,.3);border-left:3px solid #2ecc71;border-radius:9px;padding:10px 12px">'+
+    '<div style="font-size:9px;font-weight:800;letter-spacing:1px;color:#2ecc71;margin-bottom:3px">PIÙ VELOCE</div>'+
+    '<div style="font-size:14px;font-weight:800;color:#fff">'+xe(veloce)+'</div>'+
+    '<div style="font-size:11px;color:var(--txt2)">media '+fmtDur(agg[veloce].avg)+' · '+agg[veloce].n+' passaggi</div></div>';
+  h+='</div>';
+
+  // 2) Tabella per fase
+  h+='<div style="font-size:9px;font-weight:800;letter-spacing:1.5px;color:var(--txt3);margin-bottom:6px">TEMPO MEDIO PER FASE</div>';
+  var maxAvg=Math.max.apply(null,fasi.map(function(f){return agg[f].avg;}))||1;
+  FASI_ORDER.concat(fasi.filter(function(f){return FASI_ORDER.indexOf(f)<0;})).forEach(function(f){
+    if(!agg[f]) return;
+    var pct=Math.round(agg[f].avg/maxAvg*100);
+    h+='<div style="background:var(--bg1);border:1px solid var(--brd);border-radius:8px;padding:9px 11px;margin-bottom:6px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">'+
+        '<span style="font-size:12px;font-weight:700;color:#fff">'+xe(f)+'</span>'+
+        '<span style="font-size:12px;font-weight:800;color:#3B9FD4">'+fmtDur(agg[f].avg)+'</span>'+
+      '</div>'+
+      '<div style="height:5px;background:var(--bg2);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:linear-gradient(90deg,#2980B9,#3B9FD4)"></div></div>'+
+      '<div style="font-size:10px;color:var(--txt3);margin-top:4px">'+agg[f].n+' passaggi · '+agg[f].aperte+' ancora in corso · totale '+fmtDur(agg[f].ms)+'</div>'+
+    '</div>';
+  });
+
+  // 3) Pratiche ferme da piu' tempo (stato attuale)
+  aperte.sort(function(a,b){ return b.ms-a.ms; });
+  h+='<div style="font-size:9px;font-weight:800;letter-spacing:1.5px;color:var(--txt3);margin:14px 0 6px">FERME DA PIÙ TEMPO (stato attuale)</div>';
+  if(!aperte.length) h+='<div style="font-size:11px;color:var(--txt3);padding:8px">Nessuna pratica aperta.</div>';
+  aperte.slice(0,12).forEach(function(x){
+    var r=x.r;
+    var col = x.ms>14*86400000 ? '#E05555' : (x.ms>7*86400000 ? '#E6B03C' : '#3B9FD4');
+    h+='<div onclick="tempiDettaglio(\''+(r._key||'')+'\')" style="background:var(--bg1);border:1px solid var(--brd);border-left:3px solid '+col+';border-radius:8px;padding:9px 11px;margin-bottom:6px;cursor:pointer">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px">'+
+        '<div style="min-width:0;flex:1">'+
+          '<div style="font-size:12px;font-weight:800;color:#3B9FD4;font-family:monospace">'+(r.pre?xe(r.pre)+' ':'')+xe(r.cod||'')+'</div>'+
+          '<div style="font-size:11px;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+xe(r.sogg||r.forn||'')+'</div>'+
+          '<div style="font-size:10px;color:var(--txt3)">'+xe(x.fase)+(r.stato?(' · '+xe(r.stato)):'')+'</div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:800;color:'+col+'">'+fmtDur(x.ms)+'</div><div style="font-size:9px;color:var(--txt3)">tocca per storico</div></div>'+
+      '</div></div>';
+  });
+
+  // 4) Registro invii mail del periodo
+  var ml=getMailLog().filter(function(m){ return !_tempiPeriodMs() || m.ts>=Date.now()-_tempiPeriodMs(); });
+  h+='<div style="font-size:9px;font-weight:800;letter-spacing:1.5px;color:var(--txt3);margin:14px 0 6px">MAIL INVIATE ('+ml.length+')</div>';
+  if(!ml.length) h+='<div style="font-size:11px;color:var(--txt3);padding:8px">Nessuna mail registrata nel periodo.</div>';
+  ml.slice(0,25).forEach(function(m){
+    h+='<div style="background:var(--bg1);border:1px solid var(--brd);border-radius:8px;padding:8px 11px;margin-bottom:5px">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:11px;font-weight:700;color:#2ecc71">✉ '+xe(m.tipo||'')+(m.n>1?(' · '+m.n+' righe'):'')+'</span>'+
+      '<span style="font-size:10px;color:var(--txt3);flex-shrink:0">'+new Date(m.ts).toLocaleString('it-IT')+'</span></div>'+
+      '<div style="font-size:10px;color:var(--txt2)">'+xe(m.dest||'(nessun destinatario)')+(m.user?(' · '+xe(m.user)):'')+(m.extra?(' · '+xe(m.extra)):'')+'</div></div>';
+  });
+
+  el.innerHTML=h;
+}
+// Dettaglio di una pratica: timeline fasi + storico stati con orari
+function tempiDettaglio(key){
+  var r=rows[key]; if(!r){ toast('Riga non trovata','y'); return; }
+  var tl=faseTimeline(r), st=statoStoria(r);
+  var old=document.getElementById('tempiDetBox'); if(old) old.remove();
+  var box=document.createElement('div'); box.id='tempiDetBox';
+  box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1500;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto;-webkit-overflow-scrolling:touch';
+  var h='<div style="background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:16px;width:100%;max-width:480px;margin:auto">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">⏱ '+(r.pre?xe(r.pre)+' ':'')+xe(r.cod||'')+'</div><button onclick="document.getElementById(\'tempiDetBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>';
+  h+='<div style="font-size:11px;color:#aaa;margin-bottom:12px">'+xe(r.sogg||'')+(r.forn?(' · '+xe(r.forn)):'')+'</div>';
+  h+='<div style="background:rgba(59,159,212,.08);border:1px solid rgba(59,159,212,.3);border-radius:8px;padding:9px 11px;margin-bottom:12px"><div style="font-size:9px;font-weight:800;letter-spacing:1px;color:#3B9FD4;margin-bottom:2px">STATO ATTUALE</div><div style="font-size:13px;font-weight:800;color:#fff">'+xe(r.fase||'')+(r.stato?(' · '+xe(r.stato)):'')+'</div></div>';
+
+  h+='<div style="font-size:9px;font-weight:800;letter-spacing:1.5px;color:#777;margin-bottom:6px">PERMANENZA PER FASE</div>';
+  if(!tl.length) h+='<div style="font-size:11px;color:#666;margin-bottom:10px">Nessun log disponibile per questa pratica.</div>';
+  tl.forEach(function(t){
+    h+='<div style="display:flex;justify-content:space-between;gap:8px;background:#1a1a1a;border-radius:7px;padding:8px 10px;margin-bottom:5px">'+
+      '<div style="min-width:0"><div style="font-size:12px;font-weight:700;color:'+(t.chiusa?'#e0e0e0':'#2ecc71')+'">'+xe(t.fase)+(t.chiusa?'':' <span style="font-size:9px">(in corso)</span>')+'</div>'+
+      '<div style="font-size:9px;color:#666">dal '+new Date(t.from).toLocaleString('it-IT')+'</div></div>'+
+      '<div style="font-size:13px;font-weight:800;color:#3B9FD4;flex-shrink:0">'+fmtDur(t.ms)+'</div></div>';
+  });
+
+  h+='<div style="font-size:9px;font-weight:800;letter-spacing:1.5px;color:#777;margin:14px 0 6px">STORICO STATI E INVII</div>';
+  if(!st.length) h+='<div style="font-size:11px;color:#666">Nessuna modifica di stato registrata.</div>';
+  st.slice().reverse().forEach(function(e){
+    var col=e.isMail?'#2ecc71':(e.isFase?'#d0b370':'#3B9FD4');
+    h+='<div style="border-left:2px solid '+col+';padding:5px 0 5px 10px;margin-bottom:6px">'+
+      '<div style="font-size:11px;font-weight:700;color:'+col+'">'+xe(e.da?(e.da+' → '+e.a):e.a)+'</div>'+
+      '<div style="font-size:9px;color:#666">'+new Date(e.ts).toLocaleString('it-IT')+(e.user?(' · '+xe(e.user)):'')+'</div></div>';
+  });
+  h+='</div>';
+  box.innerHTML=h; document.body.appendChild(box);
+}
+function exportTempi(){
+  var arr=tempiDataset();
+  if(!arr.length){ toast('Nessun dato nel periodo','y'); return; }
+  var HD=['Codice','Pre','Soggetto','Fornitore','Fase attuale','Stato attuale','Fase','Dal','Al','Permanenza','In corso'];
+  var data=[HD.map(function(x){return {v:x,s:1};})];
+  arr.forEach(function(r){
+    faseTimeline(r).forEach(function(t){
+      data.push([
+        {v:r.cod||''},{v:r.pre||''},{v:r.sogg||''},{v:r.forn||''},{v:r.fase||''},{v:r.stato||''},
+        {v:t.fase},{v:new Date(t.from).toLocaleString('it-IT')},
+        {v:t.to?new Date(t.to).toLocaleString('it-IT'):''},
+        {v:fmtDur(t.ms)},{v:t.chiusa?'':'SI'}
+      ]);
+    });
+  });
+  try{
+    var z=makeXLSX(data,null);
+    dlFb(new Blob([z],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),
+      'Tempi_Fasi_'+new Date().toISOString().slice(0,10)+'.xlsx',
+      function(){ toast('📥 Export tempi: '+arr.length+' pratiche','b'); });
+  }catch(e){ toast('Errore export: '+e.message,'r'); }
+}
+
+// Storico stati (con orario) per una pratica
+function statoStoria(r){
+  var log=(r&&r._log||[]).slice().sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+  var out=[];
+  for(var i=0;i<log.length;i++){
+    var l=log[i], ch=l.changes||{};
+    if(ch.stato && (ch.stato.a||ch.stato.da)) out.push({ts:l.ts, da:ch.stato.da||'', a:ch.stato.a||'', user:l.user||''});
+    else if(ch.fase && ch.fase.a) out.push({ts:l.ts, da:'', a:'→ fase '+ch.fase.a, user:l.user||'', isFase:true});
+    else if(String(l.action||'').indexOf('MAIL')===0) out.push({ts:l.ts, da:'', a:'✉ '+l.action, user:l.user||'', isMail:true});
+  }
+  return out;
 }
 
 // ══════════════════════════════════════════════════
@@ -3216,6 +3611,13 @@ function svEdit(key){
     note:document.getElementById('ei_note')?document.getElementById('ei_note').value.trim():'',
     _lastEdit:deviceName,_lastEditTs:Date.now(),_lastEditRole:ROLE
   };
+  // Blocco: niente UFFICIO RESI senza RMA/RNC (vale anche salvando dalla scheda)
+  if(ch.fase==='UFFICIO RESI' && !(ch.rma||'').trim()){
+    toast('⛔ Serve il numero RMA/RNC per la fase UFFICIO RESI','r');
+    var _rmaEl=document.getElementById('ei_rma');
+    if(_rmaEl){ try{ _rmaEl.focus(); _rmaEl.scrollIntoView({behavior:'smooth',block:'center'}); _rmaEl.style.border='1.5px solid #E05555'; }catch(e){} }
+    return;
+  }
   // STORICO TRIMESTRE: override locale (non tocca DB_TRI e non passa da sendMsg → non è in rows)
   if(String(key).indexOf('tri_')===0){
     if(ROLE!=='UFF' && ROLE!=='ADM'){ toast('Solo UFFICIO/ADMIN possono modificare lo storico','r'); return; }
@@ -3680,6 +4082,42 @@ var _fbRT=null, _fbPT=null;
 function fbRender(){ if(_fbRT)return; _fbRT=setTimeout(function(){_fbRT=null; renderAll();}, 80); }
 function fbPersist(){ if(_fbPT)return; _fbPT=setTimeout(function(){_fbPT=null; svl();}, 150); }
 
+var FB_LAST_ERR='';
+// v32: diagnostica Firebase — dice ESATTAMENTE cosa non va invece di fallire in silenzio
+function fbDiagnose(){
+  var cfg=getFBCfg();
+  var sdk=(typeof firebase!=='undefined' && !!firebase.database);
+  var checks=[
+    {ok:sdk, t:'Libreria Firebase caricata',
+     ko:'Le librerie Firebase non si sono caricate: rete/proxy che blocca www.gstatic.com, oppure sei offline.'},
+    {ok:!!(cfg&&cfg.apiKey&&cfg.dbUrl), t:'Configurazione presente su questo dispositivo',
+     ko:'Nessuna configurazione salvata QUI. La chiave è salvata per singolo dispositivo: va inserita anche su questo (Impostazioni → Firebase).'},
+    {ok:!!FB_REF, t:'Connessione attiva',
+     ko:'Non connesso'+(FB_LAST_ERR?(': '+FB_LAST_ERR):'. Premi CONNETTI nella finestra Firebase.')},
+    {ok:(typeof rows==='object' && Object.keys(rows||{}).length>=0), t:'Dati locali leggibili', ko:'Archivio locale non leggibile'}
+  ];
+  var old=document.getElementById('fbDiagBox'); if(old) old.remove();
+  var box=document.createElement('div'); box.id='fbDiagBox';
+  box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1600;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
+  var h='<div style="background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:18px;width:100%;max-width:430px;max-height:86vh;overflow-y:auto">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">🩺 Diagnostica Firebase</div><button onclick="document.getElementById(\'fbDiagBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>';
+  var allOk=true;
+  checks.forEach(function(c){
+    if(!c.ok) allOk=false;
+    h+='<div style="display:flex;gap:9px;align-items:flex-start;background:'+(c.ok?'rgba(46,204,113,.07)':'rgba(224,85,85,.08)')+';border:1px solid '+(c.ok?'rgba(46,204,113,.3)':'rgba(224,85,85,.35)')+';border-radius:8px;padding:9px 11px;margin-bottom:7px">'+
+      '<span style="font-size:15px;flex-shrink:0;line-height:1.2">'+(c.ok?'✅':'❌')+'</span>'+
+      '<div style="min-width:0"><div style="font-size:12px;font-weight:700;color:#fff">'+c.t+'</div>'+
+      (c.ok?'':'<div style="font-size:11px;color:#E0A0A0;line-height:1.5;margin-top:3px">'+c.ko+'</div>')+'</div></div>';
+  });
+  if(cfg&&cfg.dbUrl) h+='<div style="font-size:10px;color:#666;font-family:monospace;word-break:break-all;margin:8px 0;padding:8px;background:#0a0a0a;border-radius:7px">URL: '+xe(cfg.dbUrl)+'</div>';
+  h+='<div style="font-size:11px;color:#888;line-height:1.6;margin:10px 0;padding:10px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">'+
+     (allOk?'Tutto a posto: la sincronizzazione è attiva. Le righe compaiono su tutti i dispositivi collegati allo stesso database.'
+           :'<b>Come sistemare:</b><br>1. Verifica di avere rete.<br>2. Apri <b>Firebase</b> e incolla <b>apiKey</b> e <b>databaseURL</b> (li trovi nella console Firebase → Impostazioni progetto).<br>3. Nelle <b>Regole</b> del Realtime Database deve essere consentita lettura/scrittura ai tuoi dispositivi.<br>4. La configurazione va ripetuta su <b>ogni</b> dispositivo.')+'</div>';
+  h+='<button onclick="document.getElementById(\'fbDiagBox\').remove();openFBModal()" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">⚙ Apri configurazione Firebase</button>';
+  h+='<button onclick="document.getElementById(\'fbDiagBox\').remove();FB_REF=null;_fbConnecting=false;ensureFB();toast(\'Riprovo la connessione…\',\'b\')" style="width:100%;background:none;color:#888;border:1px solid #333;border-radius:9px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Riprova connessione</button>';
+  h+='</div>';
+  box.innerHTML=h; document.body.appendChild(box);
+}
 function getFBCfg() {
   try { return JSON.parse(localStorage.getItem('fbcfg') || 'null'); } catch(e) { return null; }
 }
@@ -3808,9 +4246,31 @@ function startFB(cfg, cb) {
         renderAll();
         _fbAttachChild();
       });
-      cb(true, '');
+      // v32: NON dichiaro successo subito. Aspetto una prova REALE di connessione
+      // (.info/connected true oppure la prima lettura andata a buon fine), con timeout.
+      // Prima bastava creare il ref e l'app diceva "connesso" anche con URL sbagliato o regole che negano.
+      var _verified=false, _vTimer=null;
+      function _vOk(){
+        if(_verified) return; _verified=true;
+        if(_vTimer) clearTimeout(_vTimer);
+        FB_LAST_ERR='';
+        cb(true, '');
+      }
+      function _vFail(msg){
+        if(_verified) return; _verified=true;
+        if(_vTimer) clearTimeout(_vTimer);
+        FB_LAST_ERR=msg||'Connessione non confermata';
+        try{ FB_REF=null; }catch(e){}
+        cb(false, FB_LAST_ERR);
+      }
+      db.ref('.info/connected').on('value', function(sn){ if(sn.val()===true) _vOk(); });
+      FB_REF.limitToFirst(1).once('value')
+        .then(function(){ _vOk(); })
+        .catch(function(err){ _vFail((err&&err.message)||'Accesso negato dalle regole del database'); });
+      _vTimer=setTimeout(function(){ _vFail('Timeout: nessuna risposta dal database (URL errato o rete bloccata)'); }, 9000);
     } catch(e) {
-      cb(false, e.message || 'Errore connessione');
+      FB_LAST_ERR = e.message || 'Errore connessione';
+      cb(false, FB_LAST_ERR);
     }
   });
 }
@@ -4352,9 +4812,40 @@ function renderAnoList(){
     el.innerHTML='<div class="empty" style="padding:24px;text-align:center;color:#666">'+(ANOMALIE_STORE.length?'Nessun risultato':'Nessuna anomalia registrata.')+'</div>';
     return;
   }
+  // v32: raggruppo le anomalie per AGENTE (dedotto dall'anagrafica se il record non lo porta)
+  function _anoAgente(a){
+    var ag=(a.agente||'').trim();
+    if(!ag && a.sogg && typeof agentByClient==='function'){ try{ ag=agentByClient(a.sogg)||''; }catch(e){} }
+    return ag || 'SENZA AGENTE';
+  }
+  var gruppi={}, ordine=[];
+  for(var gi=0; gi<list.length; gi++){
+    var _ag=_anoAgente(list[gi]);
+    if(!gruppi[_ag]){ gruppi[_ag]=[]; ordine.push(_ag); }
+    gruppi[_ag].push(list[gi]);
+  }
+  // agenti con piu' anomalie in cima; "SENZA AGENTE" sempre per ultimo
+  ordine.sort(function(x,y){
+    if(x==='SENZA AGENTE') return 1;
+    if(y==='SENZA AGENTE') return -1;
+    var d=gruppi[y].length-gruppi[x].length;
+    return d!==0?d:x.localeCompare(y);
+  });
+
   var html='';
-  for(var i=0;i<list.length;i++){
-    var a=list[i];
+  for(var gj=0; gj<ordine.length; gj++){
+    var _agName=ordine[gj], _agList=gruppi[_agName];
+    var _agInfo=null; try{ _agInfo=(typeof agenteInfo==='function')?agenteInfo(_agName):null; }catch(e){}
+    var _agMail=(_agInfo&&_agInfo.mail)?_agInfo.mail:'';
+    html+='<div style="display:flex;align-items:center;gap:8px;margin:'+(gj?'16px':'2px')+' 0 8px;padding:8px 11px;background:rgba(59,159,212,.07);border:1px solid rgba(59,159,212,.22);border-left:3px solid #3B9FD4;border-radius:8px">'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13px;font-weight:800;color:#3B9FD4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">\ud83d\udc64 '+xe(_agName)+'</div>'+
+        (_agMail?('<div style="font-size:10px;color:#5BB8E0">\u2709 '+xe(_agMail)+'</div>'):'')+
+      '</div>'+
+      '<span style="background:rgba(224,85,85,.15);color:#E05555;border:1px solid rgba(224,85,85,.4);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:800;flex-shrink:0">'+_agList.length+'</span>'+
+    '</div>';
+  for(var i=0;i<_agList.length;i++){
+    var a=_agList[i];
     html+='<div style="background:#111;border:1px solid #333;border-left:3px solid #E05555;border-radius:10px;padding:12px;margin-bottom:10px">';
     // Top row
     html+='<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">';
@@ -4381,7 +4872,7 @@ function renderAnoList(){
     if(a.note) html+='<div style="font-size:11px;color:#aaa;background:#1a1a1a;border-radius:6px;padding:6px 9px;margin-bottom:8px">'+xe(a.note)+'</div>';
     // Footer
     html+='<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">';
-    html+='<span style="font-size:9px;color:#555;flex:1">'+xe(a.operator||'')+(a.role?' ('+a.role+')':'')+'</span>';
+    html+='<span style="font-size:9px;color:#555;flex:1">'+xe(a.operator||'')+(a.role?' ('+a.role+')':'')+(a._lastMailTs?('<br><span style="color:#2ecc71">\u2709 inviata '+new Date(a._lastMailTs).toLocaleString('it-IT')+'</span>'):'')+'</span>';
     if(_pk.length) html+='<button data-id="'+xe(a.id)+'" onclick="dlAnoAllPhotos(this.dataset.id)" style="background:rgba(59,159,212,.1);color:#3B9FD4;border:1px solid rgba(59,159,212,.3);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">&#11015; Scarica foto'+(_pk.length>1?' ('+_pk.length+')':'')+'</button>';
 
     html+='<button data-id="'+xe(a.id)+'" onclick="doAnoMail(this.dataset.id)" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">&#9993; Mail</button>';
@@ -4389,6 +4880,7 @@ function renderAnoList(){
     html+='<button data-id="'+xe(a.id)+'" onclick="deleteAno(this.dataset.id)" style="background:rgba(224,85,85,.08);color:#E05555;border:1px solid rgba(224,85,85,.2);border-radius:6px;padding:5px 9px;font-size:11px;cursor:pointer;-webkit-appearance:none;font-family:inherit">&#10005;</button>';
     html+='</div>';
     html+='</div>';
+  }
   }
   el.innerHTML=html;
   // carica le foto da IndexedDB e riempi i placeholder
@@ -6020,7 +6512,7 @@ function generateAnoMail(a, who) {
     // (necessario: dopo la generazione AI asincrona il "gesto utente" è scaduto
     //  e il browser bloccherebbe l'apertura del client di posta).
     // Carica le foto anomalia: mailto NON può allegare → l'utente le scarica/copia dall'anteprima.
-    var ctx = { who:who, agenteNome: agenteNome, agenteFullName: (a.agente||''), agTel: agTel, clienteNome: (clientName||displayName) };
+    var ctx = { who:who, agenteNome: agenteNome, agenteFullName: (a.agente||''), agTel: agTel, clienteNome: (clientName||displayName), anoId: a.id||'', anoCod: (a.cod||''), rowKey: a._rowKey||a._key||'' };
     if(!_photoKeys.length){ showMailPreview(email, subj, finalBody||body, [], ctx); return; }
     Promise.all(_photoKeys.map(function(k){ return idbGet('anophoto_'+k).then(function(v){return v||null;}).catch(function(){return null;}); }))
       .then(function(ph){ showMailPreview(email, subj, finalBody||body, ph.filter(Boolean), ctx); });
@@ -6080,8 +6572,45 @@ function mpOpenOutlook(){
   var url='mailto:'+to+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
   // apertura diretta nel gesto utente (non naviga: il browser passa il mailto all'app)
   try{ window.location.href=url; }catch(e){ openMail(url); }
+  mpRegisterSend('Outlook');
   toast('📧 Se Outlook è installato come app predefinita si apre. Altrimenti usa "Outlook Web".','b');
 }
+
+// v32: registra l'invio della mail (chi/quando/destinatario) sul log delle righe coinvolte
+function mpRegisterSend(canale){
+  var ctx=window._mpCtx||{};
+  var to=((document.getElementById('mpTo')||{}).value||'').trim();
+  try{
+    if(ctx.who==='presa'){
+      var keys=window._presaKeys||[];
+      logMailSent('presa'+(canale?(' '+canale):''), to, keys, ctx.forn||'');
+      presaClear();
+    } else if(ctx.anoId){
+      // anomalia: registro sul record anomalia + sulla riga collegata se esiste
+      var ts=Date.now();
+      try{
+        loadAno();
+        for(var i=0;i<ANOMALIE_STORE.length;i++){
+          if(ANOMALIE_STORE[i].id===ctx.anoId){
+            ANOMALIE_STORE[i]._mailLog=(ANOMALIE_STORE[i]._mailLog||[]).concat([{ts:ts,to:to,user:deviceName,who:ctx.who||'',canale:canale||''}]).slice(-20);
+            ANOMALIE_STORE[i]._lastMailTs=ts;
+            break;
+          }
+        }
+        saveAno();
+      }catch(e){}
+      try{
+        var ml=JSON.parse(localStorage.getItem('maillog')||'[]');
+        ml.unshift({ts:ts, tipo:'anomalia '+(ctx.who||''), dest:to, user:deviceName, n:1, extra:ctx.anoCod||''});
+        localStorage.setItem('maillog', JSON.stringify(ml.slice(0,300)));
+      }catch(e){}
+      if(ctx.rowKey) logMailSent('anomalia '+(ctx.who||''), to, [ctx.rowKey], ctx.anoCod||'');
+      else toast('✉ Invio anomalia registrato · '+new Date(ts).toLocaleString('it-IT'),'b');
+      try{ renderAnoList(); }catch(e){}
+    }
+  }catch(e){}
+}
+
 // ══════════════════════════════════════════════════
 // EXPORT COMPLETO DATABASE (Excel multi-foglio: CORRENTI + ARCHIVIO + TRIMESTRE)
 // ══════════════════════════════════════════════════
@@ -6206,6 +6735,7 @@ function mpOpenWeb(){
   var body=((document.getElementById('mpBody')||{}).value||'').slice(0,1800);
   var url='https://outlook.office.com/mail/deeplink/compose?to='+encodeURIComponent(to)+'&subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
   window.open(url,'_blank');   // https → apre la composizione di Outlook nel browser
+  mpRegisterSend('Outlook Web');
   toast('🌐 Apro Outlook Web…','b');
 }
 function mpCopy(){
