@@ -392,7 +392,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34i · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34j · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -925,7 +925,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34i</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34j</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -1434,7 +1434,10 @@ function launchApp() {
   try{
     if(typeof admLoad==='function'){
       admLoad().then(function(){
+        // Firebase potrebbe essere configurato SOLO nel bundle: riprovo dopo caricamento config
+        try{ ensureFB(); }catch(e){}
         if(typeof admFetchBundleConfig==='function') admFetchBundleConfig().then(function(){
+          try{ ensureFB(); }catch(e){} // e ancora dopo che il bundle remoto è stato applicato
           try{ if(typeof renderList==='function') renderList(); }catch(e){}
         });
       });
@@ -4225,7 +4228,19 @@ function fbDiagnose(){
   box.innerHTML=h; document.body.appendChild(box);
 }
 function getFBCfg() {
-  try { return JSON.parse(localStorage.getItem('fbcfg') || 'null'); } catch(e) { return null; }
+  // 1° prova: config locale (impostata da questo dispositivo in modale Firebase)
+  try {
+    var loc = JSON.parse(localStorage.getItem('fbcfg') || 'null');
+    if(loc && loc.apiKey && loc.dbUrl) return loc;
+  } catch(e){}
+  // 2° prova: config distribuita dall'admin via admin-config.json
+  try {
+    if(typeof ADM_CFG!=='undefined' && ADM_CFG && ADM_CFG.general && ADM_CFG.general.firebase){
+      var fb = ADM_CFG.general.firebase;
+      if(fb.apiKey && fb.dbUrl) return {apiKey: fb.apiKey, dbUrl: fb.dbUrl};
+    }
+  } catch(e){}
+  return null;
 }
 
 function waitForFB(cb, tries) {
@@ -9947,6 +9962,12 @@ function admRender_config(){
     '</div>'+
     '<div class="admCard"><h3>Firma email</h3>'+
     '<div class="admRow"><div><textarea class="admIn" id="gSg" style="min-height:100px;font-family:inherit;resize:vertical">'+admEsc(g.emailSignature||'')+'</textarea></div></div></div>'+
+    '<div class="admCard"><h3>🔥 Firebase — sincronizzazione tra dispositivi</h3>'+
+    '<div class="sub" style="line-height:1.6">Configura Firebase QUI una sola volta e verrà distribuita a tutti i dispositivi con il prossimo bundle admin-config.json. Serve un progetto Firebase con Realtime Database attivo. Le regole del DB devono permettere lettura/scrittura.</div>'+
+    '<div class="admRow"><div><label class="admLbl">API Key</label><input class="admIn" id="gFbKey" value="'+admEsc((g.firebase&&g.firebase.apiKey)||'')+'" placeholder="AIza..."></div></div>'+
+    '<div class="admRow"><div><label class="admLbl">Database URL</label><input class="admIn" id="gFbUrl" value="'+admEsc((g.firebase&&g.firebase.dbUrl)||'')+'" placeholder="https://xxx.europe-west1.firebasedatabase.app"></div></div>'+
+    '<div style="padding:10px 12px;background:rgba(59,159,212,.05);border:1px solid rgba(59,159,212,.2);border-radius:7px;font-size:11px;color:#8899a8;margin-bottom:8px">💡 Nella Firebase Console: <b>Project settings → Web app config</b> per apiKey · <b>Realtime Database → URL</b> per dbUrl.</div>'+
+    '</div>'+
     '<div class="admCard"><h3>Parametri applicazione</h3>'+
     '<div class="admRow"><div style="max-width:200px"><label class="admLbl">SLA giallo (giorni)</label><input class="admIn" type="number" id="gSw" value="'+admEsc(g.slaWarn||7)+'"></div>'+
     '<div style="max-width:200px"><label class="admLbl">SLA rosso (giorni)</label><input class="admIn" type="number" id="gSc" value="'+admEsc(g.slaCrit||14)+'"></div>'+
@@ -9965,6 +9986,10 @@ function admConfigSave(){
   g.logoData = document.getElementById('gLg').value;
   g.color1 = document.getElementById('gC1').value; g.color2 = document.getElementById('gC2').value;
   g.emailSignature = document.getElementById('gSg').value;
+  // Firebase: config distribuita a tutti via bundle
+  var fbKey = (document.getElementById('gFbKey')||{}).value||'';
+  var fbUrl = (document.getElementById('gFbUrl')||{}).value||'';
+  g.firebase = (fbKey.trim() && fbUrl.trim()) ? {apiKey:fbKey.trim(), dbUrl:fbUrl.trim()} : {};
   g.slaWarn = +document.getElementById('gSw').value||7; g.slaCrit = +document.getElementById('gSc').value||14;
   g.timeoutFB = +document.getElementById('gTo').value||9;
   g.ocrEnabled = document.getElementById('gOc').checked; g.aiEnabled = document.getElementById('gAi').checked;
