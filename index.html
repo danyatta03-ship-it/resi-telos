@@ -392,7 +392,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34b · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34c · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -925,7 +925,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34b</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34c</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -2454,14 +2454,22 @@ function renderList(){
     html+='<div class="ac-price">'+(r.prc>0?'\u20AC'+r.prc.toFixed(2):'\u2014')+'</div>';
     html+='<div class="ac-date">'+fd(r.datArr)+'</div>';
     html+='</div></div>';
-    html+='<div style="font-size:8px;color:var(--txt3);letter-spacing:.5px;margin:6px 0 3px;padding:0 2px;opacity:.7">flusso · entrata · qt · causale · stato · rma · uscita</div>';
-    html+='<div class="ac-chips">'+(r._frozen?'<span class="chip" style="background:rgba(150,120,50,.15);color:#d0b370;border:1px solid rgba(150,120,50,.4)" title="Record dallo storico trimestre">🗄 STORICO</span>':'')+slaChip(r)+'<span class="chip '+fc+'">'+xe(r.flusso||'—')+'</span><span class="chip cb">'+xe(r.vetRic||'')+'</span><span class="chip cn">Qt\u00e0 '+r.qty+'</span>';
-    if(r.causale)html+='<span class="chip cn">'+xe(r.causale)+'</span>';
-    if(r.anomalia)html+='<span class="chip cr">'+xe(r.anomalia)+'</span>';
-    if(r.stato)html+=statoChip(r.stato,r.fase);
-    if(r.stato==='NON RENDIBILE'&&r.motivoNR)html+='<span class="chip cr">'+xe(r.motivoNR)+'</span>';
-    if(r.rma)html+='<span class="chip cn">'+xe(r.rma)+'</span>';
-    if(r.vetUsc)html+='<span class="chip cb">→ '+xe(r.vetUsc)+'</span>';
+    // Ogni chip ha la sua micro-label sopra (flusso/entrata/qt/causale/stato/rma/uscita)
+    function _cGrp(lbl, chipHtml){
+      return '<div style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px"><div style="font-size:8px;color:var(--txt3);letter-spacing:.5px;opacity:.7;padding-left:2px">'+lbl+'</div>'+chipHtml+'</div>';
+    }
+    html+='<div class="ac-chips" style="align-items:flex-end">';
+    if(r._frozen) html+='<span class="chip" style="background:rgba(150,120,50,.15);color:#d0b370;border:1px solid rgba(150,120,50,.4)" title="Record dallo storico trimestre">🗄 STORICO</span>';
+    var _sla=slaChip(r); if(_sla) html+=_sla;
+    html+=_cGrp('flusso','<span class="chip '+fc+'">'+xe(r.flusso||'—')+'</span>');
+    html+=_cGrp('entrata','<span class="chip cb">'+xe(r.vetRic||'')+'</span>');
+    html+=_cGrp('qt','<span class="chip cn">Qt\u00e0 '+r.qty+'</span>');
+    if(r.causale) html+=_cGrp('causale','<span class="chip cn">'+xe(r.causale)+'</span>');
+    if(r.anomalia) html+=_cGrp('anomalia','<span class="chip cr">'+xe(r.anomalia)+'</span>');
+    if(r.stato) html+=_cGrp('stato',statoChip(r.stato,r.fase));
+    if(r.stato==='NON RENDIBILE'&&r.motivoNR) html+='<span class="chip cr">'+xe(r.motivoNR)+'</span>';
+    if(r.rma) html+=_cGrp('rma','<span class="chip cn">'+xe(r.rma)+'</span>');
+    if(r.vetUsc) html+=_cGrp('uscita','<span class="chip cb">→ '+xe(r.vetUsc)+'</span>');
     html+='</div>';
     html+='<div class="ac-acts">';
     if(bulkMode) html+='<input type="checkbox" class="ac-chk" '+(bulkSel[r._key]?'checked':'')+' onchange="toggleSel(\''+xe(r._key||'')+'\')">';
