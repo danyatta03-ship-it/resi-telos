@@ -392,7 +392,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34f · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34g · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -925,7 +925,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34f</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34g</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -8418,6 +8418,20 @@ function showOcrConfirm(res, photoUrl, source){
   html+='<div style="height:1px;background:#222;margin:6px 0 10px"></div>';
   html+=lab('SOGGETTO / COD. CLIENTE')+'<input id="ocrSogg" value="'+xe(res.sogg||'')+'" placeholder="codice o nome cliente" oninput="this.value=this.value.toUpperCase();ocrSoggLookup(this)" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:4px;display:block"><div id="ocrSoggTip" style="margin-bottom:8px;display:flex;align-items:center;flex-wrap:wrap;gap:4px"></div>';
   html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('VETTORE RIC.')+fInp('ocrVet',res.vetRic,'es. CIPI')+'</div><div style="flex:1">'+lab('CAUSALE')+fInp('ocrCau',res.causale,'es. CARCASSA')+'</div></div>';
+  // Fornitore: input libero, prepopolato dal form principale
+  var _curForn=(document.getElementById('cFor')||{}).value||res.fornitore||'';
+  html+=lab('FORNITORE')+fInp('ocrForn',_curForn,'es. BOSCH');
+  // Tipo flusso + Tipo doc + Fase + Stato (obbligatori per addRow)
+  var _fluL=['STANDARD','FILIALE IN','FILIALE OUT','ANOMALIA','ECCEZIONE','VETTORE PRIMA DI FLUSSO','AGENTE','COLLEGA'];
+  var _docL=['FLOTTA','SCONTRINO','FATTURA','VENDITA','ACQUISTO','VISIONE','RESO FILIALE','NOLEGGIO','BL/FIM','BL/TRA','NESSUNO'];
+  var _fasL=['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'];
+  function _cV(id){var e=document.getElementById(id); return e?e.value||'':'';}
+  function _oOpts(list,cur){var h=''; for(var oi=0;oi<list.length;oi++){var v=list[oi];h+='<option value="'+v.replace(/"/g,'&quot;')+'"'+(v===cur?' selected':'')+'>'+v+'</option>';} return h;}
+  var _selCss='width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block';
+  var _curFas=_cV('cFas')||'RICEVIMENTO';
+  var _staL=(typeof STATI!=='undefined' && STATI[_curFas]) ? STATI[_curFas] : [];
+  html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('TIPO FLUSSO')+'<select id="ocrFlu" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_fluL,_cV('cFlu'))+'</select></div><div style="flex:1">'+lab('TIPO DOC')+'<select id="ocrDoc" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_docL,_cV('cDoc'))+'</select></div></div>';
+  html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('FASE')+'<select id="ocrFas" onchange="ocrRefreshStato()" style="'+_selCss+'">'+_oOpts(_fasL,_curFas)+'</select></div><div style="flex:1">'+lab('STATO')+'<select id="ocrSta" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_staL,_cV('cSta')||_staL[0]||'')+'</select></div></div>';
   html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('RMA / N\u00b0 BOLLA')+fInp('ocrRma',res.rma,'BL/TRA/...')+'</div><div style="flex:1">'+lab('DATA LISTATO')+'<input id="ocrData" type="date" value="'+xe(res.data||'')+'" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block"></div></div>';
   html+=lab('NOTE')+'<input id="ocrNote" value="'+xe(res.note||(a0.desc||''))+'" placeholder="annotazioni" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:10px;display:block">';
 
@@ -8548,12 +8562,27 @@ function ocrCollectRows(){
   return out;
 }
 
+// Aggiorna il select STATO nel modulo OCR quando cambia la FASE
+function ocrRefreshStato(){
+  var fase=(document.getElementById('ocrFas')||{}).value;
+  var sel=document.getElementById('ocrSta'); if(!sel) return;
+  sel.innerHTML='<option value="">—</option>';
+  var lst=(typeof STATI!=='undefined' && STATI[fase]) ? STATI[fase] : [];
+  for(var i=0;i<lst.length;i++){ var o=document.createElement('option'); o.value=lst[i]; o.textContent=lst[i]; sel.appendChild(o); }
+  if(lst.length) sel.value=lst[0];
+}
+
 function applyOcrConfirm(allArticles){
   var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
   var sv=function(id,val){ var e=document.getElementById(id); if(e&&val!==''&&val!=null){ e.value=val; if(typeof ce==='function')ce(e); } };
 
-  // Campi comuni
+  // Campi comuni: trasferisco al form principale TUTTI i campi obbligatori
   var data=g('ocrData'); if(data&&/^\d{4}-\d{2}-\d{2}$/.test(data)) sv('hArr',data);
+  var _forn=g('ocrForn'); if(_forn) sv('cFor', _forn.toUpperCase());
+  var _flu=g('ocrFlu'); if(_flu) sv('cFlu', _flu);
+  var _doc=g('ocrDoc'); if(_doc) sv('cDoc', _doc);
+  var _fas=g('ocrFas'); if(_fas){ sv('cFas', _fas); try{ if(typeof fillStato==='function') fillStato('cFas','cSta'); }catch(e){} }
+  var _sta=g('ocrSta'); if(_sta) sv('cSta', _sta);
   // Soggetto: aggancia codice cliente <-> nome via CLI_DATA (così l'anomalia trova il contatto)
   var soggRaw=g('ocrSogg');
   if(soggRaw){
