@@ -392,7 +392,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34d · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34e · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -925,7 +925,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34d</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34e</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -7780,8 +7780,36 @@ function showOCRPicker(items, rawText){
   var inner=document.createElement('div');
   inner.style.cssText='background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:16px;width:100%;max-width:400px;max-height:70vh;overflow-y:auto;-webkit-overflow-scrolling:touch';
 
-  var html='<div style="font-size:13px;font-weight:800;color:#3B9FD4;margin-bottom:4px">&#128196; OCR — '+items.length+' codici trovati</div>';
-  html+='<div style="font-size:11px;color:#666;margin-bottom:12px">Seleziona il codice da inserire</div>';
+  var html='<div style="font-size:13px;font-weight:800;color:#3B9FD4;margin-bottom:4px">📄 OCR — '+items.length+' codici trovati</div>';
+  html+='<div style="font-size:11px;color:#666;margin-bottom:10px">Compila i campi comuni sotto e tap AGGIUNGI TUTTI</div>';
+
+  // Sezione: CAMPI COMUNI (riflettono i valori attuali del form, modificabili qui)
+  function _cur(id){var el=document.getElementById(id); return el?el.value||'':'';}
+  function _opts(list, cur){ var h=''; for(var oi=0;oi<list.length;oi++){var v=list[oi]; h+='<option value="'+v.replace(/"/g,'&quot;')+'"'+(v===cur?' selected':'')+'>'+v+'</option>';} return h; }
+  var _fluL=['STANDARD','FILIALE IN','FILIALE OUT','ANOMALIA','ECCEZIONE','VETTORE PRIMA DI FLUSSO','AGENTE','COLLEGA'];
+  var _docL=['FLOTTA','SCONTRINO','FATTURA','VENDITA','ACQUISTO','VISIONE','RESO FILIALE','NOLEGGIO','BL/FIM','BL/TRA','NESSUNO'];
+  var _fasL=['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'];
+  var _cauL=(typeof CAULIST!=='undefined')?CAULIST:[];
+  var _staL=(_cur('cFas') && typeof STATI!=='undefined' && STATI[_cur('cFas')])?STATI[_cur('cFas')]:(typeof STATI!=='undefined'?STATI['RICEVIMENTO']:[]);
+  var _selCss='width:100%;background:#0a0d12;color:#fff;border:1px solid #2a3546;padding:8px 10px;font-size:12px;border-radius:7px;outline:none;font-family:inherit;margin:2px 0 6px';
+  var _inCss='width:100%;background:#0a0d12;color:#fff;border:1px solid #2a3546;padding:8px 10px;font-size:12px;border-radius:7px;outline:none;font-family:inherit;margin:2px 0 6px;-webkit-appearance:none';
+  var _lblCss='font-size:9px;color:#7db8ff;font-weight:700;letter-spacing:.5px';
+
+  html+='<div style="background:#0a0d12;border:1px solid #1c2432;border-radius:9px;padding:10px 12px;margin-bottom:12px">';
+  html+='<div style="font-size:10px;color:#3B9FD4;font-weight:800;letter-spacing:1px;margin-bottom:6px">CAMPI COMUNI</div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 8px">';
+  html+='<div><div style="'+_lblCss+'">DATA LISTATO</div><input id="ocpDate" type="date" value="'+_cur('hArr')+'" style="'+_inCss+'"></div>';
+  html+='<div><div style="'+_lblCss+'">VETTORE RIC.</div><input id="ocpVetRic" value="'+_cur('hVet').replace(/"/g,'&quot;')+'" placeholder="es. CIPI" style="'+_inCss+'"></div>';
+  html+='<div style="grid-column:1/-1"><div style="'+_lblCss+'">SOGGETTO</div><input id="ocpSogg" value="'+_cur('hSogg').replace(/"/g,'&quot;')+'" placeholder="cod - nome cliente" style="'+_inCss+'"></div>';
+  html+='<div style="grid-column:1/-1"><div style="'+_lblCss+'">FORNITORE</div><input id="ocpForn" value="'+_cur('cFor').replace(/"/g,'&quot;')+'" placeholder="es. BOSCH" style="'+_inCss+'"></div>';
+  html+='<div><div style="'+_lblCss+'">TIPO FLUSSO</div><select id="ocpFlu" style="'+_selCss+'"><option value="">—</option>'+_opts(_fluL,_cur('cFlu'))+'</select></div>';
+  html+='<div><div style="'+_lblCss+'">TIPO DOC</div><select id="ocpDoc" style="'+_selCss+'"><option value="">—</option>'+_opts(_docL,_cur('cDoc'))+'</select></div>';
+  html+='<div style="grid-column:1/-1"><div style="'+_lblCss+'">CAUSALE</div><select id="ocpCau" style="'+_selCss+'"><option value="">—</option>'+_opts(_cauL,_cur('cCau'))+'</select></div>';
+  html+='<div><div style="'+_lblCss+'">FASE</div><select id="ocpFas" onchange="ocpRefreshStato()" style="'+_selCss+'">'+_opts(_fasL,_cur('cFas')||'RICEVIMENTO')+'</select></div>';
+  html+='<div><div style="'+_lblCss+'">STATO</div><select id="ocpSta" style="'+_selCss+'"><option value="">—</option>'+_opts(_staL,_cur('cSta'))+'</select></div>';
+  html+='</div></div>';
+
+  html+='<div style="font-size:10px;color:#7db8ff;font-weight:800;letter-spacing:1px;margin:8px 0 6px">CODICI RICONOSCIUTI ('+items.length+')</div>';
 
   for(var i=0;i<items.length;i++){
     var it=items[i];
@@ -7818,16 +7846,45 @@ function pickOCRItem(idx){
   toast('\u2705 OCR: '+item.cod,'b');
 }
 
-// Aggiunta massiva: itera tutti gli item riconosciuti dall'OCR
-// e crea una riga per ciascuno. I campi comuni (data, vettore, soggetto,
-// fase, stato, ecc.) devono gi\u00e0 essere compilati nel form.
+// Aggiorna il select STATO nel picker quando cambia la FASE
+function ocpRefreshStato(){
+  var fase = (document.getElementById('ocpFas')||{}).value;
+  var sel = document.getElementById('ocpSta');
+  if(!sel) return;
+  sel.innerHTML='<option value="">\u2014</option>';
+  var lst = (typeof STATI!=='undefined' && STATI[fase]) ? STATI[fase] : [];
+  for(var i=0;i<lst.length;i++){
+    var o=document.createElement('option'); o.value=lst[i]; o.textContent=lst[i];
+    sel.appendChild(o);
+  }
+  // Auto-seleziona il primo (stato di default della fase)
+  if(lst.length) sel.value=lst[0];
+}
+
+// Aggiunta massiva: prima riversa i valori dal picker al form principale,
+// poi itera tutti gli item riconosciuti dall'OCR creando una riga per ciascuno.
 function pickAllOCRItems(){
   var items=(window._ocrItems||[]).slice();
   if(!items.length){ toast('Nessun codice da aggiungere','r'); return; }
+  // Sposta i valori compilati nel picker sui campi corrispondenti del form principale.
+  // Trasferisco tutto tranne lo STATO, che dipende dalla FASE: prima aggiorno cFas,
+  // poi chiamo fillStato() per popolare le options di cSta, poi assegno cSta.value.
+  var map={ocpDate:'hArr', ocpVetRic:'hVet', ocpSogg:'hSogg', ocpForn:'cFor',
+           ocpFlu:'cFlu', ocpDoc:'cDoc', ocpCau:'cCau', ocpFas:'cFas'};
+  for(var pk in map){
+    var pel=document.getElementById(pk), fel=document.getElementById(map[pk]);
+    if(pel && fel && pel.value){ fel.value=pel.value; try{ if(typeof ce==='function') ce(fel); }catch(e){} }
+  }
+  // Ora popolo cSta con le option della fase corrente e imposto il valore
+  try{ if(typeof fillStato==='function') fillStato('cFas','cSta'); }catch(e){}
+  var _staEl=document.getElementById('cSta'), _pstaEl=document.getElementById('ocpSta');
+  if(_staEl && _pstaEl && _pstaEl.value){ _staEl.value = _pstaEl.value; try{ if(typeof ce==='function') ce(_staEl); }catch(e){} }
   // Verifica campi comuni obbligatori PRIMA di iniziare (non voglio met\u00e0 lista dentro e met\u00e0 fuori)
   var need=[
     {id:'hArr', lbl:'DATA LISTATO'},
-    {id:'hVet', lbl:'VETTORE RICEVIMENTO'},
+    {id:'hVet', lbl:'VETTORE RIC.'},
+    {id:'cFor', lbl:'FORNITORE'},
+    {id:'cCau', lbl:'CAUSALE'},
     {id:'cFas', lbl:'FASE'},
     {id:'cSta', lbl:'STATO'},
     {id:'cDoc', lbl:'TIPO DOC'}
