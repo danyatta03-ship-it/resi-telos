@@ -393,7 +393,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34m · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34n · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -926,7 +926,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34m</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34n</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -1063,6 +1063,11 @@ select option {
 <!-- Dati esternalizzati: caricati via fetch al boot (Service Worker cache-first) -->
 <script>
 var DB_TRI=[], CLI_DATA={}, CLI_AGENTS={agents:[],m:{}};
+// Mappa filiale -> vettore abituale. Non è mai stata popolata, ma il codice la
+// leggeva senza dichiararla: bastava un cliente trovato perché il ReferenceError
+// interrompesse la ricerca, lasciando la tendina vuota e l'agente non compilato.
+// Dichiarandola vuota valgono i valori predefiniti già previsti dal codice.
+var CLI_FIL = {};
 // Promessa globale: startApp/launchApp aspettano questa prima di procedere.
 // I 3 file sono nel PRECACHE del Service Worker → dal 2° accesso caricamento istantaneo.
 window._dataReady = Promise.all([
@@ -1766,19 +1771,40 @@ function onSogg(val) {
     pickSogg(foundCod, nome);
     return;
   }
-  // Name search - dropdown con più match
+  // Ricerca per CODICE (anche parziale, con o senza zeri iniziali) e per NOME.
+  // Prima si cercava solo tra i nomi: digitando le prime cifre del codice non
+  // usciva alcun suggerimento, quindi non si arrivava mai a dedurre l'agente.
   var matches=[];
   var qUp=val;
+  // I codici cliente hanno zeri davanti (009820). Se l'operatore li digita
+  // vale il confronto letterale; se li omette ("9820") confronto con il codice
+  // privato degli zeri. Togliere gli zeri anche dalla query allargherebbe troppo:
+  // "00982" diventerebbe "982" e pescherebbe tutti i codici 982xxx.
+  var qSoloCifre=/^\d+$/.test(qUp), qConZeri=/^0/.test(qUp);
   for(var k in CLI_DATA){
-    var nm=(CLI_DATA[k]||'').split('|')[0]||'';
+    var raw=CLI_DATA[k]||'';
+    var pipe=raw.indexOf('|');
+    var nm=(pipe>=0?raw.slice(0,pipe):raw);
     var nmU=nm.toUpperCase();
-    if(nmU.indexOf(qUp)>=0){
-      matches.push({cod:k, nm:nm.trim(), fil:(CLI_DATA[k]||'').split('|')[1]||'', starts:nmU.indexOf(qUp)===0});
+    var codHit=(k.indexOf(qUp)===0);
+    if(!codHit && qSoloCifre && !qConZeri) codHit=(k.replace(/^0+/,'').indexOf(qUp)===0);
+    var nomePos=nmU.indexOf(qUp);
+    if(codHit || nomePos>=0){
+      matches.push({
+        cod:k, nm:nm.trim(), fil:(pipe>=0?raw.slice(pipe+1):''),
+        rank: codHit ? 0 : (nomePos===0 ? 1 : 2)   // codice, poi nome che inizia, poi nome che contiene
+      });
       if(matches.length>=40)break;
     }
   }
   if(!matches.length){ tip.style.display='none'; return; }
-  matches.sort(function(a,b){ if(a.starts!==b.starts) return a.starts?-1:1; return a.nm.localeCompare(b.nm); });
+  matches.sort(function(a,b){
+    if(a.rank!==b.rank) return a.rank-b.rank;
+    // Cercando per codice l'ordine utile è quello numerico, non alfabetico:
+    // digitando "00982" il primo della lista dev'essere 009820, non il nome con la A.
+    if(a.rank===0) return a.cod.localeCompare(b.cod);
+    return a.nm.localeCompare(b.nm);
+  });
   var top=matches.slice(0,6);
   var html='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:5px">'+matches.length+(matches.length>=40?'+':'')+' RISULTATI · TOCCA IL CLIENTE</div>';
   for(var i=0;i<top.length;i++){
@@ -1788,8 +1814,13 @@ function onSogg(val) {
       '<div style="font-size:10px;color:#3B9FD4;font-family:monospace">'+xe(m.cod)+(mvet?' · '+xe(mvet):'')+(m.fil?' · Fil.'+xe(m.fil):'')+'</div></div>';
   }
   tip.innerHTML=html; tip.style.display='block';
-  // se c'è solo un match che inizia con la query, precompilo il primo (comodo per tastiera)
-  if(top.length===1||(top[0].starts && val.length>=Math.min(4,top[0].nm.length))) showSoggChip(top[0].cod, top[0].nm, CLI_FIL&&CLI_FIL[top[0].fil]?CLI_FIL[top[0].fil]:'');
+  // Un solo cliente possibile: mostro direttamente la pastiglia da toccare.
+  // Con più risultati resta la lista, altrimenti showSoggChip la sostituirebbe
+  // nascondendo le alternative (svuota il contenitore).
+  if(matches.length===1){
+    var b0=matches[0];
+    showSoggChip(b0.cod, b0.nm, (CLI_FIL&&CLI_FIL[b0.fil])?CLI_FIL[b0.fil]:'');
+  }
 }
 
 function showSoggChip(cod, nome, vet){
@@ -1815,7 +1846,7 @@ function pickSogg(cod, nome){
   // Trigger tip
   var parts=(CLI_DATA[cod]||'').split('|');
   var fil=parts[1]||'';
-  var vet=CLI_FIL[fil]||'CIPI/PIEMME';
+  var vet=(CLI_FIL&&CLI_FIL[fil])||'CIPI/PIEMME';
   var tip=document.getElementById('cliTip');
   if(tip){
     tip.innerHTML='<span style="color:#3B9FD4;font-weight:700">'+xe(cod)+' — '+xe(nome)+'</span>'+
