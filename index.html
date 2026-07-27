@@ -318,9 +318,12 @@ select option {
 .stato-stallo{background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35)}
 .stato-anomalia{background:rgba(224,85,85,.18);color:#E05555;border:2px solid rgba(224,85,85,.5)}
 </style>
-<script async src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" id="fbAppSdk"></script>
-<script async src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js" id="fbDbSdk"></script>
-<script async src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" id="fbAuthSdk"></script>
+<!-- defer, non async: i moduli "compat" si registrano sull'oggetto creato da
+     firebase-app, quindi vanno eseguiti in quest'ordine. Con async l'ordine è
+     casuale e database poteva partire prima di app, restando non registrato. -->
+<script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" id="fbAppSdk"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js" id="fbDbSdk"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" id="fbAuthSdk"></script>
 <script src="html5-qrcode.min.js" onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';document.head.appendChild(s);})()"></script>
 <script src="zxing.min.js" onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';document.head.appendChild(s);})()"></script>
 <script src="ocr-config.js"></script>
@@ -393,7 +396,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34n · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34o · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -926,7 +929,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34n</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34o</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -4270,7 +4273,7 @@ function fbDiagnose(){
   try{ logged = !!(authSdk && firebase.auth().currentUser); }catch(e){}
   var checks=[
     {ok:sdk, t:'Libreria Firebase caricata',
-     ko:'Le librerie Firebase non si sono caricate: rete/proxy che blocca www.gstatic.com, oppure sei offline.'},
+     ko:'Il modulo del database non risulta registrato. Prova “Ricarica moduli Firebase” qui sotto; se non basta, la rete blocca www.gstatic.com oppure sei offline.'},
     {ok:authSdk, t:'Libreria di autenticazione caricata',
      ko:'Manca firebase-auth: senza non si ottiene il token e il database resta chiuso.'},
     {ok:!!(cfg&&cfg.apiKey&&cfg.dbUrl), t:'Configurazione presente su questo dispositivo',
@@ -4300,6 +4303,8 @@ function fbDiagnose(){
            :'<b>Come sistemare:</b><br>1. Verifica di avere rete.<br>2. Firebase Console → <b>Authentication → Sign-in method</b>: abilita <b>Anonimo</b>.<br>3. Firebase Console → <b>Realtime Database → Regole</b>: <code>{"rules":{".read":"auth != null",".write":"auth != null"}}</code><br>4. Controlla <b>apiKey</b> e <b>databaseURL</b> con “Apri configurazione Firebase”.')+'</div>';
   h+='<div id="fbTestOut" style="display:none;font-size:11px;line-height:1.6;border-radius:8px;padding:10px;margin-bottom:8px"></div>';
   h+='<button onclick="fbLiveTest()" style="width:100%;background:#12331d;color:#5ce080;border:1.5px solid #1e5a35;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">🧪 Prova lettura e scrittura adesso</button>';
+  if(!sdk || !authSdk)
+    h+='<button onclick="_fbSdkRetry=false;fbReloadSdk();toast(\'Ricarico i moduli Firebase…\',\'b\');setTimeout(function(){FB_REF=null;_fbConnecting=false;ensureFB();fbDiagnose();},2500)" style="width:100%;background:#3a2c1c;color:#e6b03c;border:1.5px solid #6a5024;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">📦 Ricarica moduli Firebase</button>';
   h+='<button onclick="document.getElementById(\'fbDiagBox\').remove();openFBModal()" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">⚙ Apri configurazione Firebase</button>';
   h+='<button onclick="document.getElementById(\'fbDiagBox\').remove();FB_REF=null;_fbConnecting=false;ensureFB();toast(\'Riprovo la connessione…\',\'b\')" style="width:100%;background:none;color:#888;border:1px solid #333;border-radius:9px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Riprova connessione</button>';
   h+='</div>';
@@ -4380,14 +4385,36 @@ function getFBCfg() {
   return null;
 }
 
+// Secondo tentativo di caricamento dei moduli Firebase, stavolta uno alla volta
+// e nell'ordine giusto: se per un intoppo di rete uno non si è registrato,
+// ricaricarli in sequenza risolve senza che l'utente debba fare nulla.
+var _fbSdkRetry = false;
+function fbReloadSdk(){
+  if(_fbSdkRetry) return; _fbSdkRetry = true;
+  var srcs = [
+    'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js',
+    'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js'
+  ];
+  var i = 0;
+  (function next(){
+    if(i >= srcs.length) return;
+    var s = document.createElement('script');
+    s.src = srcs[i++];
+    s.onload = next; s.onerror = next;   // proseguo comunque: il polling valuta il risultato
+    document.head.appendChild(s);
+  })();
+}
+
 function waitForFB(cb, tries) {
   tries = tries || 0;
   var hasDb   = (typeof firebase !== 'undefined' && !!firebase.database);
   var hasAuth = (typeof firebase !== 'undefined' && typeof firebase.auth === 'function');
   if (hasDb && hasAuth) { cb(true); return; }
-  // Se il database è pronto ma l'SDK di autenticazione no, proseguo lo stesso:
+  if (tries === 15) { try{ fbReloadSdk(); }catch(e){} }   // ~4,5s: ritento il caricamento
+  // Se il database è pronto ma l'autenticazione no, proseguo lo stesso:
   // sarà il login a dire con chiarezza cosa manca, invece di un timeout muto.
-  if (tries > 30) { cb(hasDb); return; }
+  if (tries > 40) { cb(hasDb); return; }
   setTimeout(function() { waitForFB(cb, tries + 1); }, 300);
 }
 
