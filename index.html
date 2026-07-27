@@ -320,6 +320,7 @@ select option {
 </style>
 <script async src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" id="fbAppSdk"></script>
 <script async src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js" id="fbDbSdk"></script>
+<script async src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" id="fbAuthSdk"></script>
 <script src="html5-qrcode.min.js" onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';document.head.appendChild(s);})()"></script>
 <script src="zxing.min.js" onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';document.head.appendChild(s);})()"></script>
 <script src="ocr-config.js"></script>
@@ -392,7 +393,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34k · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34l · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -925,7 +926,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34k</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34l</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -4200,9 +4201,18 @@ var FB_LAST_ERR='';
 // Il caso di gran lunga più frequente è PERMISSION_DENIED: le regole del
 // Realtime Database sono chiuse, oppure il periodo di prova (30 giorni) è scaduto.
 function fbErrText(err){
+  var code = (err && err.code) ? String(err.code) : '';
   var m = (err && (err.message || err.code)) ? String(err.message || err.code) : '';
+  if(m === 'AUTH_SDK_MANCANTE')
+    return 'Libreria di autenticazione non caricata: sei offline oppure la rete blocca www.gstatic.com.';
+  if(/auth\/(operation-not-allowed|admin-restricted-operation|configuration-not-found)/i.test(code+m))
+    return 'Accesso anonimo non attivo: Firebase Console → Authentication → Sign-in method → abilita “Anonimo”.';
+  if(/auth\/(network-request-failed|timeout)/i.test(code+m))
+    return 'Accesso al database non riuscito per problemi di rete: controlla la connessione o il firewall.';
+  if(/auth\/(api-key-not-valid|invalid-api-key)/i.test(code+m))
+    return 'API Key non valida: ricontrollala nella Firebase Console → Impostazioni progetto.';
   if(/permission[_ ]?denied/i.test(m))
-    return 'Regole del database: accesso negato. Firebase Console → Realtime Database → Regole: consenti lettura e scrittura (il periodo di prova di 30 giorni potrebbe essere scaduto).';
+    return 'Regole del database: accesso negato. Firebase Console → Realtime Database → Regole: consenti lettura e scrittura agli utenti autenticati.';
   if(/network|offline|unavailable|timeout/i.test(m))
     return 'Database non raggiungibile: controlla la rete o il firewall aziendale.';
   if(/not.*found|does not exist|invalid.*url/i.test(m))
@@ -4224,11 +4234,18 @@ function fbWriteFail(err){
 function fbDiagnose(){
   var cfg=getFBCfg();
   var sdk=(typeof firebase!=='undefined' && !!firebase.database);
+  var authSdk=(typeof firebase!=='undefined' && typeof firebase.auth==='function');
+  var logged=false;
+  try{ logged = !!(authSdk && firebase.auth().currentUser); }catch(e){}
   var checks=[
     {ok:sdk, t:'Libreria Firebase caricata',
      ko:'Le librerie Firebase non si sono caricate: rete/proxy che blocca www.gstatic.com, oppure sei offline.'},
+    {ok:authSdk, t:'Libreria di autenticazione caricata',
+     ko:'Manca firebase-auth: senza non si ottiene il token e il database resta chiuso.'},
     {ok:!!(cfg&&cfg.apiKey&&cfg.dbUrl), t:'Configurazione presente su questo dispositivo',
-     ko:'Nessuna configurazione salvata QUI. La chiave è salvata per singolo dispositivo: va inserita anche su questo (Impostazioni → Firebase).'},
+     ko:'Nessuna configurazione salvata QUI. Inseriscila con “Apri configurazione Firebase”, oppure distribuiscila a tutti dal pannello Admin → Configurazione.'},
+    {ok:logged, t:'Accesso al database effettuato',
+     ko:'Nessun accesso attivo'+(FB_LAST_ERR?(': '+FB_LAST_ERR):'. Se è la prima volta, attiva l\'accesso Anonimo: Firebase Console → Authentication → Sign-in method.')},
     {ok:!!FB_REF, t:'Connessione attiva',
      ko:'Non connesso'+(FB_LAST_ERR?(': '+FB_LAST_ERR):'. Premi CONNETTI nella finestra Firebase.')},
     {ok:(typeof rows==='object' && Object.keys(rows||{}).length>=0), t:'Dati locali leggibili', ko:'Archivio locale non leggibile'}
@@ -4248,8 +4265,8 @@ function fbDiagnose(){
   });
   if(cfg&&cfg.dbUrl) h+='<div style="font-size:10px;color:#666;font-family:monospace;word-break:break-all;margin:8px 0;padding:8px;background:#0a0a0a;border-radius:7px">URL: '+xe(cfg.dbUrl)+'</div>';
   h+='<div style="font-size:11px;color:#888;line-height:1.6;margin:10px 0;padding:10px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">'+
-     (allOk?'Tutto a posto: la sincronizzazione è attiva. Le righe compaiono su tutti i dispositivi collegati allo stesso database.'
-           :'<b>Come sistemare:</b><br>1. Verifica di avere rete.<br>2. Apri <b>Firebase</b> e incolla <b>apiKey</b> e <b>databaseURL</b> (li trovi nella console Firebase → Impostazioni progetto).<br>3. Nelle <b>Regole</b> del Realtime Database deve essere consentita lettura/scrittura ai tuoi dispositivi.<br>4. La configurazione va ripetuta su <b>ogni</b> dispositivo.')+'</div>';
+     (allOk?'Tutto a posto: la sincronizzazione è attiva e il database è accessibile solo tramite l\'app. Le righe compaiono su tutti i dispositivi collegati.'
+           :'<b>Come sistemare:</b><br>1. Verifica di avere rete.<br>2. Firebase Console → <b>Authentication → Sign-in method</b>: abilita <b>Anonimo</b>.<br>3. Firebase Console → <b>Realtime Database → Regole</b>: <code>{"rules":{".read":"auth != null",".write":"auth != null"}}</code><br>4. Controlla <b>apiKey</b> e <b>databaseURL</b> con “Apri configurazione Firebase”.')+'</div>';
   h+='<div id="fbTestOut" style="display:none;font-size:11px;line-height:1.6;border-radius:8px;padding:10px;margin-bottom:8px"></div>';
   h+='<button onclick="fbLiveTest()" style="width:100%;background:#12331d;color:#5ce080;border:1.5px solid #1e5a35;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">🧪 Prova lettura e scrittura adesso</button>';
   h+='<button onclick="document.getElementById(\'fbDiagBox\').remove();openFBModal()" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">⚙ Apri configurazione Firebase</button>';
@@ -4285,8 +4302,13 @@ function fbLiveTest(){
     show('rgba(224,85,85,.08)','rgba(224,85,85,.35)','#E0A0A0','❌ '+xe(fbErrText(e)));
     return;
   }
-  var readOk=false;
-  db.ref('returns').limitToFirst(1).once('value')
+  var readOk=false, authOk=false;
+  fbAnonLogin(firebase.app())
+    .then(function(u){
+      authOk=true;
+      show('rgba(59,159,212,.08)','rgba(59,159,212,.3)','#7db8ff','✅ Accesso riuscito<br>⏳ Provo lettura e scrittura…');
+      return db.ref('returns').limitToFirst(1).once('value');
+    })
     .then(function(){
       readOk=true;
       return db.ref('_diag/'+deviceId).set({ts:Date.now(), who:deviceName||'?'});
@@ -4298,14 +4320,16 @@ function fbLiveTest(){
     .then(function(snap){
       var n=Object.keys(snap.val()||{}).length;
       show('rgba(46,204,113,.08)','rgba(46,204,113,.35)','#5ce080',
-        '✅ <b>Lettura OK</b><br>✅ <b>Scrittura OK</b><br>👥 Dispositivi presenti sul database: <b>'+n+'</b>'+
+        '✅ <b>Accesso OK</b><br>✅ <b>Lettura OK</b><br>✅ <b>Scrittura OK</b><br>👥 Dispositivi presenti sul database: <b>'+n+'</b>'+
         (n<2?'<br><span style="color:#E0A055">Se anche l\'altro dispositivo è aperto adesso e qui leggi 1, allora sta puntando a un database diverso: confronta l\'URL sui due dispositivi.</span>'
             :'<br>La sincronizzazione funziona.'));
     })
     .catch(function(err){
-      show('rgba(224,85,85,.08)','rgba(224,85,85,.35)','#E0A0A0',
-        (readOk?'✅ Lettura OK<br>❌ <b>Scrittura rifiutata</b><br>':'❌ <b>Lettura rifiutata</b><br>')+
-        xe(fbErrText(err)));
+      var head;
+      if(!authOk)      head='❌ <b>Accesso rifiutato</b><br>';
+      else if(!readOk) head='✅ Accesso OK<br>❌ <b>Lettura rifiutata</b><br>';
+      else             head='✅ Accesso OK<br>✅ Lettura OK<br>❌ <b>Scrittura rifiutata</b><br>';
+      show('rgba(224,85,85,.08)','rgba(224,85,85,.35)','#E0A0A0', head+xe(fbErrText(err)));
     });
 }
 
@@ -4327,9 +4351,39 @@ function getFBCfg() {
 
 function waitForFB(cb, tries) {
   tries = tries || 0;
-  if (tries > 30) { cb(false); return; }
-  if (typeof firebase !== 'undefined' && firebase.database) { cb(true); return; }
+  var hasDb   = (typeof firebase !== 'undefined' && !!firebase.database);
+  var hasAuth = (typeof firebase !== 'undefined' && typeof firebase.auth === 'function');
+  if (hasDb && hasAuth) { cb(true); return; }
+  // Se il database è pronto ma l'SDK di autenticazione no, proseguo lo stesso:
+  // sarà il login a dire con chiarezza cosa manca, invece di un timeout muto.
+  if (tries > 30) { cb(hasDb); return; }
   setTimeout(function() { waitForFB(cb, tries + 1); }, 300);
+}
+
+// Login anonimo: l'app ottiene un token Firebase senza chiedere nulla all'operatore.
+// Serve perché le regole del database pretendono "auth != null": senza token il
+// database resta chiuso a chiunque non passi da qui, anche conoscendone l'URL.
+function fbAnonLogin(app){
+  return new Promise(function(resolve, reject){
+    if(typeof firebase.auth !== 'function'){ reject(new Error('AUTH_SDK_MANCANTE')); return; }
+    var auth;
+    try{ auth = firebase.auth(app); }catch(e){ reject(e); return; }
+    if(auth.currentUser){ resolve(auth.currentUser); return; }
+    var done = false;
+    var to = setTimeout(function(){
+      if(!done){ done = true; reject(new Error('Timeout durante l\'accesso al database')); }
+    }, 12000);
+    // La sessione anonima viene ripresa da sola alle aperture successive:
+    // onAuthStateChanged copre sia il login nuovo sia quello già in cache.
+    try{
+      auth.onAuthStateChanged(function(u){
+        if(u && !done){ done = true; clearTimeout(to); resolve(u); }
+      });
+    }catch(e){}
+    auth.signInAnonymously().catch(function(err){
+      if(!done){ done = true; clearTimeout(to); reject(err); }
+    });
+  });
 }
 
 // Azzeramento locale del PC (richiesto dall'interruttore di emergenza remoto)
@@ -4372,6 +4426,25 @@ function startFB(cfg, cb) {
       try { app = firebase.app(); } catch(e) {
         app = firebase.initializeApp({ apiKey: cfg.apiKey, databaseURL: cfg.dbUrl });
       }
+      // Prima l'accesso, poi i dati: con le regole "auth != null" una lettura o una
+      // scrittura senza token verrebbe respinta prima ancora di partire.
+      fbAnonLogin(app).then(function(){
+        _fbConnectDb(app, cb);
+      }).catch(function(err){
+        FB_LAST_ERR = fbErrText(err);
+        try{ FB_REF = null; }catch(e){}
+        cb(false, FB_LAST_ERR);
+      });
+    } catch(e) {
+      FB_LAST_ERR = fbErrText(e);
+      cb(false, FB_LAST_ERR);
+    }
+  });
+}
+
+// Collegamento al database vero e proprio, eseguito solo dopo il login anonimo.
+function _fbConnectDb(app, cb) {
+    try {
       var db = firebase.database(app);
       FB_REF = db.ref('returns');
       // Presence tracking
@@ -4480,10 +4553,9 @@ function startFB(cfg, cb) {
         .catch(function(err){ _vFail(fbErrText(err)); });
       _vTimer=setTimeout(function(){ _vFail('Timeout: nessuna risposta dal database (URL errato o rete bloccata)'); }, 9000);
     } catch(e) {
-      FB_LAST_ERR = e.message || 'Errore connessione';
+      FB_LAST_ERR = fbErrText(e);
       cb(false, FB_LAST_ERR);
     }
-  });
 }
 
 function openFBModal() {
