@@ -392,7 +392,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34j · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34k · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -925,7 +925,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34j</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34k</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -1538,11 +1538,14 @@ function goSA(reason) {
 function sendMsg(m) {
   handleLocal(m);
   if (FB_REF) {
-    if ((m.type==='add') && m._key && rows[m._key])      { FB_REF.child(m._key).set(rows[m._key]); return; }
-    if ((m.type==='update') && rows[m.key])               { FB_REF.child(m.key).set(rows[m.key]);   return; }
-    if (m.type==='remove')                                { FB_REF.child(m.key).remove();            return; }
-    if (m.type==='clear')                                 { FB_REF.remove();                         return; }
-    if (m.type==='archive' && m.key)                      { FB_REF.child(m.key).remove();            return; }
+    // .catch su ogni scrittura: se le regole del database rifiutano l'operazione
+    // l'utente lo deve sapere subito, non scoprirlo quando i dati non arrivano ai colleghi.
+    var _fail = (typeof fbWriteFail==='function') ? fbWriteFail : function(){};
+    if ((m.type==='add') && m._key && rows[m._key])      { FB_REF.child(m._key).set(rows[m._key]).catch(_fail); return; }
+    if ((m.type==='update') && rows[m.key])               { FB_REF.child(m.key).set(rows[m.key]).catch(_fail);   return; }
+    if (m.type==='remove')                                { FB_REF.child(m.key).remove().catch(_fail);            return; }
+    if (m.type==='clear')                                 { FB_REF.remove().catch(_fail);                         return; }
+    if (m.type==='archive' && m.key)                      { FB_REF.child(m.key).remove().catch(_fail);            return; }
     return;
   }
   if (!STANDALONE && ws && ws.readyState===1) ws.send(JSON.stringify(m));
@@ -4192,6 +4195,31 @@ function fbRender(){ if(_fbRT)return; _fbRT=setTimeout(function(){_fbRT=null; re
 function fbPersist(){ if(_fbPT)return; _fbPT=setTimeout(function(){_fbPT=null; svl();}, 150); }
 
 var FB_LAST_ERR='';
+
+// Traduce l'errore grezzo dell'SDK in una frase che dice cosa fare.
+// Il caso di gran lunga più frequente è PERMISSION_DENIED: le regole del
+// Realtime Database sono chiuse, oppure il periodo di prova (30 giorni) è scaduto.
+function fbErrText(err){
+  var m = (err && (err.message || err.code)) ? String(err.message || err.code) : '';
+  if(/permission[_ ]?denied/i.test(m))
+    return 'Regole del database: accesso negato. Firebase Console → Realtime Database → Regole: consenti lettura e scrittura (il periodo di prova di 30 giorni potrebbe essere scaduto).';
+  if(/network|offline|unavailable|timeout/i.test(m))
+    return 'Database non raggiungibile: controlla la rete o il firewall aziendale.';
+  if(/not.*found|does not exist|invalid.*url/i.test(m))
+    return 'URL del database errato: ricontrollalo nella Firebase Console.';
+  return m || 'Connessione non confermata';
+}
+
+// Una scrittura rifiutata non deve più passare inosservata: lo dico subito
+// all'utente e riporto il pill/la fiamma in stato di errore.
+function fbWriteFail(err){
+  var t = fbErrText(err);
+  FB_LAST_ERR = t;
+  try{ setConnUI(false); }catch(e){}
+  var b = document.getElementById('fbBtn'); if(b) b.textContent='⚠';
+  toast('⛔ Sincronizzazione non riuscita: '+t, 'r');
+}
+
 // v32: diagnostica Firebase — dice ESATTAMENTE cosa non va invece di fallire in silenzio
 function fbDiagnose(){
   var cfg=getFBCfg();
@@ -4222,11 +4250,65 @@ function fbDiagnose(){
   h+='<div style="font-size:11px;color:#888;line-height:1.6;margin:10px 0;padding:10px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">'+
      (allOk?'Tutto a posto: la sincronizzazione è attiva. Le righe compaiono su tutti i dispositivi collegati allo stesso database.'
            :'<b>Come sistemare:</b><br>1. Verifica di avere rete.<br>2. Apri <b>Firebase</b> e incolla <b>apiKey</b> e <b>databaseURL</b> (li trovi nella console Firebase → Impostazioni progetto).<br>3. Nelle <b>Regole</b> del Realtime Database deve essere consentita lettura/scrittura ai tuoi dispositivi.<br>4. La configurazione va ripetuta su <b>ogni</b> dispositivo.')+'</div>';
+  h+='<div id="fbTestOut" style="display:none;font-size:11px;line-height:1.6;border-radius:8px;padding:10px;margin-bottom:8px"></div>';
+  h+='<button onclick="fbLiveTest()" style="width:100%;background:#12331d;color:#5ce080;border:1.5px solid #1e5a35;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">🧪 Prova lettura e scrittura adesso</button>';
   h+='<button onclick="document.getElementById(\'fbDiagBox\').remove();openFBModal()" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">⚙ Apri configurazione Firebase</button>';
   h+='<button onclick="document.getElementById(\'fbDiagBox\').remove();FB_REF=null;_fbConnecting=false;ensureFB();toast(\'Riprovo la connessione…\',\'b\')" style="width:100%;background:none;color:#888;border:1px solid #333;border-radius:9px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Riprova connessione</button>';
   h+='</div>';
   box.innerHTML=h; document.body.appendChild(box);
 }
+
+// Test dal vivo: legge e scrive davvero sul database e mostra l'esito con l'errore esatto.
+// Serve a distinguere "socket aperto" da "posso davvero sincronizzare".
+function fbLiveTest(){
+  var out=document.getElementById('fbTestOut'); if(!out) return;
+  function show(bg,brd,col,html){
+    out.style.display='block';
+    out.style.background=bg; out.style.border='1px solid '+brd; out.style.color=col;
+    out.innerHTML=html;
+  }
+  show('rgba(59,159,212,.08)','rgba(59,159,212,.3)','#7db8ff','⏳ Test in corso…');
+  var cfg=getFBCfg();
+  if(!cfg||!cfg.apiKey||!cfg.dbUrl){
+    show('rgba(224,85,85,.08)','rgba(224,85,85,.35)','#E0A0A0','❌ Nessuna configurazione su questo dispositivo: inseriscila con “Apri configurazione Firebase”.');
+    return;
+  }
+  if(typeof firebase==='undefined'||!firebase.database){
+    show('rgba(224,85,85,.08)','rgba(224,85,85,.35)','#E0A0A0','❌ Librerie Firebase non caricate: sei offline oppure la rete blocca www.gstatic.com.');
+    return;
+  }
+  var db;
+  try{
+    var app; try{ app=firebase.app(); }catch(e){ app=firebase.initializeApp({apiKey:cfg.apiKey, databaseURL:cfg.dbUrl}); }
+    db=firebase.database(app);
+  }catch(e){
+    show('rgba(224,85,85,.08)','rgba(224,85,85,.35)','#E0A0A0','❌ '+xe(fbErrText(e)));
+    return;
+  }
+  var readOk=false;
+  db.ref('returns').limitToFirst(1).once('value')
+    .then(function(){
+      readOk=true;
+      return db.ref('_diag/'+deviceId).set({ts:Date.now(), who:deviceName||'?'});
+    })
+    .then(function(){
+      try{ db.ref('_diag/'+deviceId).remove(); }catch(e){}
+      return db.ref('presence').once('value');
+    })
+    .then(function(snap){
+      var n=Object.keys(snap.val()||{}).length;
+      show('rgba(46,204,113,.08)','rgba(46,204,113,.35)','#5ce080',
+        '✅ <b>Lettura OK</b><br>✅ <b>Scrittura OK</b><br>👥 Dispositivi presenti sul database: <b>'+n+'</b>'+
+        (n<2?'<br><span style="color:#E0A055">Se anche l\'altro dispositivo è aperto adesso e qui leggi 1, allora sta puntando a un database diverso: confronta l\'URL sui due dispositivi.</span>'
+            :'<br>La sincronizzazione funziona.'));
+    })
+    .catch(function(err){
+      show('rgba(224,85,85,.08)','rgba(224,85,85,.35)','#E0A0A0',
+        (readOk?'✅ Lettura OK<br>❌ <b>Scrittura rifiutata</b><br>':'❌ <b>Lettura rifiutata</b><br>')+
+        xe(fbErrText(err)));
+    });
+}
+
 function getFBCfg() {
   // 1° prova: config locale (impostata da questo dispositivo in modale Firebase)
   try {
@@ -4302,8 +4384,9 @@ function startFB(cfg, cb) {
         if (fbB) fbB.textContent = on ? '🔥' : '⚠';
         if (on) {
           // ad ogni (ri)connessione ri-registra la presenza → la riconnessione automatica dell'SDK ripristina tutto
-          presRef.set({name: deviceName, role: ROLE, ts: Date.now()});
-          presRef.onDisconnect().remove();
+          presRef.set({name: deviceName, role: ROLE, ts: Date.now()})
+            .then(function(){ try{ presRef.onDisconnect().remove(); }catch(e){} })
+            .catch(function(err){ FB_LAST_ERR = fbErrText(err); if(fbB) fbB.textContent='⚠'; });
         }
       });
       // Live presence counter
@@ -4367,9 +4450,10 @@ function startFB(cfg, cb) {
         renderAll();
         _fbAttachChild();
       });
-      // v32: NON dichiaro successo subito. Aspetto una prova REALE di connessione
-      // (.info/connected true oppure la prima lettura andata a buon fine), con timeout.
-      // Prima bastava creare il ref e l'app diceva "connesso" anche con URL sbagliato o regole che negano.
+      // La connessione conta come buona solo se l'app riesce DAVVERO a leggere E scrivere.
+      // .info/connected dice unicamente che il socket verso Firebase è aperto: con le regole
+      // del database chiuse (o con il periodo di test scaduto) restava true, l'app si dichiarava
+      // connessa e intanto ogni scrittura veniva rifiutata senza che nessuno se ne accorgesse.
       var _verified=false, _vTimer=null;
       function _vOk(){
         if(_verified) return; _verified=true;
@@ -4384,10 +4468,16 @@ function startFB(cfg, cb) {
         try{ FB_REF=null; }catch(e){}
         cb(false, FB_LAST_ERR);
       }
-      db.ref('.info/connected').on('value', function(sn){ if(sn.val()===true) _vOk(); });
       FB_REF.limitToFirst(1).once('value')
-        .then(function(){ _vOk(); })
-        .catch(function(err){ _vFail((err&&err.message)||'Accesso negato dalle regole del database'); });
+        .then(function(){
+          // Prova di scrittura reale: la presenza è un dato che l'app deve scrivere comunque.
+          return presRef.set({name: deviceName, role: ROLE, ts: Date.now()});
+        })
+        .then(function(){
+          try{ presRef.onDisconnect().remove(); }catch(e){}
+          _vOk();
+        })
+        .catch(function(err){ _vFail(fbErrText(err)); });
       _vTimer=setTimeout(function(){ _vFail('Timeout: nessuna risposta dal database (URL errato o rete bloccata)'); }, 9000);
     } catch(e) {
       FB_LAST_ERR = e.message || 'Errore connessione';
