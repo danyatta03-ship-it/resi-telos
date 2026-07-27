@@ -396,7 +396,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34o · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34p · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -929,7 +929,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34o</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34p</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -1077,7 +1077,14 @@ window._dataReady = Promise.all([
   fetch('./db_tri.json',{cache:'force-cache'}).then(function(r){return r.ok?r.json():[];}).then(function(j){DB_TRI=j.length?j:DB_TRI;}).catch(function(){console.warn('DB_TRI load failed');}),
   fetch('./cli_data.json',{cache:'force-cache'}).then(function(r){return r.ok?r.json():{};}).then(function(j){CLI_DATA=Object.keys(j).length?j:CLI_DATA;}).catch(function(){console.warn('CLI_DATA load failed');}),
   fetch('./client_agents.json',{cache:'force-cache'}).then(function(r){return r.ok?r.json():{agents:[],m:{}};}).then(function(j){CLI_AGENTS=(j.agents&&j.agents.length)?j:CLI_AGENTS;}).catch(function(){console.warn('CLI_AGENTS load failed');})
-]).then(function(){ window._dataReady._done=true; try{ console.log('[data] loaded — DB_TRI='+DB_TRI.length+' CLI_DATA='+Object.keys(CLI_DATA).length+' CLI_AGENTS='+CLI_AGENTS.agents.length); }catch(e){} });
+]).then(function(){
+  window._dataReady._done=true;
+  // Ora che lo storico è in memoria assegno chiavi e flag di sola lettura:
+  // senza questo passaggio i record trimestre restano senza _key (la ricerca
+  // globale non riesce ad aprirli) e senza _frozen (permessi di modifica errati).
+  try{ if(typeof initTriKeys==='function') initTriKeys(); }catch(e){}
+  try{ console.log('[data] loaded — DB_TRI='+DB_TRI.length+' CLI_DATA='+Object.keys(CLI_DATA).length+' CLI_AGENTS='+CLI_AGENTS.agents.length); }catch(e){}
+});
 </script>
 
 
@@ -1707,15 +1714,20 @@ function fSt(f){return f==='STANDARD'?3:f==='ANOMALIA'?4:f==='ECCEZIONE'?7:5;}
 var TRI_OVR = {};                                    // { 'tri_N': {campo:valore,...}, ... }
 try{ TRI_OVR = JSON.parse(localStorage.getItem('triovr')||'{}'); }catch(e){ TRI_OVR = {}; }
 function saveTriOvr(){ try{ localStorage.setItem('triovr', JSON.stringify(TRI_OVR)); }catch(e){} }
-// Assegna chiavi stabili e flag di sola lettura ai record storici
-(function initTriKeys(){
-  if(typeof DB_TRI==='undefined' || !DB_TRI || !DB_TRI.length) return;
+// Assegna chiavi stabili e flag di sola lettura ai record storici.
+// Va richiamata quando lo storico è stato caricato: i dati arrivano da
+// db_tri.json dopo l'avvio, quindi al primo giro l'array è ancora vuoto.
+// È ripetibile senza effetti collaterali (assegna solo ciò che manca).
+function initTriKeys(){
+  if(typeof DB_TRI==='undefined' || !DB_TRI || !DB_TRI.length) return 0;
   for(var i=0;i<DB_TRI.length;i++){
     var r=DB_TRI[i];
     if(!r._key) r._key = 'tri_'+i;
     r._frozen = true;                                 // marker: origine storico trimestre
   }
-})();
+  return DB_TRI.length;
+}
+initTriKeys();   // se i dati fossero già disponibili
 // Restituisce il record storico con eventuali override applicati (senza mutare l'originale)
 function triApplyOvr(r){
   if(!r||!r._key) return r;
