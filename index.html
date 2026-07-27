@@ -392,7 +392,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34c · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34d · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -925,7 +925,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34c</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34d</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -7796,6 +7796,10 @@ function showOCRPicker(items, rawText){
     html+='</div></div>';
   }
 
+  // Pulsante master: aggiungi TUTTI i codici in un colpo solo.
+  // Sovrascrive cPre/cCod/cQty/cPrc con quelli dell'item e chiama addRow(),
+  // mantenendo i campi comuni compilati dall'operatore (data, vettore, sogg, fase, stato, ecc.)
+  html+='<button onclick="pickAllOCRItems()" style="width:100%;background:linear-gradient(135deg,#0e3060,#155a95);color:#fff;border:1px solid #3B9FD4;padding:12px;font-size:14px;font-weight:800;border-radius:9px;cursor:pointer;font-family:inherit;-webkit-appearance:none;margin-top:2px">\ud83d\ude80 AGGIUNGI TUTTI ('+items.length+')</button>';
   html+='<button onclick="document.getElementById(\'ocrPickerBox\').remove()" style="width:100%;background:none;color:#555;border:none;padding:10px;font-size:13px;cursor:pointer;font-family:inherit;-webkit-appearance:none;margin-top:4px">Annulla</button>';
 
   inner.innerHTML=html;
@@ -7812,6 +7816,63 @@ function pickOCRItem(idx){
   document.getElementById('ocrPickerBox').remove();
   applyOCRResult(item);
   toast('\u2705 OCR: '+item.cod,'b');
+}
+
+// Aggiunta massiva: itera tutti gli item riconosciuti dall'OCR
+// e crea una riga per ciascuno. I campi comuni (data, vettore, soggetto,
+// fase, stato, ecc.) devono gi\u00e0 essere compilati nel form.
+function pickAllOCRItems(){
+  var items=(window._ocrItems||[]).slice();
+  if(!items.length){ toast('Nessun codice da aggiungere','r'); return; }
+  // Verifica campi comuni obbligatori PRIMA di iniziare (non voglio met\u00e0 lista dentro e met\u00e0 fuori)
+  var need=[
+    {id:'hArr', lbl:'DATA LISTATO'},
+    {id:'hVet', lbl:'VETTORE RICEVIMENTO'},
+    {id:'cFas', lbl:'FASE'},
+    {id:'cSta', lbl:'STATO'},
+    {id:'cDoc', lbl:'TIPO DOC'}
+  ];
+  var missing=[];
+  for(var i=0;i<need.length;i++){
+    var el=document.getElementById(need[i].id);
+    if(!el || !el.value.trim()) missing.push(need[i].lbl);
+  }
+  if(missing.length){
+    toast('\u26a0 Prima di aggiungere tutti compila: '+missing.join(', '),'r');
+    return;
+  }
+  // Chiudo il picker cos\u00ec l'utente vede la lista popolarsi
+  var box=document.getElementById('ocrPickerBox'); if(box) box.remove();
+
+  var added=0, failed=0, before=(typeof rows==='object')?Object.keys(rows).length:0;
+  var _origAlert=window.alert, _origConfirm=window.confirm;
+  // Silenzio le conferme di addRow (duplicati) durante il batch: conferma automatica
+  window.confirm=function(){ return true; };
+  // Salvo i valori "comuni" che addRow resetta a ogni inserimento (li ripristino dopo ogni giro)
+  var savedForn=gv('cFor'), savedCau=gv('cCau'), savedFlu=gv('cFlu'), savedDoc=gv('cDoc'), savedFas=gv('cFas'), savedSta=gv('cSta');
+  try{
+    for(var i=0;i<items.length;i++){
+      var it=items[i]; if(!it||!it.cod) continue;
+      // Reset dei campi articolo specifici prima di ogni iterazione
+      var reset=['cPre','cCod','cRma','cNote'];
+      for(var r0=0;r0<reset.length;r0++){var er=document.getElementById(reset[r0]); if(er) er.value='';}
+      // Ripristino i comuni che addRow ha resettato al giro precedente
+      var setIf=function(id,val){var el=document.getElementById(id); if(el && !el.value && val) el.value=val;};
+      setIf('cFor', savedForn); setIf('cCau', savedCau); setIf('cFlu', savedFlu); setIf('cDoc', savedDoc); setIf('cFas', savedFas); setIf('cSta', savedSta);
+      // Applica i dati OCR (cCod, cPre, cQty, cPrc) e prova l'inserimento
+      applyOCRResult(it);
+      try{
+        addRow();
+        var after=Object.keys(rows).length;
+        if(after>before){ added++; before=after; }
+        else failed++;
+      }catch(e){ failed++; }
+    }
+  } finally {
+    window.confirm=_origConfirm;
+    window.alert=_origAlert;
+  }
+  toast('\u2705 Aggiunti '+added+' articoli'+(failed?' \u00b7 '+failed+' saltati':''),added>0?'b':'r');
 }
 
 // \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
