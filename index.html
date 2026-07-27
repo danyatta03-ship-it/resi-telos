@@ -392,7 +392,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34 · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34a · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -915,7 +915,7 @@ select option {
       <button onclick="exportDBAll()" style="background:linear-gradient(135deg,#001a40,#003080);color:#3B9FD4;border:1px solid #004080;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">📤 Esporta questa vista (filtrata)</button>
     </div>
     <!-- Tabella scrollabile (no paginazione) -->
-    <div id="dbColFilters" style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:6px 8px;margin-bottom:6px"></div>
+    <div id="dbColFilters" style="display:none"></div>
     <div id="dbTable" style="max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid #2a2a2a;border-radius:8px"></div>
     <div id="dbLoadMore" style="display:none;text-align:center;margin-top:8px">
       <button onclick="dbLoadMore()" style="background:#1a1a1a;color:#3B9FD4;border:1px solid rgba(59,159,212,.3);border-radius:7px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">Carica altri 50</button>
@@ -925,7 +925,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34a</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -1090,6 +1090,7 @@ var ROLE_PERMS = {
 var STATI = {
   'RICEVIMENTO':['DA GESTIRE \u23f3','ANOMALIA RICEVIMENTO','STALLO RICEVIMENTO'],
   'UFFICIO RESI':[
+    'OK PER UFFICIO',
     'RICHIESTA ATTESA APPROVAZIONE \u23f3',
     'RICHIESTA \u2705 - ACCUMULARE',
     'RICHIESTA \u2705 - FARE RNC (FILIALE)',
@@ -1201,11 +1202,19 @@ function toggleStuck(){
   listShown=LIST_PAGE;renderList();
 }
 
-var AUTO_STATO = {
-  'UFFICIO RESI':'RICHIESTA ATTESA APPROVAZIONE ⏳',
-  'MAGAZZINO':'PRESA LOGISTICA',
-  'FINALE':'NOTA CREDITO'
-};
+// Ritorna il PRIMO stato disponibile della fase (dall'elenco STATI configurato
+// dall'admin). Al cambio fase, la riga adotta questo stato automaticamente.
+// Usare la funzione (invece della vecchia mappa hardcoded) mantiene la scelta
+// coerente anche se l'admin riordina o rinomina gli stati dal pannello.
+function autoStato(fase){
+  try{
+    var lst = (typeof STATI!=='undefined' && STATI[fase]) ? STATI[fase] : null;
+    return (lst && lst.length) ? lst[0] : '';
+  }catch(e){ return ''; }
+}
+// Retro-compat: qualche punto del codice legge AUTO_STATO[fase] come oggetto.
+// Uso un Proxy così accedere alla chiave restituisce il primo stato corrente.
+var AUTO_STATO = new Proxy({}, { get: function(_, fase){ return autoStato(fase); } });
 
 var HDR = ['Data Listato','Vettore Ricevimento','Data Elaborazione','Soggetto','Pre','Codice','Quantita','Fornitore','Prezzo','Vettore Uscita','Tipo flusso','Causale','Anomalia','Tipo documento','FASE','STATO','Data stato','RMA','Contatto','Data contatto','Agente','Doc Ricevuti','Data Ric.Doc','Note','Foto','Inserito da','Motivo NR','Chiuso da','Data chiusura'];
 var CAULIST = [
@@ -2217,7 +2226,14 @@ function canEditRow(r){
 // Avanzamento consentito → ritorna la fase successiva se il ruolo può portarcela, altrimenti ''
 function canAdv(r){ if(!r)return ''; var nf=NEXT_FASE[r.fase]; var p=ROLE_PERMS[ROLE]||{}; return (nf && (p.canAdvanceTo||[]).indexOf(nf)>=0)?nf:''; }
 // Rimando indietro consentito → ritorna la fase precedente se il ruolo può, altrimenti ''
-function canBack(r){ if(!r)return ''; var pf=PREV_FASE[r.fase]; var p=ROLE_PERMS[ROLE]||{}; return (pf && p.canSendBack)?pf:''; }
+function canBack(r){
+  if(!r) return '';
+  var pf=PREV_FASE[r.fase]; if(!pf) return '';
+  var p=ROLE_PERMS[ROLE]||{}; if(!p.canSendBack) return '';
+  // Da UFFICIO RESI non si torna a RICEVIMENTO se non sei ADMIN
+  if(r.fase==='UFFICIO RESI' && pf==='RICEVIMENTO' && ROLE!=='ADM') return '';
+  return pf;
+}
 
 // ══════════════════════════════════════════════════
 // MOTIVO "NON RENDIBILE" — popup con tendina + Altro
@@ -2414,7 +2430,8 @@ function renderList(){
   for(var lk=0;lk<filt.length;lk++)_lastFiltKeys[lk]=filt[lk]._key;
   if(listShown<LIST_PAGE)listShown=LIST_PAGE;
   var nShow=Math.min(listShown,filt.length);
-  var html='';
+  // Legenda: rapido reminder di cosa mostrano i chip sulle card
+  var html='<div style="font-size:9px;color:var(--txt3);padding:4px 6px;margin-bottom:8px;letter-spacing:.5px;text-align:center;border-bottom:1px dashed var(--brd2);opacity:.85">flusso · entrata · qt · causale · stato · rma · uscita</div>';
   for(var fi=0;fi<nShow;fi++){
     var r=filt[fi],fc=fCh(r.flusso),canE=canEditRow(r);
     html+='<div class="ac'+(bulkSel[r._key]?' sel':'')+(canE?'':' locked')+'" id="ac_'+(r._key||'')+'">';
@@ -2433,6 +2450,7 @@ function renderList(){
     html+='<div style="display:flex;justify-content:space-between"><div>';
     html+='<div class="ac-sogg">'+xe(r.sogg||'\u2014')+'</div>';
     html+='<div class="ac-cod">'+(r.pre?'<span style="color:var(--ora);margin-right:4px">'+xe(r.pre)+'</span>':'')+xe(r.cod)+(r.photoThumb?' <span onclick="viewPhoto(\''+xe(r._key||'')+'\')" style="cursor:pointer" title="Vedi foto">\ud83d\udcf7</span>':(r.photo?' \ud83d\udcf7':''))+'</div>';
+    if(r.forn) html+='<div style="font-size:11px;color:#3B9FD4;font-weight:700;margin-top:2px;letter-spacing:.3px">'+xe(r.forn)+'</div>';
     html+='</div><div style="text-align:right">';
     html+='<div class="ac-price">'+(r.prc>0?'\u20AC'+r.prc.toFixed(2):'\u2014')+'</div>';
     html+='<div class="ac-date">'+fd(r.datArr)+'</div>';
@@ -3625,6 +3643,15 @@ function editRow(key){
   html+=fld('FORNITORE',inp('forn',r.forn))+fld('SOGGETTO',inp('sogg',r.sogg));
   html+='<div class="sh-section">CLASSIFICAZIONE</div>';
   html+=fld('CAUSALE',sl('causale',CAULIST,r.causale));
+  // ANOMALIA: bloccata se non era stata scelta all'inserimento (solo ADM può forzarla)
+  var _hasAnom = !!(r.anomalia && String(r.anomalia).trim());
+  var _anomOpts = (typeof subsForCausale==='function' ? subsForCausale(r.causale||'') : []).slice();
+  if(r.anomalia && _anomOpts.indexOf(r.anomalia)<0) _anomOpts.push(r.anomalia);
+  if(_hasAnom || ROLE==='ADM'){
+    html+=fld('ANOMALIA', sl('anom', _anomOpts, r.anomalia||''));
+  } else {
+    html+=fld('ANOMALIA', '<input id="ei_anom" value="" disabled placeholder="— non impostata all\'inserimento —" style="width:100%;background:rgba(255,255,255,.02);color:var(--txt3);border:1px dashed var(--brd2);padding:9px 11px;font-size:12px;border-radius:var(--rad2);-webkit-appearance:none;outline:none;font-family:inherit;margin-bottom:7px;cursor:not-allowed">');
+  }
   html+=fld('TIPO FLUSSO',sl('flusso',['STANDARD','FILIALE IN','FILIALE OUT','ANOMALIA','ECCEZIONE','VETTORE PRIMA DI FLUSSO','AGENTE','COLLEGA'],r.flusso));
   html+=fld('TIPO DOC.',sl('tipoDoc',['FLOTTA','SCONTRINO','FATTURA','VENDITA','ACQUISTO','VISIONE','RESO FILIALE','NOLEGGIO','BL/FIM','BL/TRA','NESSUNO'],r.tipoDoc));
   html+='<div class="sh-section">STATO E FASE</div>';
@@ -3669,11 +3696,13 @@ function gei(id){var el=document.getElementById('ei_'+id);return el?el.value.tri
 function svEdit(key){
   if(!key)key=document.getElementById('sh').dataset.ek;
   if(!key)return;
+  var _anomEl=document.getElementById('ei_anom');
+  var _anomVal=(_anomEl && !_anomEl.disabled) ? gei('anom') : ((rows[key]&&rows[key].anomalia)||'');
   var ch={
     pre:gei('pre').toUpperCase(),cod:gei('cod').toUpperCase(),
     qty:parseInt(gei('qty'))||1,prc:parseFloat(gei('prc'))||0,
     forn:gei('forn').toUpperCase(),sogg:gei('sogg').toUpperCase(),
-    causale:gei('causale'),flusso:gei('flusso'),tipoDoc:gei('tipoDoc'),
+    causale:gei('causale'),anomalia:_anomVal,flusso:gei('flusso'),tipoDoc:gei('tipoDoc'),
     fase:gei('fase'),stato:gei('stato'),rma:gei('rma'),vetRic:gei('vetRic'),
     vetUsc:gei('vetUsc'),datSta:gei('datSta'),
     note:document.getElementById('ei_note')?document.getElementById('ei_note').value.trim():'',
