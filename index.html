@@ -392,7 +392,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34h · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34i · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -925,7 +925,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34h</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34i</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -8619,6 +8619,31 @@ function applyOcrConfirm(allArticles){
   var articoli = (typeof ocrCollectRows==='function') ? ocrCollectRows() : [];
   if(allArticles){
     if(!articoli.length){ toast('\u26a0 Nessun articolo con codice: correggi la lista prima di inserire','y'); return; }
+    // Guardia: campi obbligatori DEVONO essere compilati nel modulo OCR.
+    // Se manca qualcosa addRow fallirebbe silenziosamente \u2192 nessuna riga in lista.
+    var _need=[
+      {id:'ocrForn', lbl:'FORNITORE'},
+      {id:'ocrCau',  lbl:'CAUSALE'},
+      {id:'ocrFlu',  lbl:'TIPO FLUSSO'},
+      {id:'ocrDoc',  lbl:'TIPO DOC'},
+      {id:'ocrFas',  lbl:'FASE'},
+      {id:'ocrSta',  lbl:'STATO'},
+      {id:'ocrData', lbl:'DATA LISTATO'},
+      {id:'ocrVet',  lbl:'VETTORE RIC.'}
+    ];
+    var _miss=[], _firstEl=null;
+    for(var _mi=0;_mi<_need.length;_mi++){
+      var _el=document.getElementById(_need[_mi].id);
+      if(!_el || !(_el.value||'').trim()){
+        _miss.push(_need[_mi].lbl);
+        if(_el){ _el.style.border='2px solid #E05555'; if(!_firstEl) _firstEl=_el; }
+      } else if(_el){ _el.style.border=''; }
+    }
+    if(_miss.length){
+      toast('\u26a0 Prima compila nel modulo: '+_miss.join(', '),'r');
+      if(_firstEl) try{ _firstEl.scrollIntoView({behavior:'smooth',block:'center'}); _firstEl.focus(); }catch(e){}
+      return;
+    }
     document.getElementById('ocrConfBox').remove();
     gTab('pgIns');
     var cForVal=(document.getElementById('cFor')||{}).value||'';
