@@ -149,8 +149,10 @@ textarea{resize:none;min-height:52px}
 .auto-arrow{background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.15);border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--blu);cursor:pointer;-webkit-appearance:none;font-family:inherit;min-height:34px;display:inline-flex;align-items:center;gap:4px}
 
 /* SUMMARY */
-.sgr{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:9px}
-.sc{border-radius:var(--rad);padding:8px 5px;text-align:center;border:1px solid var(--brd)}
+.sgr{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:9px}
+.sc{border-radius:var(--rad);padding:8px 5px;text-align:center;border:1px solid var(--brd);transition:transform .1s ease,box-shadow .15s ease}
+.sc-clk:hover{transform:translateY(-1px)}
+.sc.sc-on{border-color:var(--blu)!important;background:rgba(59,159,212,.18)!important;box-shadow:0 0 0 1px var(--blu)}
 .sc-n{font-size:19px;font-weight:700;font-family:monospace;line-height:1}
 .sc-l{font-size:10px;font-weight:700;letter-spacing:.5px;margin-top:3px}
 .srch{width:100%;background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rad2);padding:9px 12px;font-size:13px;color:var(--txt);font-family:inherit;outline:none;margin-bottom:7px;-webkit-appearance:none}
@@ -605,10 +607,11 @@ select option {
 <!-- ═══ LISTA ═══ -->
 <div class="pg" id="pgList" style="display:none">
   <div class="sgr">
-    <div class="sc" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15)"><div class="sc-n" style="color:var(--grn)" id="sRic">0</div><div class="sc-l" style="color:rgba(59,159,212,.5)">RIC.</div></div>
-    <div class="sc" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15)"><div class="sc-n" style="color:var(--blu)" id="sUff">0</div><div class="sc-l" style="color:rgba(59,159,212,.5)">UFF.</div></div>
-    <div class="sc" style="background:rgba(91,184,224,.04);border-color:rgba(91,184,224,.15)"><div class="sc-n" style="color:var(--yel)" id="sMag">0</div><div class="sc-l" style="color:rgba(91,184,224,.5)">MAG.</div></div>
-    <div class="sc" style="background:rgba(224,85,85,.04);border-color:rgba(224,85,85,.15)"><div class="sc-n" style="color:var(--red)" id="sFin">0</div><div class="sc-l" style="color:rgba(224,85,85,.5)">FIN.</div></div>
+    <div class="sc sc-clk" id="scAll" style="background:rgba(150,150,150,.04);border-color:rgba(150,150,150,.15);cursor:pointer" onclick="quickFaseFilter('')" title="Tutte le fasi"><div class="sc-n" style="color:#ccc" id="sAll">0</div><div class="sc-l" style="color:rgba(200,200,200,.55)">TUTTE</div></div>
+    <div class="sc sc-clk" id="scRic" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15);cursor:pointer" onclick="quickFaseFilter('RICEVIMENTO')" title="Filtra: RICEVIMENTO"><div class="sc-n" style="color:var(--grn)" id="sRic">0</div><div class="sc-l" style="color:rgba(59,159,212,.5)">RIC.</div></div>
+    <div class="sc sc-clk" id="scUff" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15);cursor:pointer" onclick="quickFaseFilter('UFFICIO RESI')" title="Filtra: UFFICIO RESI"><div class="sc-n" style="color:var(--blu)" id="sUff">0</div><div class="sc-l" style="color:rgba(59,159,212,.5)">UFF.</div></div>
+    <div class="sc sc-clk" id="scMag" style="background:rgba(91,184,224,.04);border-color:rgba(91,184,224,.15);cursor:pointer" onclick="quickFaseFilter('MAGAZZINO')" title="Filtra: MAGAZZINO"><div class="sc-n" style="color:var(--yel)" id="sMag">0</div><div class="sc-l" style="color:rgba(91,184,224,.5)">MAG.</div></div>
+    <div class="sc sc-clk" id="scFin" style="background:rgba(224,85,85,.04);border-color:rgba(224,85,85,.15);cursor:pointer" onclick="quickFaseFilter('FINALE')" title="Filtra: FINALE"><div class="sc-n" style="color:var(--red)" id="sFin">0</div><div class="sc-l" style="color:rgba(224,85,85,.5)">FIN.</div></div>
   </div>
 
   <!-- FILTER BAR -->
@@ -2106,6 +2109,7 @@ function applyFilters(){
     for(var i=0;i<opts.length;i++){var o=document.createElement('option');o.textContent=opts[i];if(opts[i]===curVal)o.selected=true;statSel.appendChild(o);}
   }
   listShown=LIST_PAGE; // nuovo filtro → riparti dalla prima pagina
+  syncFaseChips();
   renderList();
 }
 
@@ -2116,7 +2120,39 @@ function resetFilters(){
   stuckOnly=false;
   var sb=document.getElementById('stuckBtn');if(sb){sb.style.background='';sb.style.color='';sb.style.borderColor='';}
   listShown=LIST_PAGE;
+  syncFaseChips();
   renderList();
+}
+
+// Filtro rapido per fase: click su una delle 5 chip sopra la lista (TUTTE/RIC/UFF/MAG/FIN).
+// Se ricliccato sulla fase gia' attiva, toglie il filtro.
+function quickFaseFilter(fase){
+  if(filterState.fase===fase) fase='';
+  filterState.fase=fase||'';
+  var sel=document.getElementById('fFase'); if(sel) sel.value=filterState.fase;
+  // Aggiorna dropdown Stato coerente col filtro fase
+  var statSel=document.getElementById('fStato');
+  if(statSel){
+    statSel.innerHTML='<option value="">Tutti gli stati</option>';
+    var opts=filterState.fase&&STATI[filterState.fase]?STATI[filterState.fase]:[];
+    if(!filterState.fase){var all={};for(var f in STATI)for(var i=0;i<STATI[f].length;i++)all[STATI[f][i]]=1;opts=Object.keys(all).sort();}
+    for(var i=0;i<opts.length;i++){var o=document.createElement('option');o.textContent=opts[i];statSel.appendChild(o);}
+    filterState.stato='';
+  }
+  listShown=LIST_PAGE;
+  syncFaseChips();
+  renderList();
+}
+
+// Evidenzia la chip fase attualmente attiva (o TUTTE se nessuna).
+function syncFaseChips(){
+  var map={'':'scAll','RICEVIMENTO':'scRic','UFFICIO RESI':'scUff','MAGAZZINO':'scMag','FINALE':'scFin'};
+  var active=filterState.fase||'';
+  for(var f in map){
+    var el=document.getElementById(map[f]); if(!el) continue;
+    if(f===active) el.classList.add('sc-on');
+    else el.classList.remove('sc-on');
+  }
 }
 
 function getFiltered(){
@@ -2434,6 +2470,11 @@ function advFase(key,fase){
     return;
   }
   var auto=AUTO_STATO[fase]||'';
+  // Fix esplicito: quando si passa a UFFICIO RESI da qualsiasi fase, lo stato iniziale
+  // deve essere sempre "OK PER UFFICIO" (segnala che l'ufficio deve prendere in carico).
+  // Difende dal caso in cui STATI['UFFICIO RESI'][0] sia stato riordinato o la cache
+  // del browser stia servendo una versione vecchia.
+  if(fase==='UFFICIO RESI') auto = 'OK PER UFFICIO';
   var ch={fase:fase,stato:auto,datSta:new Date().toISOString().slice(0,10),_lastEdit:deviceName,_role:ROLE};
   // Firma operatore quando l'articolo entra in FINALE (per contestazioni interne)
   if(fase==='FINALE'&&!r._finalBy){ ch._finalBy=deviceName; ch._finalTs=Date.now(); ch._finalRole=ROLE; }
@@ -2456,6 +2497,7 @@ function sendBackFase(key){
   if(!(ROLE_PERMS[ROLE]&&ROLE_PERMS[ROLE].canSendBack)){ toast('Non autorizzato a rimandare indietro','r'); return; }
   if(!confirm('Rimandare il reso da '+r.fase+' a '+pf+' ?')) return;
   var st=AUTO_STATO[pf]||(STATI[pf]&&STATI[pf][0])||'';
+  if(pf==='UFFICIO RESI') st='OK PER UFFICIO';
   sendMsg({type:'update',key:key,changes:{fase:pf,stato:st,datSta:new Date().toISOString().slice(0,10),_lastEdit:deviceName,_role:ROLE}});
   toast('\u2190 rimandato a '+pf,'y');
 }
@@ -2494,6 +2536,8 @@ function renderList(){
   var arr=gra(),nR=0,nU=0,nM=0,nF=0;
   for(var i=0;i<arr.length;i++){if(arr[i].fase==='RICEVIMENTO')nR++;else if(arr[i].fase==='UFFICIO RESI')nU++;else if(arr[i].fase==='MAGAZZINO')nM++;else if(arr[i].fase==='FINALE')nF++;}
   document.getElementById('sRic').textContent=nR;document.getElementById('sUff').textContent=nU;document.getElementById('sMag').textContent=nM;document.getElementById('sFin').textContent=nF;
+  var _elAll=document.getElementById('sAll'); if(_elAll) _elAll.textContent=arr.length;
+  try{ syncFaseChips(); }catch(e){}
   updBS();
   var filt=getFiltered();
   filt.sort(function(a,b){return(b._ts||0)-(a._ts||0);});
@@ -4046,8 +4090,14 @@ var CRT=(function(){var t=[],i,c,k;for(i=0;i<256;i++){c=i;for(k=0;k<8;k++)c=(c&1
 function crc(d){var c=0xFFFFFFFF,i;for(i=0;i<d.length;i++)c=CRT[(c^d[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
 function mzip(files){var i,f,nb,cs,h,off=0,offs=[],parts=[];for(i=0;i<files.length;i++){f=files[i];nb=s2u8(f.n);cs=crc(f.d);offs.push(off);h=new Uint8Array(30+nb.length);h[0]=0x50;h[1]=0x4B;h[2]=3;h[3]=4;w16(h,4,20);w32(h,14,cs);w32(h,18,f.d.length);w32(h,22,f.d.length);w16(h,26,nb.length);h.set(nb,30);parts.push(h,f.d);off+=h.length+f.d.length;}var cdS=off,cds=[];for(i=0;i<files.length;i++){f=files[i];nb=s2u8(f.n);cs=crc(f.d);h=new Uint8Array(46+nb.length);h[0]=0x50;h[1]=0x4B;h[2]=1;h[3]=2;w16(h,4,20);w16(h,6,20);w32(h,16,cs);w32(h,20,f.d.length);w32(h,24,f.d.length);w16(h,28,nb.length);w32(h,42,offs[i]);h.set(nb,46);cds.push(h);off+=h.length;}var eod=new Uint8Array(22);eod[0]=0x50;eod[1]=0x4B;eod[2]=5;eod[3]=6;w16(eod,8,files.length);w16(eod,10,files.length);w32(eod,12,off-cdS);w32(eod,16,cdS);var all=parts.concat(cds,[eod]),tot=0;for(i=0;i<all.length;i++)tot+=all[i].length;var out=new Uint8Array(tot),pos=0;for(i=0;i<all.length;i++){out.set(all[i],pos);pos+=all[i].length;}return out;}
 function cl(n){var s='';n++;while(n>0){n--;s=String.fromCharCode(65+(n%26))+s;n=Math.floor(n/26);}return s;}
-function xx(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function bsh(data,cw){var rx='';for(var ri=0;ri<data.length;ri++){var row=data[ri],cells='';for(var ci=0;ci<row.length;ci++){var cell=row[ci];if(cell===null||cell===undefined||cell==='')continue;var ref=cl(ci)+(ri+1),s=0,v=cell;if(typeof cell==='object'&&cell!==null){v=cell.v;s=cell.s||0;}if(typeof v==='number')cells+='<c r="'+ref+'" t="n" s="'+s+'"><v>'+v+'</v></c>';else cells+='<c r="'+ref+'" t="inlineStr" s="'+s+'"><is><t>'+xx(String(v))+'</t></is></c>';}rx+='<row r="'+(ri+1)+'">'+cells+'</row>';}return'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+(cw||'')+'<sheetData>'+rx+'</sheetData></worksheet>';}
+// Sanitizza per XML di Excel: prima toglie i caratteri di controllo (l'XLSX non li accetta —
+// causano "il file e' danneggiato" all'apertura, tipico dei record ECCEZIONE con note vecchie),
+// poi fa l'escape delle 5 entita' XML. Tab (\x09), LF (\x0A) e CR (\x0D) restano ammessi.
+function xx(v){return String(v==null?'':v).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');}
+function bsh(data,cw){var rx='';for(var ri=0;ri<data.length;ri++){var row=data[ri],cells='';for(var ci=0;ci<row.length;ci++){var cell=row[ci];if(cell===null||cell===undefined||cell==='')continue;var ref=cl(ci)+(ri+1),s=0,v=cell;if(typeof cell==='object'&&cell!==null){v=cell.v;s=cell.s||0;}
+// Numeri: solo se finiti (NaN/Infinity rompono Excel — "file danneggiato" all'apertura).
+if(typeof v==='number'){ if(isFinite(v)) cells+='<c r="'+ref+'" t="n" s="'+s+'"><v>'+v+'</v></c>'; else cells+='<c r="'+ref+'" t="inlineStr" s="'+s+'"><is><t>'+xx(String(v))+'</t></is></c>'; }
+else cells+='<c r="'+ref+'" t="inlineStr" s="'+s+'"><is><t>'+xx(String(v))+'</t></is></c>';}rx+='<row r="'+(ri+1)+'">'+cells+'</row>';}return'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+(cw||'')+'<sheetData>'+rx+'</sheetData></worksheet>';}
 var STY='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="10"/><name val="Calibri"/></font><font><sz val="10"/><name val="Calibri"/><b/><color rgb="FFFFFFFF"/></font><font><sz val="12"/><name val="Calibri"/><b/><color rgb="FF00e676"/></font></fonts><fills count="8"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF001a40"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF002010"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFe8f5e9"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFffebee"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFfffde7"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFe3f2fd"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FF333333"/></left><right style="thin"><color rgb="FF333333"/></right><top style="thin"><color rgb="FF333333"/></top><bottom style="thin"><color rgb="FF333333"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="7" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/></cellXfs></styleSheet>';
 var CW1='<cols><col min="1" max="1" width="12" customWidth="1"/><col min="2" max="2" width="14" customWidth="1"/><col min="3" max="3" width="12" customWidth="1"/><col min="4" max="4" width="20" customWidth="1"/><col min="5" max="5" width="7" customWidth="1"/><col min="6" max="6" width="16" customWidth="1"/><col min="7" max="7" width="7" customWidth="1"/><col min="8" max="8" width="18" customWidth="1"/><col min="9" max="9" width="10" customWidth="1"/><col min="10" max="10" width="18" customWidth="1"/><col min="11" max="11" width="14" customWidth="1"/><col min="12" max="12" width="22" customWidth="1"/><col min="13" max="13" width="26" customWidth="1"/><col min="14" max="14" width="13" customWidth="1"/><col min="15" max="15" width="13" customWidth="1"/><col min="16" max="16" width="24" customWidth="1"/><col min="17" max="17" width="11" customWidth="1"/><col min="18" max="18" width="16" customWidth="1"/><col min="19" max="19" width="10" customWidth="1"/><col min="20" max="20" width="11" customWidth="1"/><col min="21" max="21" width="16" customWidth="1"/><col min="22" max="22" width="9" customWidth="1"/><col min="23" max="23" width="11" customWidth="1"/><col min="24" max="24" width="28" customWidth="1"/><col min="25" max="25" width="22" customWidth="1"/><col min="26" max="26" width="14" customWidth="1"/></cols>';
 var LOG_HDR=['Timestamp','Utente','Ruolo','Azione','Campo','Valore Da','Valore A'];
@@ -4700,6 +4750,7 @@ function doFBConnect() {
       localStorage.setItem('fbcfg', JSON.stringify(cfg));
       document.getElementById('fbModal').style.display = 'none';
       toast('🔥 Firebase connesso! Sync attivo.', 'g');
+      try{ if(typeof initChat==='function') initChat(); }catch(e){}
     } else {
       if(st){st.textContent = msg || 'Connessione fallita';st.style.color='#E05555';st.style.background='rgba(224,85,85,.1)';st.style.display='block';}
       if(btn) btn.textContent = 'CONNETTI';
@@ -4717,6 +4768,7 @@ function ensureFB() {
   startFB(cfg, function(ok) {
     _fbConnecting = false;
     if (!ok) setTimeout(ensureFB, 5000);             // connessione fallita (rete non pronta) → ritenta
+    else { try{ if(typeof initChat==='function') initChat(); }catch(e){} }
   });
 }
 function autoFB() { ensureFB(); }
@@ -7269,8 +7321,21 @@ function openChatOverlay(){
   var ov=document.getElementById('chatOverlay');
   if(ov){ ov.style.display='flex'; }
   chatOpen=true; chatUnread=0; updateChatBadge();
+  // Se Firebase e' pronto ma la chat non e' agganciata, aggancia adesso.
+  if(!CHAT_REF && FB_REF){ try{ initChat(); }catch(e){} }
   var off=document.getElementById('chatOffline');
   if(off) off.style.display=CHAT_REF?'none':'flex';
+  // Popola subito la chat aperta con i messaggi gia' presenti su Firebase
+  // (il listener .on('value') di initChat rifira solo su cambi, quindi al primo
+  //  apertura dell'overlay senza questa fetch la finestra resterebbe vuota).
+  if(CHAT_REF){
+    try{
+      CHAT_REF.limitToLast(100).once('value').then(function(snap){
+        var msgs=[]; snap.forEach(function(c){ msgs.push(c.val()); });
+        renderChatMsgs(msgs);
+      });
+    }catch(e){}
+  }
   // Reload messages
   if(!CHAT_REF){
     var msgs=[];
@@ -7758,8 +7823,21 @@ function attachChatFile(input){
 
 // ── Dispatch message (Firebase or localStorage) ───────────────────
 function dispatchChatMsg(msg){
+  // Se Firebase e' connesso ma la chat non e' ancora inizializzata, inizializzala
+  // ora — cosi' il messaggio va comunque su Firebase e non resta locale.
+  if(!CHAT_REF && FB_REF){ try{ initChat(); }catch(e){} }
   if(CHAT_REF){
-    CHAT_REF.push(msg);
+    CHAT_REF.push(msg).catch(function(err){
+      // La scrittura Firebase e' fallita (permessi/regola): non perdere il messaggio,
+      // fallback su localStorage cosi' l'utente lo vede almeno sul proprio dispositivo.
+      var msgs=[];
+      try{msgs=JSON.parse(localStorage.getItem('localchat')||'[]');}catch(e){}
+      msgs.push(msg);
+      if(msgs.length>300)msgs=msgs.slice(-300);
+      try{localStorage.setItem('localchat',JSON.stringify(msgs));}catch(e){}
+      renderChatMsgs(msgs);
+      toast('⚠ Chat: messaggio salvato solo in locale ('+((err&&err.code)||'errore')+')','y');
+    });
   }else{
     var msgs=[];
     try{msgs=JSON.parse(localStorage.getItem('localchat')||'[]');}catch(e){}
@@ -8359,10 +8437,85 @@ function buildDbSummary(){
   }
   return { totale:arr.length, perFase:byFase, perStato:byStato, perCausale:byCausale, perFornitore:byForn, nonRendibiliPerMotivo:byMotivoNR, aging_giorni:aging, articoli_aperti:aperti.slice(0,250) };
 }
+// Contesto FORNITORI: fonde SUP_RULES (regole reso/garanzia/carcassa/contatti/note)
+// con GARANZIE_DB (documenti richiesti per la garanzia + giorni entro cui rendere).
+// Le regole modificate dall'admin (ADM_CFG.suppliers) hanno priorita' e sovrascrivono.
+// Serve al Copilota AI per rispondere a "qual e' il regolamento di X fornitore".
+function buildFornitoriContext(){
+  var out={};
+  try{
+    if(typeof SUP_RULES==='object' && SUP_RULES){
+      for(var k in SUP_RULES){ var r=SUP_RULES[k]||{}; out[k]=out[k]||{};
+        if(r.contatti)  out[k].contatti  = r.contatti;
+        if(r.sede)      out[k].sede      = r.sede;
+        if(r.corriere)  out[k].corriere  = r.corriere;
+        if(r.portale)   out[k].portale   = r.portale;
+        if(r.garanzia)  out[k].regola_garanzia = r.garanzia;
+        if(r.carcassa)  out[k].regola_carcassa = r.carcassa;
+        if(r.errato)    out[k].regola_errata_ordinazione = r.errato;
+        if(r.disdetto)  out[k].regola_disdetto = r.disdetto;
+        if(r.ritiro)    out[k].procedura_ritiro = r.ritiro;
+        if(r.note)      out[k].note      = r.note;
+      }
+    }
+  }catch(e){}
+  try{
+    if(typeof GARANZIE_DB==='object' && GARANZIE_DB){
+      for(var g in GARANZIE_DB){
+        var G=GARANZIE_DB[g]||{}; var K=g.toUpperCase();
+        out[K]=out[K]||{};
+        if(G.documenti && G.documenti.length) out[K].documenti_necessari_per_garanzia = G.documenti;
+        if(G.giorni)   out[K].giorni_massimi_per_rendere = G.giorni;
+        if(G.valoreMin!==undefined && G.valoreMin>0) out[K].valore_minimo_eur = G.valoreMin;
+        if(G.vettore)  out[K].vettore_reso = G.vettore;
+      }
+    }
+  }catch(e){}
+  // Sovrascrittura dai dati editati dall'admin (fonte di verita' condivisa via admin-config.json)
+  try{
+    var adm = (typeof ADM_CFG==='object' && ADM_CFG && ADM_CFG.suppliers) ? ADM_CFG.suppliers : [];
+    for(var i=0;i<adm.length;i++){
+      var s=adm[i]||{}; if(!s.name) continue;
+      var Kn=String(s.name).toUpperCase();
+      out[Kn]=out[Kn]||{};
+      if(s.mail)              out[Kn].contatti=Object.assign(out[Kn].contatti||{},{mail:s.mail});
+      if(s.ref)               out[Kn].contatti=Object.assign(out[Kn].contatti||{},{ref:s.ref});
+      if(s.tel)               out[Kn].contatti=Object.assign(out[Kn].contatti||{},{tel:s.tel});
+      if(s.portalUrl)         out[Kn].portale=s.portalUrl;
+      if(s.giorni_reso)       out[Kn].giorni_massimi_per_rendere=s.giorni_reso;
+      if(s.valoreMin)         out[Kn].valore_minimo_eur=s.valoreMin;
+      if(s.documenti&&s.documenti.length) out[Kn].documenti_necessari_per_garanzia=s.documenti;
+      if(s.regola_garanzia)   out[Kn].regola_garanzia=s.regola_garanzia;
+      if(s.regola_carcassa)   out[Kn].regola_carcassa=s.regola_carcassa;
+      if(s.regola_errato)     out[Kn].regola_errata_ordinazione=s.regola_errato;
+      if(s.note)              out[Kn].note=s.note;
+    }
+  }catch(e){}
+  return out;
+}
+
 function aiCopilotAsk(q){
   q=(q||'').trim(); if(!q) return;
   var ans=document.getElementById('aiCopAns'); if(ans) ans.innerHTML='<span style="color:#888">🧠 sto pensando…</span>';
-  var prompt='Sei l\'assistente del reparto resi di Telos SPA. Rispondi in ITALIANO, conciso e diretto, usando SOLO i dati JSON qui sotto (non inventare nulla; se i dati non bastano, dillo). Conteggi e filtri falli tu. Fasi del flusso: RICEVIMENTO, UFFICIO RESI, MAGAZZINO, FINALE.\n\nDATI (JSON):\n'+JSON.stringify(buildDbSummary())+'\n\nDOMANDA: '+q;
+  var fornCtx = buildFornitoriContext();
+  var promptRegoleFornitori =
+    'ANAGRAFICA REGOLE FORNITORI (bolla/modulo/libretto/diagnosi = documenti necessari; '+
+    '"giorni_massimi_per_rendere" = quanti giorni ha l\'utente dal ricevimento per rendere l\'articolo; '+
+    '"regola_garanzia" = come rendere per garanzia; "regola_carcassa" = come rendere le carcasse; '+
+    '"regola_errata_ordinazione" = come rendere per ordine sbagliato; "regola_disdetto" = come rendere se disdetto):\n'+
+    JSON.stringify(fornCtx);
+  var prompt =
+    'Sei l\'assistente del reparto resi di Telos SPA. Rispondi in ITALIANO, conciso e diretto, usando SOLO i dati JSON qui sotto (non inventare nulla; se i dati non bastano, dillo). '+
+    'Conteggi e filtri falli tu. Fasi del flusso: RICEVIMENTO, UFFICIO RESI, MAGAZZINO, FINALE.\n\n'+
+    'Quando ti chiedono "qual e\' il regolamento di X fornitore" (o simile), rispondi elencando in modo compatto: '+
+    '1) documenti da allegare (bolla/modulo/libretto/diagnosi/ricevuta/foto), '+
+    '2) entro quanti giorni si puo\' rendere, '+
+    '3) valore minimo, 4) chi paga il trasporto (regole garanzia/carcassa/errato), '+
+    '5) contatto mail e procedura ritiro se presenti, 6) eventuali note operative. '+
+    'Se un fornitore non e\' in anagrafica, dillo esplicitamente e suggerisci di aggiungerlo dal pannello admin.\n\n'+
+    'DATI RESI CORRENTI (JSON):\n'+JSON.stringify(buildDbSummary())+'\n\n'+
+    promptRegoleFornitori+'\n\n'+
+    'DOMANDA: '+q;
   aiComplete([{type:'text',text:prompt}], function(content,err){
     if(!ans) return;
     if(!content){ ans.innerHTML='<span style="color:#E05555">⚠ '+xe(err||'nessuna risposta')+'</span>'; return; }
@@ -8373,7 +8526,7 @@ function openAiCopilot(){
   if(!aiAvailable()){ toast('AI non attiva: incolla la chiave Gemini in ocr-config.js','y'); return; }
   var old=document.getElementById('aiCopBox'); if(old) old.remove();
   var u=aiUsageSummary();
-  var sugg=['Quanti resi aperti e in che fase?','Top 5 fornitori per numero di resi','Cosa è fermo da più di 15 giorni?','Quanti NON RENDIBILI e per quale motivo?'];
+  var sugg=['Quanti resi aperti e in che fase?','Top 5 fornitori per numero di resi','Cosa è fermo da più di 15 giorni?','Quanti NON RENDIBILI e per quale motivo?','Qual è il regolamento di BOSCH?','Entro quanti giorni posso rendere a STELLANTIS?','Che documenti servono per la garanzia MALO?'];
   var sh=''; for(var i=0;i<sugg.length;i++){ sh+='<button onclick="document.getElementById(\'aiCopQ\').value=this.textContent;aiCopilotAsk(this.textContent)" style="background:#1a1a1a;color:#3B9FD4;border:1px solid #2a2a2a;border-radius:7px;padding:6px 10px;font-size:11px;cursor:pointer;margin:0 4px 6px 0">'+xe(sugg[i])+'</button>'; }
   var box=document.createElement('div'); box.id='aiCopBox';
   box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1400;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto;-webkit-overflow-scrolling:touch';
@@ -9861,8 +10014,28 @@ function admRender_suppliers(){
   return h;
 }
 function admSupEdit(i){
-  var s = i>=0 ? ADM_CFG.suppliers[i] : {name:'',code:'',mail:'',tel:'',ref:'',portalUrl:'',note:'',logoData:'',categories:[],active:true};
+  var s = i>=0 ? ADM_CFG.suppliers[i] : {name:'',code:'',mail:'',tel:'',ref:'',portalUrl:'',note:'',logoData:'',categories:[],active:true,
+    giorni_reso:'',documenti:[],regola_garanzia:'',regola_carcassa:'',regola_errato:'',valoreMin:''};
+  // Se il fornitore esiste in GARANZIE_DB / SUP_RULES lato client, pre-carica i valori
+  // cosi' l'admin trova subito i regolamenti gia' compilati (li puo' correggere).
+  try{
+    var K = String(s.name||'').toUpperCase();
+    if(typeof GARANZIE_DB!=='undefined' && GARANZIE_DB[K]){
+      var g=GARANZIE_DB[K];
+      if(!s.giorni_reso && g.giorni)   s.giorni_reso = g.giorni;
+      if((!s.documenti||!s.documenti.length) && g.documenti) s.documenti = g.documenti.slice();
+      if(!s.valoreMin && g.valoreMin)  s.valoreMin = g.valoreMin;
+    }
+    if(typeof SUP_RULES!=='undefined' && SUP_RULES[K]){
+      var r=SUP_RULES[K];
+      if(!s.regola_garanzia && r.garanzia) s.regola_garanzia = r.garanzia;
+      if(!s.regola_carcassa && r.carcassa) s.regola_carcassa = r.carcassa;
+      if(!s.regola_errato && r.errato)     s.regola_errato = r.errato;
+    }
+  }catch(e){}
   var cats = (ADM_CFG.categories||[]);
+  var DOCS_STD = ['BOLLA','MODULO','LIBRETTO','DIAGNOSI','RICEVUTA','RELAZIONE','FATTURA A COSTO 0','FOTO SCATOLA','FOTO PEZZO','FOTO ETICHETTA'];
+  var supDocs = s.documenti||[];
   var h = '<div class="admCard"><h3>'+(i>=0?'Modifica fornitore':'Nuovo fornitore')+'</h3>'+
     '<div class="admRow"><div><label class="admLbl">Nome</label><input class="admIn" id="sNm" value="'+admEsc(s.name||'')+'"></div>'+
     '<div><label class="admLbl">Codice</label><input class="admIn" id="sCd" value="'+admEsc(s.code||'')+'"></div></div>'+
@@ -9875,6 +10048,18 @@ function admSupEdit(i){
     '<div id="sCats">'+cats.map(function(c){var sel=(s.categories||[]).indexOf(c)>=0;return '<label style="display:inline-flex;align-items:center;gap:5px;margin:2px 8px 2px 0;font-size:12px;color:#c6d4e2"><input type="checkbox" value="'+admEsc(c)+'"'+(sel?' checked':'')+'> '+admEsc(c)+'</label>';}).join('')+'</div>'+
     (cats.length?'':'<div style="font-size:11px;color:#5c6b7d">Nessuna categoria definita. Aggiungine dalla sezione Categorie.</div>')+
     '</div></div>'+
+    // ── SEZIONE REGOLAMENTO RESO (usata dal Copilota AI) ──────────────────────
+    '<div style="margin:16px 0 6px;padding:8px 10px;background:rgba(59,159,212,.08);border-left:3px solid #3B9FD4;border-radius:4px;color:#3B9FD4;font-weight:800;font-size:12px">📋 REGOLAMENTO RESO (il Copilota AI usa queste info per rispondere alle domande sul fornitore)</div>'+
+    '<div class="admRow"><div><label class="admLbl">Giorni entro cui rendere</label><input class="admIn" id="sGg" placeholder="es. 15" value="'+admEsc(s.giorni_reso||'')+'"></div>'+
+    '<div><label class="admLbl">Valore minimo (€)</label><input class="admIn" id="sVm" placeholder="es. 25" value="'+admEsc(s.valoreMin||'')+'"></div></div>'+
+    '<div class="admRow"><div style="grid-column:1/-1"><label class="admLbl">Documenti da allegare al reso</label>'+
+    '<div id="sDocs" style="display:flex;flex-wrap:wrap;gap:6px 12px">'+DOCS_STD.map(function(d){var sel=supDocs.indexOf(d)>=0;return '<label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#c6d4e2"><input type="checkbox" value="'+admEsc(d)+'"'+(sel?' checked':'')+'> '+admEsc(d)+'</label>';}).join('')+'</div>'+
+    '<input class="admIn" id="sDocsExtra" placeholder="Altri (separati da virgola)" value="'+admEsc((supDocs.filter(function(x){return DOCS_STD.indexOf(x)<0;})).join(', '))+'" style="margin-top:6px">'+
+    '</div></div>'+
+    '<div class="admRow"><div style="grid-column:1/-1"><label class="admLbl">Regola per GARANZIA</label><textarea class="admIn" id="sRg" placeholder="es. porto assegnato loro, imballo originale" style="min-height:52px;resize:vertical">'+admEsc(s.regola_garanzia||'')+'</textarea></div></div>'+
+    '<div class="admRow"><div style="grid-column:1/-1"><label class="admLbl">Regola per CARCASSA (old core)</label><textarea class="admIn" id="sRc" placeholder="es. entro 1 anno emissione doc, integra, non arrugginita" style="min-height:52px;resize:vertical">'+admEsc(s.regola_carcassa||'')+'</textarea></div></div>'+
+    '<div class="admRow"><div style="grid-column:1/-1"><label class="admLbl">Regola per ERRATA ORDINAZIONE</label><textarea class="admIn" id="sRe" placeholder="es. porto franco, entro 14 giorni" style="min-height:52px;resize:vertical">'+admEsc(s.regola_errato||'')+'</textarea></div></div>'+
+    // ── FINE SEZIONE ──────────────────────────────────────────────────────────
     '<div class="admRow"><div><label class="admLbl">Note</label><input class="admIn" id="sNt" value="'+admEsc(s.note||'')+'"></div>'+
     '<div style="max-width:150px"><label class="admLbl">Stato</label><div style="padding:9px 0"><label class="admSw"><input type="checkbox" id="sAc"'+(s.active!==false?' checked':'')+'><span></span></label></div></div></div>'+
     '<div style="display:flex;gap:9px;margin-top:12px"><button class="admBtn pri" onclick="admSupSave('+i+')">💾 Salva</button>'+
@@ -9887,12 +10072,22 @@ function admSupSave(i){
   if(!nm){ admToast('Nome obbligatorio','err'); return; }
   var cats = [];
   document.querySelectorAll('#sCats input:checked').forEach(function(el){ cats.push(el.value); });
+  var docs = [];
+  document.querySelectorAll('#sDocs input:checked').forEach(function(el){ docs.push(el.value); });
+  var extra = (document.getElementById('sDocsExtra')||{}).value||'';
+  extra.split(',').forEach(function(x){ x=x.trim(); if(x) docs.push(x.toUpperCase()); });
   var neu = {
     name: nm.toUpperCase(), code: document.getElementById('sCd').value.trim(),
     mail: document.getElementById('sEm').value.trim().toLowerCase(), tel: document.getElementById('sTl').value.trim(),
     ref: document.getElementById('sRf').value.trim().toUpperCase(), portalUrl: document.getElementById('sUrl').value.trim(),
     logoData: document.getElementById('sLg').value.trim(), note: document.getElementById('sNt').value.trim(),
-    categories: cats, active: document.getElementById('sAc').checked
+    categories: cats, active: document.getElementById('sAc').checked,
+    giorni_reso: (document.getElementById('sGg')||{}).value||'',
+    valoreMin:   (document.getElementById('sVm')||{}).value||'',
+    documenti:   docs,
+    regola_garanzia: (document.getElementById('sRg')||{}).value||'',
+    regola_carcassa: (document.getElementById('sRc')||{}).value||'',
+    regola_errato:   (document.getElementById('sRe')||{}).value||''
   };
   if(i>=0){ var old = lst[i]; lst[i] = Object.assign({}, old, neu); admLog('suppliers','update','sup['+nm+']', JSON.stringify(old).slice(0,200), JSON.stringify(neu).slice(0,200)); admCommit('suppliers','update','Fornitore aggiornato'); }
   else { lst.push(neu); admLog('suppliers','create','sup', '', nm); admCommit('suppliers','create','Fornitore creato'); }
