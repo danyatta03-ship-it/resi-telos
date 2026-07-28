@@ -396,7 +396,7 @@ select option {
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34p · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34r · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -898,7 +898,12 @@ select option {
     <div style="font-size:11px;color:var(--txt2);margin-bottom:8px;line-height:1.6" id="dbHead">
       Database Trimestre · <strong style="color:var(--grn)" id="dbCount">— righe</strong>
     </div>
-    <script>(function updDbHead(){var el=document.getElementById('dbCount');if(el && typeof DB_TRI!=='undefined')el.textContent=(DB_TRI.length||0).toLocaleString('it-IT')+' righe';})();</script>
+    <script>
+    // Conteggio righe dello storico. Va richiamata anche a dati caricati:
+    // db_tri.json arriva dopo l'avvio, al primo giro l'elenco è ancora vuoto.
+    function updDbHead(){var el=document.getElementById('dbCount');if(el && typeof DB_TRI!=='undefined')el.textContent=(DB_TRI.length||0).toLocaleString('it-IT')+' righe';}
+    updDbHead();
+    </script>
     <!-- Ricerca globale -->
     <input class="srch" id="dbSrch" placeholder="🔍 Cerca in tutte le colonne..." oninput="renderDB(1)" style="margin-bottom:7px;font-size:14px;width:100%;display:block;box-sizing:border-box">
     <!-- Filtri riga 1 -->
@@ -929,7 +934,7 @@ select option {
 
   <div id="hPanForn" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34p</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34r</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
   <!-- Sub-tabs LOGISTICA -->
@@ -1083,6 +1088,7 @@ window._dataReady = Promise.all([
   // senza questo passaggio i record trimestre restano senza _key (la ricerca
   // globale non riesce ad aprirli) e senza _frozen (permessi di modifica errati).
   try{ if(typeof initTriKeys==='function') initTriKeys(); }catch(e){}
+  try{ if(typeof updDbHead==='function') updDbHead(); }catch(e){}   // contatore righe storico
   try{ console.log('[data] loaded — DB_TRI='+DB_TRI.length+' CLI_DATA='+Object.keys(CLI_DATA).length+' CLI_AGENTS='+CLI_AGENTS.agents.length); }catch(e){}
 });
 </script>
@@ -1724,6 +1730,11 @@ function initTriKeys(){
     var r=DB_TRI[i];
     if(!r._key) r._key = 'tri_'+i;
     r._frozen = true;                                 // marker: origine storico trimestre
+    // Nel file dello storico prezzo e quantità sono testo ("59.413", "1").
+    // Convertiti qui una volta sola: a valle vengono sommati e formattati come
+    // numeri, e una stringa faceva concatenare i totali e fallire toFixed().
+    if(typeof r.prc!=='number') r.prc = parseFloat(String(r.prc).replace(',','.')) || 0;
+    if(typeof r.qty!=='number') r.qty = parseInt(r.qty,10) || 1;
   }
   return DB_TRI.length;
 }
@@ -2047,8 +2058,20 @@ function renderAll(){
   var pq=document.getElementById('pgQ');    if(pq&&pq.style.display!=='none') renderQueue();
 }
 
+// Prezzo come numero, qualunque cosa sia arrivata (testo dallo storico, dato
+// sincronizzato da un'altra postazione, campo vuoto). Senza questa conversione
+// una stringa faceva concatenare i totali e mandava in errore toFixed().
+function nprc(v){
+  if(typeof v==='number') return isFinite(v)?v:0;
+  if(v==null||v==='') return 0;
+  var n=parseFloat(String(v).replace(',','.'));
+  return isFinite(n)?n:0;
+}
+// Prezzo formattato per la visualizzazione: stringa vuota se non c'\u00E8 importo.
+function eur(v){ var n=nprc(v); return n>0 ? '\u20AC'+n.toFixed(2) : ''; }
+
 function updBS(){
-  var arr=gra(),tot=0;for(var i=0;i<arr.length;i++)tot+=arr[i].prc||0;
+  var arr=gra(),tot=0;for(var i=0;i<arr.length;i++)tot+=nprc(arr[i].prc);
   document.getElementById('botN').textContent=arr.length;
   document.getElementById('botE').textContent='\u20AC'+(tot>=1000?(tot/1000).toFixed(1)+'k':tot.toFixed(2));
   var b=document.getElementById('nbadge');if(b){if(arr.length){b.style.display='inline-flex';b.textContent=arr.length;}else b.style.display='none';}
@@ -2504,7 +2527,7 @@ function renderList(){
     html+='<div class="ac-cod">'+(r.pre?'<span style="color:var(--ora);margin-right:4px">'+xe(r.pre)+'</span>':'')+xe(r.cod)+(r.photoThumb?' <span onclick="viewPhoto(\''+xe(r._key||'')+'\')" style="cursor:pointer" title="Vedi foto">\ud83d\udcf7</span>':(r.photo?' \ud83d\udcf7':''))+'</div>';
     if(r.forn) html+='<div style="font-size:11px;color:#3B9FD4;font-weight:700;margin-top:2px;letter-spacing:.3px">'+xe(r.forn)+'</div>';
     html+='</div><div style="text-align:right">';
-    html+='<div class="ac-price">'+(r.prc>0?'\u20AC'+r.prc.toFixed(2):'\u2014')+'</div>';
+    html+='<div class="ac-price">'+(eur(r.prc)||'\u2014')+'</div>';
     html+='<div class="ac-date">'+fd(r.datArr)+'</div>';
     html+='</div></div>';
     // Ogni chip ha la sua micro-label sopra (flusso/entrata/qt/causale/stato/rma/uscita)
@@ -2608,7 +2631,7 @@ function renderArchive(){
     html+='<div style="display:flex;justify-content:space-between"><div>';
     html+='<div class="arc-cod">'+(r.pre?'<span style="color:var(--ora);margin-right:4px">'+xe(r.pre)+'</span>':'')+xe(r.cod)+'</div>';
     html+='<div class="arc-sogg">'+xe(r.sogg||'—')+'</div>';
-    html+='</div><div style="text-align:right"><div style="font-size:11px;color:var(--yel);font-family:monospace">'+(r.prc>0?'\u20AC'+r.prc.toFixed(2):'')+'</div><div style="font-size:9px;color:var(--txt3)">Arch. '+dt+'</div></div></div>';
+    html+='</div><div style="text-align:right"><div style="font-size:11px;color:var(--yel);font-family:monospace">'+eur(r.prc)+'</div><div style="font-size:9px;color:var(--txt3)">Arch. '+dt+'</div></div></div>';
     html+='<div class="ac-chips" style="margin-top:5px"><span class="chip cy">'+xe(r.stato||'—')+'</span><span class="chip cn">'+xe(r.causale||'')+'</span>';
     if(r.vetUsc) html+='<span class="chip cb">→ '+xe(r.vetUsc)+'</span>';
     html+='</div>';
@@ -3250,7 +3273,17 @@ function resetDbFilters(){
 }
 
 function renderDB(pg){
-  if(!DB_TRI){ loadDB(function(){ renderDB(1); }); return; }
+  // Lo storico arriva da db_tri.json dopo l'avvio: se non è ancora pronto
+  // segnalo l'attesa e ridisegno da solo appena i dati ci sono.
+  // (Prima qui si chiamava loadDB(), una funzione che non esiste: la condizione
+  //  non scattava mai perché l'elenco parte come array vuoto, non come nullo.)
+  if(!DB_TRI || !DB_TRI.length){
+    if(window._dataReady && !window._dataReady._done){
+      var cnt0=document.getElementById('dbCount'); if(cnt0)cnt0.textContent='caricamento…';
+      window._dataReady.then(function(){ try{ renderDB(pg||1); }catch(e){} });
+      return;
+    }
+  }
   dbShownCount = 50;
   var filt=getDBFiltered();
   var tot=filt.length;
@@ -5861,10 +5894,14 @@ var CON_PAGE=0, CON_PP=80;
 
 function renderContatti(){
   var el=document.getElementById('conList');if(!el)return;
-  if(!CLI_DATA){
-    loadCLI(function(){renderContatti();});
-    el.innerHTML='<div style="text-align:center;padding:24px;color:#3B9FD4;font-size:12px">Caricamento clienti...</div>';
-    return;
+  // L'anagrafica clienti arriva da cli_data.json dopo l'avvio: mostro l'attesa
+  // e ridisegno appena è disponibile. (Prima si chiamava loadCLI(), inesistente.)
+  if(!CLI_DATA || !Object.keys(CLI_DATA).length){
+    if(window._dataReady && !window._dataReady._done){
+      el.innerHTML='<div style="text-align:center;padding:24px;color:#3B9FD4;font-size:12px">Caricamento clienti…</div>';
+      window._dataReady.then(function(){ try{ renderContatti(); }catch(e){} });
+      return;
+    }
   }
   loadEmails();
   var q=((document.getElementById('conSearch')||{}).value||'').trim().toUpperCase();
@@ -9568,6 +9605,12 @@ function admEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){r
 
 // ── Persistenza ibrida (Firebase se disponibile, altrimenti localStorage) ──
 function admDefaults(){
+  // Entrando col PIN si salta launchApp(), che è l'unico punto in cui l'elenco
+  // fornitori predefinito viene creato: senza questo il pannello mostrerebbe
+  // zero fornitori e, esportando la configurazione, li cancellerebbe ovunque.
+  try{
+    if(typeof supDb!=='undefined' && !supDb.length && typeof initDefaultSuppliers==='function') initDefaultSuppliers();
+  }catch(e){}
   return {
     users: [],
     suppliers: (typeof supDb!=='undefined' && supDb.length) ? supDb.slice() : [],
@@ -9640,7 +9683,10 @@ function admSave(){
 function _admApplyToApp(){
   if(!ADM_CFG) return;
   try{
-    if(Array.isArray(ADM_CFG.suppliers) && typeof supDb!=='undefined'){
+    // Applico l'elenco fornitori solo se contiene qualcosa: una lista vuota
+    // arrivata da una configurazione incompleta cancellerebbe l'anagrafica
+    // su ogni dispositivo che la riceve.
+    if(Array.isArray(ADM_CFG.suppliers) && ADM_CFG.suppliers.length && typeof supDb!=='undefined'){
       supDb.length = 0;
       for(var i=0;i<ADM_CFG.suppliers.length;i++) supDb.push(ADM_CFG.suppliers[i]);
       try{ localStorage.setItem('supdb', JSON.stringify(supDb)); }catch(e){}
