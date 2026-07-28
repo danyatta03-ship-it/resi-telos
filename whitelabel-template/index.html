@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="App">
+<meta name="theme-color" content="#111">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>White Label · App</title>
+
+<!-- Brand loader: legge brand-config.json + app-config.json e li espone come
+     window.BRAND / window.APP. Applica CSS variables, title, favicon, ecc. -->
+<script src="brand-loader.js"></script>
+
+<style>
+:root {
+  /* Le variabili --wl-* sono impostate a runtime da brand-loader.js.
+     I fallback qui sotto vengono usati solo se il loader non ha ancora
+     applicato il brand (primo paint) o se manca brand-config.json. */
+  --wl-primary:#3B9FD4; --wl-primary-dark:#2980B9;
+  --wl-secondary:#5BB8E0; --wl-accent:#2ECC71;
+  --wl-success:#2ECC71; --wl-warning:#E6B03C; --wl-danger:#E05555; --wl-info:#3B9FD4;
+  --wl-bg:#080808; --wl-bg1:#111; --wl-bg2:#1a1a1a; --wl-bg3:#222;
+  --wl-border:#2a2a2a; --wl-border2:#333;
+  --wl-text:#fff; --wl-text2:#e0e0e0; --wl-text3:#999;
+  --wl-sidebar:#0f1826; --wl-sidebar-text:#c6d4e2;
+  --wl-header:#111; --wl-header-text:#fff;
+  --wl-font:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  --wl-font-size:16px;
+  --wl-rad:10px; --wl-rad-sm:7px;
+}
+
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; background:var(--wl-bg); color:var(--wl-text);
+  font-family:var(--wl-font); font-size:var(--wl-font-size); overflow:hidden; }
+
+/* ═══ LAYOUT ═══ */
+#app { display:grid; grid-template-columns:220px 1fr; grid-template-rows:56px 1fr;
+       height:100vh; grid-template-areas:"side head" "side main"; }
+@media (max-width:800px) { #app { grid-template-columns:1fr; grid-template-areas:"head" "main"; }
+                            #sideNav { display:none; } }
+#sideNav { grid-area:side; background:var(--wl-sidebar); color:var(--wl-sidebar-text);
+           padding:16px 12px; overflow-y:auto; border-right:1px solid var(--wl-border); }
+#header { grid-area:head; background:var(--wl-header); color:var(--wl-header-text);
+          display:flex; align-items:center; padding:0 18px; gap:14px;
+          border-bottom:1px solid var(--wl-border); }
+#main   { grid-area:main; overflow-y:auto; padding:18px; -webkit-overflow-scrolling:touch; }
+
+/* ═══ SIDEBAR ═══ */
+.brand-block { display:flex; align-items:center; gap:10px; padding:6px 4px 16px;
+               border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:12px; }
+.brand-logo { width:36px; height:36px; background:var(--wl-primary);
+              border-radius:8px; display:flex; align-items:center; justify-content:center;
+              font-size:20px; font-weight:800; color:#fff; overflow:hidden; }
+.brand-logo img { width:100%; height:100%; object-fit:cover; }
+.brand-name { font-size:14px; font-weight:800; letter-spacing:.3px; color:#fff; }
+.brand-sub  { font-size:10px; color:rgba(255,255,255,.55); letter-spacing:.5px; }
+
+.nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px;
+            border-radius:var(--wl-rad-sm); cursor:pointer; font-size:13px;
+            color:var(--wl-sidebar-text); margin-bottom:2px;
+            transition:background .12s, color .12s; }
+.nav-item:hover { background:rgba(255,255,255,.05); color:#fff; }
+.nav-item.on { background:var(--wl-primary); color:#fff; }
+.nav-item .ic { font-size:16px; width:20px; text-align:center; }
+.nav-sep { height:1px; background:rgba(255,255,255,.08); margin:12px 0; }
+.nav-label { font-size:9px; letter-spacing:1.2px; color:rgba(255,255,255,.4);
+             padding:4px 12px 4px; font-weight:700; }
+
+/* ═══ HEADER ═══ */
+.hdr-title { font-size:15px; font-weight:700; flex:1; }
+.hdr-user { display:flex; align-items:center; gap:8px; font-size:12px;
+            padding:6px 10px; background:rgba(255,255,255,.05);
+            border-radius:20px; cursor:pointer; }
+.hdr-user .role-badge { padding:2px 8px; border-radius:10px; font-size:10px;
+                        font-weight:700; background:var(--wl-primary); color:#fff; }
+
+/* ═══ CARDS / BOTTONI ═══ */
+.card { background:var(--wl-bg1); border:1px solid var(--wl-border);
+        border-radius:var(--wl-rad); padding:14px; margin-bottom:12px; }
+.card-h { font-size:13px; font-weight:700; color:var(--wl-text2); margin-bottom:10px;
+          display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.card-h .actions { display:flex; gap:6px; }
+
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
+       background:var(--wl-primary); color:#fff; border:none; padding:9px 14px;
+       border-radius:var(--wl-rad-sm); font-size:13px; font-weight:600; cursor:pointer;
+       font-family:inherit; -webkit-appearance:none; transition:transform .08s, filter .12s; }
+.btn:hover { filter:brightness(1.1); }
+.btn:active { transform:scale(.97); }
+.btn.ghost { background:transparent; border:1px solid var(--wl-border2); color:var(--wl-text2); }
+.btn.danger { background:var(--wl-danger); }
+.btn.success { background:var(--wl-success); }
+.btn.sm { padding:5px 10px; font-size:11px; }
+.btn.icon { width:32px; height:32px; padding:0; }
+.btn-add { display:inline-flex; align-items:center; gap:6px; background:transparent;
+           border:1.5px dashed var(--wl-border2); color:var(--wl-text3);
+           padding:10px 14px; border-radius:var(--wl-rad-sm); font-size:12px;
+           font-weight:700; cursor:pointer; font-family:inherit; -webkit-appearance:none;
+           transition:border-color .15s, color .15s; }
+.btn-add:hover { border-color:var(--wl-primary); color:var(--wl-primary); }
+
+/* ═══ FORM ═══ */
+.field { margin-bottom:12px; }
+.field label { display:block; font-size:11px; font-weight:700; color:var(--wl-text3);
+               margin-bottom:4px; letter-spacing:.3px; text-transform:uppercase; }
+.field input, .field select, .field textarea {
+  width:100%; background:var(--wl-bg2); color:var(--wl-text); border:1px solid var(--wl-border2);
+  border-radius:var(--wl-rad-sm); padding:9px 11px; font-size:13px; outline:none;
+  font-family:inherit; -webkit-appearance:none;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color:var(--wl-primary); }
+.field textarea { min-height:70px; resize:vertical; }
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+/* ═══ CHIPS / BADGES ═══ */
+.chip { display:inline-flex; align-items:center; gap:4px; padding:2px 8px;
+        border-radius:12px; font-size:11px; font-weight:700; background:var(--wl-bg2);
+        color:var(--wl-text2); border:1px solid var(--wl-border); }
+
+/* ═══ TABLE ═══ */
+.tbl { width:100%; border-collapse:collapse; font-size:12px; }
+.tbl th { text-align:left; padding:8px 10px; font-size:10px; letter-spacing:.5px;
+          color:var(--wl-text3); border-bottom:1px solid var(--wl-border);
+          background:var(--wl-bg2); }
+.tbl td { padding:9px 10px; border-bottom:1px solid var(--wl-border); }
+.tbl tr:hover td { background:var(--wl-bg2); }
+.tbl-scroll { overflow-x:auto; }
+
+/* ═══ MODAL ═══ */
+.modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:900;
+            display:flex; align-items:center; justify-content:center; padding:16px; }
+.modal { background:var(--wl-bg1); border:1px solid var(--wl-border2);
+         border-radius:14px; padding:22px; width:100%; max-width:520px;
+         max-height:90vh; overflow-y:auto; }
+.modal-h { display:flex; align-items:center; justify-content:space-between;
+           margin-bottom:16px; padding-bottom:10px; border-bottom:1px solid var(--wl-border); }
+.modal-h h3 { font-size:15px; font-weight:700; }
+.modal-x { background:none; border:none; color:var(--wl-text3); font-size:22px;
+           cursor:pointer; padding:0 4px; }
+
+/* ═══ TOAST ═══ */
+#toastArea { position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+             z-index:1500; display:flex; flex-direction:column; gap:8px; }
+.toast { padding:11px 18px; border-radius:22px; font-size:13px; font-weight:600;
+         background:var(--wl-bg2); color:var(--wl-text); border:1px solid var(--wl-border2);
+         min-width:240px; text-align:center; animation:slideUp .25s ease; }
+.toast.success { background:rgba(46,204,113,.15); border-color:var(--wl-success); color:var(--wl-success); }
+.toast.danger  { background:rgba(224,85,85,.15);  border-color:var(--wl-danger);  color:var(--wl-danger);  }
+.toast.warning { background:rgba(230,176,60,.15); border-color:var(--wl-warning); color:var(--wl-warning); }
+@keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+
+/* ═══ EMPTY STATE ═══ */
+.empty { text-align:center; padding:48px 20px; color:var(--wl-text3); }
+.empty .icon { font-size:56px; margin-bottom:12px; opacity:.5; }
+.empty h4 { font-size:15px; margin-bottom:8px; color:var(--wl-text2); }
+.empty p { font-size:12px; margin-bottom:16px; }
+
+/* ═══ DASHBOARD GRID ═══ */
+.dash-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; }
+.stat-card { background:var(--wl-bg1); border:1px solid var(--wl-border);
+             border-radius:var(--wl-rad); padding:14px; text-align:center;
+             transition:transform .12s, border-color .12s; }
+.stat-card:hover { transform:translateY(-2px); border-color:var(--wl-primary); }
+.stat-card .n { font-size:28px; font-weight:800; color:var(--wl-primary); font-family:monospace; }
+.stat-card .l { font-size:10px; color:var(--wl-text3); margin-top:4px; letter-spacing:.5px; text-transform:uppercase; }
+
+/* ═══ LOGIN ═══ */
+#loginScreen { position:fixed; inset:0; background:var(--wl-bg); display:flex;
+               align-items:center; justify-content:center; z-index:800; padding:20px; }
+.login-box { background:var(--wl-bg1); border:1px solid var(--wl-border2);
+             border-radius:14px; padding:32px 28px; width:100%; max-width:380px; }
+.login-brand { text-align:center; margin-bottom:24px; }
+.login-brand .logo-big { width:64px; height:64px; margin:0 auto 12px; background:var(--wl-primary);
+                        border-radius:14px; display:flex; align-items:center; justify-content:center;
+                        font-size:32px; font-weight:800; color:#fff; overflow:hidden; }
+.login-brand .logo-big img { width:100%; height:100%; object-fit:cover; }
+.login-brand h1 { font-size:20px; margin-bottom:4px; }
+.login-brand p { font-size:12px; color:var(--wl-text3); }
+.role-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+.role-btn { background:var(--wl-bg2); border:1px solid var(--wl-border2); border-radius:var(--wl-rad-sm);
+            padding:14px 10px; text-align:center; cursor:pointer; transition:all .12s; }
+.role-btn:hover { border-color:var(--wl-primary); }
+.role-btn.on { border-color:var(--wl-primary); background:rgba(59,159,212,.08); }
+.role-btn .role-ic { font-size:24px; margin-bottom:4px; }
+.role-btn .role-nm { font-size:11px; font-weight:700; color:var(--wl-text2); }
+
+/* ═══ ADMIN LIST ITEMS (fasi, stati, ruoli, campi) ═══ */
+.list-item { display:flex; align-items:center; gap:10px; padding:10px 12px;
+             background:var(--wl-bg2); border:1px solid var(--wl-border);
+             border-radius:var(--wl-rad-sm); margin-bottom:6px; }
+.list-item .li-ic { font-size:18px; width:28px; text-align:center; }
+.list-item .li-body { flex:1; min-width:0; }
+.list-item .li-title { font-size:13px; font-weight:700; }
+.list-item .li-sub { font-size:11px; color:var(--wl-text3); margin-top:2px; }
+.list-item .li-actions { display:flex; gap:4px; }
+
+/* ═══ TOGGLE SWITCH ═══ */
+.switch { position:relative; display:inline-block; width:44px; height:24px; }
+.switch input { opacity:0; width:0; height:0; }
+.switch .slider { position:absolute; cursor:pointer; inset:0; background:var(--wl-border2);
+                  border-radius:24px; transition:.2s; }
+.switch .slider:before { content:""; position:absolute; height:18px; width:18px; left:3px;
+                         bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
+.switch input:checked + .slider { background:var(--wl-success); }
+.switch input:checked + .slider:before { transform:translateX(20px); }
+
+.color-preview { display:inline-block; width:22px; height:22px; border-radius:5px;
+                 border:1px solid var(--wl-border2); vertical-align:middle; margin-right:6px; }
+
+.hidden { display:none !important; }
+</style>
+</head>
+
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LOGIN SCREEN
+     ═══════════════════════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-brand">
+      <div class="logo-big" id="loginLogo">
+        <span data-brand="app.shortName">App</span>
+      </div>
+      <h1 data-brand="app.name">My App</h1>
+      <p data-brand="app.subtitle">Gestione pratiche</p>
+    </div>
+
+    <div class="field">
+      <label>Il tuo nome</label>
+      <input id="loginName" placeholder="Nome operatore" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label>Seleziona ruolo</label>
+      <div class="role-grid" id="roleGrid"><!-- popolato da JS --></div>
+    </div>
+
+    <button class="btn" onclick="doLogin()" style="width:100%;padding:12px">Accedi</button>
+    <p style="text-align:center;font-size:10px;color:var(--wl-text3);margin-top:14px">
+      Suggerimento: scrivi il PIN admin nel campo nome per aprire il pannello di configurazione.
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     APP LAYOUT (nascosto finche' non c'e' login)
+     ═══════════════════════════════════════════════════════════ -->
+<div id="app" class="hidden">
+  <!-- SIDEBAR -->
+  <aside id="sideNav">
+    <div class="brand-block">
+      <div class="brand-logo" id="brandLogo"><span data-brand="app.shortName">App</span></div>
+      <div>
+        <div class="brand-name" data-brand="app.name">My App</div>
+        <div class="brand-sub"  data-brand="app.subtitle">Gestione pratiche</div>
+      </div>
+    </div>
+
+    <div class="nav-label">MENU</div>
+    <div class="nav-item on" data-view="dashboard" onclick="showView('dashboard')"><span class="ic">📊</span>Dashboard</div>
+    <div class="nav-item"    data-view="records"   onclick="showView('records')"><span class="ic" data-app="entity.iconEmoji">📋</span><span data-app="entity.plural">Record</span></div>
+    <div class="nav-item"    data-view="add"       onclick="showView('add')"><span class="ic">➕</span>Nuovo</div>
+
+    <div class="nav-sep"></div>
+    <div class="nav-label">SISTEMA</div>
+    <div class="nav-item"    data-view="admin"     onclick="showView('admin')"><span class="ic">⚙️</span>Configurazione</div>
+    <div class="nav-item"    onclick="doLogout()"><span class="ic">🚪</span>Esci</div>
+  </aside>
+
+  <!-- HEADER -->
+  <header id="header">
+    <div class="hdr-title" id="hdrTitle">Dashboard</div>
+    <div class="hdr-user" id="hdrUser" onclick="showUserMenu()">
+      <span id="hdrUserName">—</span>
+      <span class="role-badge" id="hdrUserRole">—</span>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main id="main">
+    <div id="viewDashboard" class="view"><!-- popolato dinamicamente --></div>
+    <div id="viewRecords"   class="view hidden"></div>
+    <div id="viewAdd"       class="view hidden"></div>
+    <div id="viewAdmin"     class="view hidden"></div>
+    <div id="viewRecord"    class="view hidden"><!-- dettaglio singolo record --></div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL CONTAINER
+     ═══════════════════════════════════════════════════════════ -->
+<div id="modalRoot"></div>
+<div id="toastArea"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     APP LOGIC
+     ═══════════════════════════════════════════════════════════ -->
+<script src="app.js"></script>
+<script src="admin.js"></script>
+<script>
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js').catch(function(){});
+    });
+  }
+</script>
+
+</body>
+</html>

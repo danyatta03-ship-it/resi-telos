@@ -1,0 +1,15 @@
+{
+  "name": "My App",
+  "short_name": "App",
+  "description": "White Label · Piattaforma configurabile",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080808",
+  "theme_color": "#111111",
+  "lang": "it",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

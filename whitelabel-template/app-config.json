@@ -1,0 +1,78 @@
+{
+  "version": 1,
+
+  "entity": {
+    "singular": "Pratica",
+    "plural": "Pratiche",
+    "iconEmoji": "📋",
+    "idPrefix": "PRT-"
+  },
+
+  "phases": [
+    { "id": "new",       "name": "NUOVO",       "icon": "📥", "color": "#3B9FD4", "order": 1 },
+    { "id": "working",   "name": "IN LAVORO",   "icon": "⚙️",  "color": "#E6B03C", "order": 2 },
+    { "id": "review",    "name": "IN REVISIONE","icon": "👁", "color": "#8859E5", "order": 3 },
+    { "id": "closed",    "name": "CHIUSO",      "icon": "✅", "color": "#2ECC71", "order": 4 }
+  ],
+
+  "states": {
+    "new":     [ "DA GESTIRE", "IN ATTESA INFO", "STALLO" ],
+    "working": [ "IN CORSO", "SOSPESO", "BLOCCATO" ],
+    "review":  [ "OK PER REVISIONE", "MODIFICHE RICHIESTE", "APPROVATO" ],
+    "closed":  [ "COMPLETATO", "ANNULLATO", "TRASFERITO", "RIFIUTATO" ]
+  },
+
+  "roles": [
+    { "id": "USER",  "name": "Operatore",   "icon": "👤", "color": "#3B9FD4",
+      "permissions": { "canAdd": true, "canEdit": true, "canDelete": false,
+                       "canAdvancePhases": ["new","working"], "canViewAll": false } },
+    { "id": "SUPERVISOR", "name": "Supervisore", "icon": "👔", "color": "#8859E5",
+      "permissions": { "canAdd": true, "canEdit": true, "canDelete": false,
+                       "canAdvancePhases": ["new","working","review"], "canViewAll": true } },
+    { "id": "ADMIN", "name": "Amministratore", "icon": "🔑", "color": "#E05555",
+      "permissions": { "canAdd": true, "canEdit": true, "canDelete": true,
+                       "canAdvancePhases": ["new","working","review","closed"], "canViewAll": true } }
+  ],
+
+  "fields": [
+    { "key": "title",       "label": "Titolo",       "type": "text",     "required": true,  "showInList": true  },
+    { "key": "customer",    "label": "Cliente",      "type": "text",     "required": false, "showInList": true  },
+    { "key": "amount",      "label": "Importo €",    "type": "number",   "required": false, "showInList": true  },
+    { "key": "priority",    "label": "Priorità",     "type": "select",   "options": ["Bassa","Media","Alta","Urgente"], "showInList": true },
+    { "key": "assignedTo",  "label": "Assegnato a",  "type": "text",     "required": false, "showInList": false },
+    { "key": "dueDate",     "label": "Scadenza",     "type": "date",     "required": false, "showInList": true  },
+    { "key": "notes",       "label": "Note",         "type": "textarea", "required": false, "showInList": false }
+  ],
+
+  "dashboard": {
+    "widgets": [
+      { "id": "counter-total",   "type": "counter",  "title": "Totale",       "filter": {} , "enabled": true },
+      { "id": "counter-open",    "type": "counter",  "title": "Aperti",       "filter": { "phaseNot": "closed" }, "enabled": true },
+      { "id": "counter-closed",  "type": "counter",  "title": "Chiusi",       "filter": { "phase": "closed" }, "enabled": true },
+      { "id": "counter-overdue", "type": "counter",  "title": "In ritardo",   "filter": { "overdue": true }, "enabled": true },
+      { "id": "chart-phases",    "type": "chart",    "title": "Per fase",     "chartType": "doughnut", "groupBy": "phase", "enabled": true },
+      { "id": "chart-priority",  "type": "chart",    "title": "Per priorità", "chartType": "bar",       "groupBy": "priority", "enabled": true },
+      { "id": "recent",          "type": "list",     "title": "Recenti",       "limit": 5, "enabled": true }
+    ]
+  },
+
+  "email": {
+    "templates": [
+      { "id": "notify-open",  "name": "Notifica apertura",   "subject": "Nuova pratica {{id}}: {{title}}",
+        "body": "Buongiorno,\n\nè stata aperta una nuova pratica:\n\nID: {{id}}\nTitolo: {{title}}\nCliente: {{customer}}\n\nCordiali saluti" },
+      { "id": "notify-close", "name": "Notifica chiusura",   "subject": "Pratica {{id}} chiusa",
+        "body": "Buongiorno,\n\nla pratica {{id}} — {{title}} è stata chiusa in data odierna.\n\nCordiali saluti" }
+    ]
+  },
+
+  "notifications": {
+    "toastDurationMs": 3000,
+    "slaWarnDays": 7,
+    "slaCritDays": 14
+  },
+
+  "admin": {
+    "pinHash": "92cf4b9034b653432b922dcd907b2f11b4a30051007e2c7552ca391796043f9d",
+    "pinHint": "PIN default = AttaDani260403 (SHA-256). Cambialo dal pannello admin."
+  }
+}

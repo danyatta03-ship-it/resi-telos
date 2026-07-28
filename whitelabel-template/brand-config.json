@@ -1,0 +1,133 @@
+{
+  "$schema": "./brand-config.schema.json",
+  "version": 1,
+
+  "app": {
+    "name": "My App",
+    "shortName": "App",
+    "subtitle": "Gestione pratiche",
+    "description": "Piattaforma configurabile per la gestione di pratiche con workflow personalizzato",
+    "tagline": "",
+    "copyright": "© 2026 — Tutti i diritti riservati",
+    "footerText": ""
+  },
+
+  "company": {
+    "name": "La Mia Azienda S.r.l.",
+    "legalName": "",
+    "address": "",
+    "addressShort": "",
+    "city": "",
+    "province": "",
+    "postalCode": "",
+    "country": "IT",
+    "phone": "",
+    "email": "",
+    "pec": "",
+    "vat": "",
+    "fiscalCode": "",
+    "website": "",
+    "emailSignature": "Cordiali saluti\nLa Mia Azienda S.r.l."
+  },
+
+  "logo": {
+    "main": "",
+    "login": "",
+    "sidebar": "",
+    "dashboard": "",
+    "print": "",
+    "email": ""
+  },
+
+  "favicon": {
+    "ico": "",
+    "svg": "icon.svg",
+    "png192": "",
+    "png512": "",
+    "appleTouch": "icon.svg"
+  },
+
+  "theme": {
+    "mode": "dark",
+    "font": "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif",
+    "fontSize": "16px",
+    "borderRadius": "10px",
+    "borderRadiusSm": "7px",
+
+    "colors": {
+      "primary": "#3B9FD4",
+      "primaryDark": "#2980B9",
+      "secondary": "#5BB8E0",
+      "accent": "#2ECC71",
+      "success": "#2ECC71",
+      "warning": "#E6B03C",
+      "danger": "#E05555",
+      "info": "#3B9FD4",
+
+      "bg": "#080808",
+      "bg1": "#111111",
+      "bg2": "#1a1a1a",
+      "bg3": "#222222",
+      "border": "#2a2a2a",
+      "border2": "#333333",
+
+      "text": "#FFFFFF",
+      "text2": "#E0E0E0",
+      "text3": "#999999",
+
+      "sidebar": "#0f1826",
+      "sidebarText": "#c6d4e2",
+      "header": "#111111",
+      "headerText": "#FFFFFF"
+    }
+  },
+
+  "pwa": {
+    "themeColor": "#111111",
+    "backgroundColor": "#080808",
+    "display": "standalone",
+    "orientation": "portrait",
+    "startUrl": "./index.html",
+    "scope": "./",
+    "lang": "it"
+  },
+
+  "modules": {
+    "dashboard": true,
+    "records": true,
+    "admin": true,
+    "search": true,
+    "filters": true,
+    "export": true,
+    "import": true,
+    "print": true,
+    "email": true,
+    "whatsapp": false,
+    "ocr": false,
+    "ai": false,
+    "scanner": false,
+    "qr": false,
+    "chat": false,
+    "notifications": true,
+    "firebase": false,
+    "offline": true,
+    "log": true
+  },
+
+  "ai": {
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "temperature": 0.2,
+    "timeoutMs": 45000,
+    "retries": 2,
+    "endpoint": "/api/gemini",
+    "systemPrompt": "Sei un assistente professionale. Rispondi in italiano, conciso e diretto."
+  },
+
+  "firebase": {
+    "apiKey": "",
+    "authDomain": "",
+    "databaseURL": "",
+    "projectId": ""
+  }
+}

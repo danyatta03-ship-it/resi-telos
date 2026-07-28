@@ -1,0 +1,9 @@
+{
+  "name": "white-label-app",
+  "version": "1.0.0",
+  "description": "Piattaforma white-label per gestione pratiche con workflow configurabile",
+  "private": true,
+  "scripts": {
+    "dev": "node dev-server.js"
+  }
+}
