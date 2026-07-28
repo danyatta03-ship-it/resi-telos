@@ -149,10 +149,8 @@ textarea{resize:none;min-height:52px}
 .auto-arrow{background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.15);border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--blu);cursor:pointer;-webkit-appearance:none;font-family:inherit;min-height:34px;display:inline-flex;align-items:center;gap:4px}
 
 /* SUMMARY */
-.sgr{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:9px}
-.sc{border-radius:var(--rad);padding:8px 5px;text-align:center;border:1px solid var(--brd);transition:transform .1s ease,box-shadow .15s ease}
-.sc-clk:hover{transform:translateY(-1px)}
-.sc.sc-on{border-color:var(--blu)!important;background:rgba(59,159,212,.18)!important;box-shadow:0 0 0 1px var(--blu)}
+.sgr{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:9px}
+.sc{border-radius:var(--rad);padding:8px 5px;text-align:center;border:1px solid var(--brd)}
 .sc-n{font-size:19px;font-weight:700;font-family:monospace;line-height:1}
 .sc-l{font-size:10px;font-weight:700;letter-spacing:.5px;margin-top:3px}
 .srch{width:100%;background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rad2);padding:9px 12px;font-size:13px;color:var(--txt);font-family:inherit;outline:none;margin-bottom:7px;-webkit-appearance:none}
@@ -607,11 +605,22 @@ select option {
 <!-- ═══ LISTA ═══ -->
 <div class="pg" id="pgList" style="display:none">
   <div class="sgr">
-    <div class="sc sc-clk" id="scAll" style="background:rgba(150,150,150,.04);border-color:rgba(150,150,150,.15);cursor:pointer" onclick="quickFaseFilter('')" title="Tutte le fasi"><div class="sc-n" style="color:#ccc" id="sAll">0</div><div class="sc-l" style="color:rgba(200,200,200,.55)">TUTTE</div></div>
-    <div class="sc sc-clk" id="scRic" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15);cursor:pointer" onclick="quickFaseFilter('RICEVIMENTO')" title="Filtra: RICEVIMENTO"><div class="sc-n" style="color:var(--grn)" id="sRic">0</div><div class="sc-l" style="color:rgba(59,159,212,.5)">RIC.</div></div>
-    <div class="sc sc-clk" id="scUff" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15);cursor:pointer" onclick="quickFaseFilter('UFFICIO RESI')" title="Filtra: UFFICIO RESI"><div class="sc-n" style="color:var(--blu)" id="sUff">0</div><div class="sc-l" style="color:rgba(59,159,212,.5)">UFF.</div></div>
-    <div class="sc sc-clk" id="scMag" style="background:rgba(91,184,224,.04);border-color:rgba(91,184,224,.15);cursor:pointer" onclick="quickFaseFilter('MAGAZZINO')" title="Filtra: MAGAZZINO"><div class="sc-n" style="color:var(--yel)" id="sMag">0</div><div class="sc-l" style="color:rgba(91,184,224,.5)">MAG.</div></div>
-    <div class="sc sc-clk" id="scFin" style="background:rgba(224,85,85,.04);border-color:rgba(224,85,85,.15);cursor:pointer" onclick="quickFaseFilter('FINALE')" title="Filtra: FINALE"><div class="sc-n" style="color:var(--red)" id="sFin">0</div><div class="sc-l" style="color:rgba(224,85,85,.5)">FIN.</div></div>
+    <div class="sc" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15)"><div class="sc-n" style="color:var(--grn)" id="sRic">0</div><div class="sc-l" style="color:rgba(59,159,212,.5)">RIC.</div></div>
+    <div class="sc" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15)"><div class="sc-n" style="color:var(--blu)" id="sUff">0</div><div class="sc-l" style="color:rgba(59,159,212,.5)">UFF.</div></div>
+    <div class="sc" style="background:rgba(91,184,224,.04);border-color:rgba(91,184,224,.15)"><div class="sc-n" style="color:var(--yel)" id="sMag">0</div><div class="sc-l" style="color:rgba(91,184,224,.5)">MAG.</div></div>
+    <div class="sc" style="background:rgba(224,85,85,.04);border-color:rgba(224,85,85,.15)"><div class="sc-n" style="color:var(--red)" id="sFin">0</div><div class="sc-l" style="color:rgba(224,85,85,.5)">FIN.</div></div>
+  </div>
+
+  <!-- FILTRO FASE (tendina sempre visibile) -->
+  <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+    <label for="fFaseQuick" style="font-size:11px;font-weight:700;color:var(--txt2);letter-spacing:.5px;flex-shrink:0">FASE:</label>
+    <select id="fFaseQuick" onchange="quickFaseFilter(this.value)" style="flex:1;background:#111;color:#fff;border:1px solid #333;padding:8px 10px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;background-image:url(&quot;data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='%233B9FD4' d='M6 8L2 4h8z'/></svg>&quot;);background-repeat:no-repeat;background-position:right 10px center;padding-right:30px">
+      <option value="">Tutte le fasi</option>
+      <option value="RICEVIMENTO">📥 RICEVIMENTO</option>
+      <option value="UFFICIO RESI">🏢 UFFICIO RESI</option>
+      <option value="MAGAZZINO">📦 MAGAZZINO</option>
+      <option value="FINALE">✅ FINALE</option>
+    </select>
   </div>
 
   <!-- FILTER BAR -->
@@ -2124,12 +2133,12 @@ function resetFilters(){
   renderList();
 }
 
-// Filtro rapido per fase: click su una delle 5 chip sopra la lista (TUTTE/RIC/UFF/MAG/FIN).
-// Se ricliccato sulla fase gia' attiva, toglie il filtro.
+// Filtro rapido per fase dalla tendina "FASE" sempre visibile in cima alla lista.
+// Sincronizza anche il select avanzato dentro il pannello Filtri.
 function quickFaseFilter(fase){
-  if(filterState.fase===fase) fase='';
   filterState.fase=fase||'';
   var sel=document.getElementById('fFase'); if(sel) sel.value=filterState.fase;
+  var selQ=document.getElementById('fFaseQuick'); if(selQ && selQ.value!==filterState.fase) selQ.value=filterState.fase;
   // Aggiorna dropdown Stato coerente col filtro fase
   var statSel=document.getElementById('fStato');
   if(statSel){
@@ -2144,15 +2153,11 @@ function quickFaseFilter(fase){
   renderList();
 }
 
-// Evidenzia la chip fase attualmente attiva (o TUTTE se nessuna).
+// Mantiene la tendina "FASE" allineata con il filtro corrente (utile quando il
+// filtro viene cambiato dal pannello Filtri avanzato o dal reset).
 function syncFaseChips(){
-  var map={'':'scAll','RICEVIMENTO':'scRic','UFFICIO RESI':'scUff','MAGAZZINO':'scMag','FINALE':'scFin'};
-  var active=filterState.fase||'';
-  for(var f in map){
-    var el=document.getElementById(map[f]); if(!el) continue;
-    if(f===active) el.classList.add('sc-on');
-    else el.classList.remove('sc-on');
-  }
+  var selQ=document.getElementById('fFaseQuick');
+  if(selQ && selQ.value!==(filterState.fase||'')) selQ.value=(filterState.fase||'');
 }
 
 function getFiltered(){
@@ -2536,7 +2541,6 @@ function renderList(){
   var arr=gra(),nR=0,nU=0,nM=0,nF=0;
   for(var i=0;i<arr.length;i++){if(arr[i].fase==='RICEVIMENTO')nR++;else if(arr[i].fase==='UFFICIO RESI')nU++;else if(arr[i].fase==='MAGAZZINO')nM++;else if(arr[i].fase==='FINALE')nF++;}
   document.getElementById('sRic').textContent=nR;document.getElementById('sUff').textContent=nU;document.getElementById('sMag').textContent=nM;document.getElementById('sFin').textContent=nF;
-  var _elAll=document.getElementById('sAll'); if(_elAll) _elAll.textContent=arr.length;
   try{ syncFaseChips(); }catch(e){}
   updBS();
   var filt=getFiltered();
