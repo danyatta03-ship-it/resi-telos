@@ -1985,6 +1985,13 @@ function addRow() {
   if(!ok){toast('Campi obbligatori mancanti','r');if(fe)fe.scrollIntoView({behavior:'smooth',block:'center'});return;}
   // ── Regole di coerenza ──
   var _anoV=gv('cAno'), _fluV=gv('cFlu'), _docV=gv('cDoc');
+  // RICEVIMENTO + flusso ANOMALIA: lo stato non puo' restare "DA GESTIRE"
+  // (chi ha inserito ha gia' rilevato l'anomalia — DA GESTIRE avrebbe senso solo per resi standard).
+  if(fase==='RICEVIMENTO' && _fluV==='ANOMALIA' && stato.indexOf('DA GESTIRE')>=0){
+    toast('⛔ Ricevimento con flusso ANOMALIA: lo stato non può essere "DA GESTIRE" — scegli "ANOMALIA RICEVIMENTO" o "STALLO RICEVIMENTO".','r');
+    var _sEl=document.getElementById('cSta'); if(_sEl){_sEl.classList.add('err');_sEl.scrollIntoView({behavior:'smooth',block:'center'});}
+    return;
+  }
   // Anomalia: gli utenti del reparto (tranne ADM) non possono lasciarla "DA GESTIRE" o in "STALLO"
   if(_anoV && ROLE!=='ADM' && (stato.indexOf('DA GESTIRE')>=0 || stato.indexOf('STALLO')>=0)){
     toast('⚠ Con un\'anomalia lo stato non può essere "Da gestire" o "Stallo": scegli uno stato di gestione.','r');
@@ -3856,6 +3863,13 @@ function svEdit(key){
     toast('⛔ Serve il numero RMA/RNC per passare a MAGAZZINO','r');
     var _rmaEl=document.getElementById('ei_rma');
     if(_rmaEl){ try{ _rmaEl.focus(); _rmaEl.scrollIntoView({behavior:'smooth',block:'center'}); _rmaEl.style.border='1.5px solid #E05555'; }catch(e){} }
+    return;
+  }
+  // Blocco: RICEVIMENTO + flusso ANOMALIA non puo' avere stato "DA GESTIRE"
+  if(ch.fase==='RICEVIMENTO' && ch.flusso==='ANOMALIA' && (ch.stato||'').indexOf('DA GESTIRE')>=0){
+    toast('⛔ Ricevimento con flusso ANOMALIA: lo stato non può essere "DA GESTIRE" — scegli "ANOMALIA RICEVIMENTO" o "STALLO RICEVIMENTO".','r');
+    var _stEl=document.getElementById('ei_stato');
+    if(_stEl){ try{ _stEl.focus(); _stEl.scrollIntoView({behavior:'smooth',block:'center'}); _stEl.style.border='1.5px solid #E05555'; }catch(e){} }
     return;
   }
   // STORICO TRIMESTRE: override locale (non tocca DB_TRI e non passa da sendMsg → non è in rows)
