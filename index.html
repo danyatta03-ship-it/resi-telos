@@ -930,9 +930,10 @@ select option {
       <input type="date" id="dbA"  onchange="renderDB(1)" style="background:#1a1a1a;color:#fff;border:1px solid #333;padding:7px 9px;font-size:12px;border-radius:7px;-webkit-appearance:none;outline:none;font-family:inherit;flex:1">
       <button onclick="resetDbFilters()" style="background:#1a1a1a;color:#E05555;border:1px solid rgba(224,85,85,.3);border-radius:7px;padding:7px 11px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit;flex-shrink:0">✕ Reset</button>
     </div>
-    <!-- Export tutto + contatore -->
-    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+    <!-- Export tutto + contatore + KPI -->
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
       <span id="dbCount" style="font-size:11px;color:var(--txt2);flex:1"></span>
+      <button onclick="showKpiRecurring()" title="Codici che tornano piu' spesso con la stessa causale" style="background:linear-gradient(135deg,#3a2c1c,#6a5024);color:#E6B03C;border:1px solid #6a5024;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">📊 KPI ricorrenti</button>
       <button onclick="exportDBAll()" style="background:linear-gradient(135deg,#001a40,#003080);color:#3B9FD4;border:1px solid #004080;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">📤 Esporta questa vista (filtrata)</button>
     </div>
     <!-- Tabella scrollabile (no paginazione) -->
@@ -1115,10 +1116,13 @@ var ROLE_PERMS = {
   // canEditFasi = modifica CAMPI (cumulativo verso l'alto, FINALE solo ADM)
   // canAdvanceTo = fasi a cui il ruolo può PORTARE un reso (avanzamento/chiusura)
   // canSendBack  = può rimandare un reso alla fase precedente
-  RIC: { canAdd:true, canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'], canViewAll:true, canBulk:false, canAdvanceTo:['UFFICIO RESI'], canSendBack:false },
-  UFF: { canAdd:true, canDelete:false, canArchive:true, canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:true, canBulk:true, canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true },
-  MAG: { canAdd:true, canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO'], canViewAll:true, canBulk:true, canAdvanceTo:['UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true },
-  ADM: { canAdd:true, canDelete:true,  canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:true, canBulk:true, canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true }
+  // canViewPhases: fasi VISIBILI (fuori dalle quali i record vengono nascosti in lista).
+  // canViewOwnOnly: se true, l'utente vede solo i record che ha inserito lui.
+  // canSeeTabs:     tab principali (in alto) mostrati; '*' = tutti; altrimenti sono gli id (pgIns/pgList/pgAno/pgUbi/pgTri/pgHist/pgCon).
+  RIC: { canAdd:true, canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'], canViewAll:false, canViewPhases:['RICEVIMENTO'], canViewOwnOnly:true,  canBulk:false, canAdvanceTo:['UFFICIO RESI'], canSendBack:false, canSeeTabs:['pgIns','pgList'] },
+  UFF: { canAdd:true, canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:false, canViewPhases:['UFFICIO RESI'], canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true,  canSeeTabs:['*'] },
+  MAG: { canAdd:true, canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO'],         canViewAll:false, canViewPhases:['MAGAZZINO'],    canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true, canSeeTabs:['*'] },
+  ADM: { canAdd:true, canDelete:true,  canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:true,  canViewPhases:['*'],            canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true, canSeeTabs:['*'] }
 };
 
 var STATI = {
@@ -1769,7 +1773,26 @@ function grAll(){
   }
   return out;
 }
-function gra(){return Object.values(rows);}          // righe ATTUALI (backward-compat: chi filtra per fase/stato lavora solo su queste)
+// gra() = righe attuali VISIBILI al ruolo corrente. Filtra secondo ROLE_PERMS:
+//   - canViewPhases: nasconde record non nelle fasi consentite ('*' = tutte)
+//   - canViewOwnOnly: nasconde record inseriti da altri operatori
+// Il filtro sopravvive alle chiamate di canAdvance/canEdit perche' controllano
+// direttamente rows[key] (non passano da gra). Cosi' la vista e' limitata ma
+// non impedisce a UFF di caricare un record che ha in mano.
+function gra(){
+  var all = Object.values(rows);
+  var perms = (typeof ROLE_PERMS!=='undefined' && ROLE_PERMS[ROLE]) || {};
+  if(perms.canViewAll) return all;
+  var phases = perms.canViewPhases || [];
+  var ownOnly = !!perms.canViewOwnOnly;
+  return all.filter(function(r){
+    if(phases.length && phases[0] !== '*' && phases.indexOf(r.fase) < 0) return false;
+    if(ownOnly && r._who && r._who !== deviceName) return false;
+    return true;
+  });
+}
+function graAll(){return Object.values(rows);}          // "vera" gra senza filtro (per contatori interni / sync FB)
+
 function svf(v){v=v.trim().toUpperCase();if(v&&forn.indexOf(v)<0){forn.push(v);try{localStorage.setItem('tf',JSON.stringify(forn));}catch(e){}rdl();}}
 function rdl(){
   var ls=document.getElementById('lSogg'),lf=document.getElementById('lFor');
@@ -1941,6 +1964,19 @@ function setDataContatto() {
 function gTab(pg) {
   var all=['pgIns','pgList','pgAno','pgUbi','pgTri','pgHist','pgCon'];
   var tabs=['tabIns','tabList','tabAno','tabUbi','tabTri','tabHist','tabCon'];
+  // Blocco accesso a tab non permessi al ruolo corrente
+  var perms = (typeof ROLE_PERMS!=='undefined' && ROLE_PERMS[ROLE]) || {};
+  var allowedTabs = perms.canSeeTabs || ['*'];
+  if(allowedTabs.indexOf('*') < 0 && allowedTabs.indexOf(pg) < 0){
+    toast('Ruolo '+ROLE+' non autorizzato a questa vista','r'); return;
+  }
+  // Nascondi i tab non permessi (idempotente: rieseguito a ogni gTab)
+  if(allowedTabs.indexOf('*') < 0){
+    for(var j=0;j<tabs.length;j++){
+      var tv = document.getElementById(tabs[j]);
+      if(tv) tv.style.display = allowedTabs.indexOf(all[j])>=0 ? '' : 'none';
+    }
+  }
   for(var i=0;i<all.length;i++){
     var p=document.getElementById(all[i]);if(p)p.style.display='none';
     var t=document.getElementById(tabs[i]);if(t)t.classList.remove('on');
@@ -3500,6 +3536,136 @@ function exportDBAll(){
 }
 
 function dbPg(dir){}
+
+// ── KPI: codici che tornano piu' spesso con la stessa causale ─────────
+// Analizza righe attuali (rows) + storico trimestre (DB_TRI) fusi.
+// Raggruppa per (codice + causale), ordina per # occorrenze, mostra top 30
+// con fornitore piu' frequente e valore totale. Utile per individuare
+// pezzi cronicamente problematici sui quali negoziare col fornitore.
+function showKpiRecurring(){
+  var attuali = (typeof gra==='function') ? gra() : [];
+  var storico = (typeof DB_TRI!=='undefined' && DB_TRI) ? DB_TRI : [];
+  var all = attuali.concat(storico);
+  if(!all.length){ toast('Nessun dato disponibile','y'); return; }
+
+  var map = {};   // key = cod|causale
+  for(var i=0;i<all.length;i++){
+    var r = all[i];
+    var cod = (r.cod||'').trim().toUpperCase();
+    var cau = (r.causale||'').trim();
+    if(!cod || !cau) continue;
+    var key = cod + '||' + cau;
+    if(!map[key]) map[key] = { cod:cod, causale:cau, n:0, val:0, forn:{}, clienti:{}, lastDate:'' };
+    map[key].n++;
+    var prc = parseFloat(r.prc)||0, qty = parseInt(r.qty)||1;
+    map[key].val += prc * qty;
+    if(r.forn){ map[key].forn[r.forn] = (map[key].forn[r.forn]||0)+1; }
+    if(r.sogg){ map[key].clienti[r.sogg] = (map[key].clienti[r.sogg]||0)+1; }
+    var d = r.datArr || r.datElab || '';
+    if(d && d > map[key].lastDate) map[key].lastDate = d;
+  }
+
+  // Solo combinazioni ricorrenti (>= 2 occorrenze)
+  var list = Object.keys(map).map(function(k){ return map[k]; })
+                             .filter(function(x){ return x.n >= 2; })
+                             .sort(function(a,b){ return b.n - a.n; })
+                             .slice(0, 50);
+
+  if(!list.length){
+    toast('Nessuna combinazione codice+causale ricorrente trovata','y'); return;
+  }
+
+  function topKey(obj){
+    var best = '', bestN = 0;
+    for(var k in obj){ if(obj[k] > bestN){ best = k; bestN = obj[k]; } }
+    return best ? (best + ' ('+bestN+')') : '';
+  }
+
+  var rows = list.map(function(x, i){
+    var cls = i < 3 ? 'style="background:rgba(224,85,85,.08)"'
+            : i < 10 ? 'style="background:rgba(230,176,60,.05)"'
+            : '';
+    return '<tr '+cls+'>' +
+             '<td style="padding:6px 8px;font-weight:700;color:'+(i<3?'#E05555':i<10?'#E6B03C':'#3B9FD4')+';font-family:monospace">'+xe(x.cod)+'</td>' +
+             '<td style="padding:6px 8px">'+xe(x.causale)+'</td>' +
+             '<td style="padding:6px 8px;text-align:center;font-family:monospace;font-weight:800">'+x.n+'</td>' +
+             '<td style="padding:6px 8px;font-family:monospace;color:#8859E5">€'+x.val.toFixed(0)+'</td>' +
+             '<td style="padding:6px 8px;font-size:10px;color:#c6d4e2">'+xe(topKey(x.forn))+'</td>' +
+             '<td style="padding:6px 8px;font-size:10px;color:#999">'+xe(x.lastDate||'—')+'</td>' +
+           '</tr>';
+  }).join('');
+
+  var totalOccurrences = list.reduce(function(s,x){ return s + x.n; }, 0);
+  var totalValue = list.reduce(function(s,x){ return s + x.val; }, 0);
+
+  var html =
+    '<div style="position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1400;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto;-webkit-overflow-scrolling:touch" id="kpiBox" onclick="if(event.target===this)this.remove()">' +
+      '<div style="background:#111;border:2px solid #E6B03C;border-radius:14px;padding:16px;width:100%;max-width:800px;margin:auto">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+          '<div style="font-size:16px;font-weight:800;color:#E6B03C">📊 Codici ricorrenti · stesse causali</div>' +
+          '<button onclick="document.getElementById(\'kpiBox\').remove()" style="background:none;border:none;color:#777;font-size:22px;cursor:pointer">✕</button>' +
+        '</div>' +
+        '<div style="font-size:11px;color:#999;margin-bottom:10px;line-height:1.5">' +
+          'Combinazioni <b>codice articolo + causale</b> che tornano <b>≥2 volte</b> nell\'archivio + storico. ' +
+          'Ordinate per frequenza. Le prime 3 in rosso: casi critici (probabile pezzo difettoso/fornitore instabile).' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">' +
+          '<div style="background:#0a0a0a;border:1px solid #2a2a2a;border-radius:8px;padding:10px;text-align:center">' +
+            '<div style="font-size:20px;font-weight:800;color:#E6B03C;font-family:monospace">'+list.length+'</div>' +
+            '<div style="font-size:10px;color:#666;letter-spacing:.5px">COMBINAZIONI</div>' +
+          '</div>' +
+          '<div style="background:#0a0a0a;border:1px solid #2a2a2a;border-radius:8px;padding:10px;text-align:center">' +
+            '<div style="font-size:20px;font-weight:800;color:#3B9FD4;font-family:monospace">'+totalOccurrences+'</div>' +
+            '<div style="font-size:10px;color:#666;letter-spacing:.5px">RESI TOTALI</div>' +
+          '</div>' +
+          '<div style="background:#0a0a0a;border:1px solid #2a2a2a;border-radius:8px;padding:10px;text-align:center">' +
+            '<div style="font-size:20px;font-weight:800;color:#8859E5;font-family:monospace">€'+totalValue.toFixed(0)+'</div>' +
+            '<div style="font-size:10px;color:#666;letter-spacing:.5px">VALORE TOT.</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid #2a2a2a;border-radius:8px">' +
+          '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+            '<thead style="position:sticky;top:0;background:#1a1a1a;z-index:1">' +
+              '<tr>' +
+                '<th style="padding:8px;text-align:left;color:#999;font-size:10px">CODICE</th>' +
+                '<th style="padding:8px;text-align:left;color:#999;font-size:10px">CAUSALE</th>' +
+                '<th style="padding:8px;text-align:center;color:#999;font-size:10px">RESI</th>' +
+                '<th style="padding:8px;text-align:left;color:#999;font-size:10px">€ TOT</th>' +
+                '<th style="padding:8px;text-align:left;color:#999;font-size:10px">FORN. FREQ.</th>' +
+                '<th style="padding:8px;text-align:left;color:#999;font-size:10px">ULT. DATA</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + rows + '</tbody>' +
+          '</table>' +
+        '</div>' +
+        '<div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">' +
+          '<button onclick="exportKpiRecurring()" style="background:#1a1a1a;color:#E6B03C;border:1px solid #6a5024;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">📤 Esporta CSV</button>' +
+          '<button onclick="document.getElementById(\'kpiBox\').remove()" style="background:#3B9FD4;color:#fff;border:none;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">Chiudi</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  document.body.insertAdjacentHTML('beforeend', html);
+  window._kpiListRicorrenti = list; // per export
+}
+
+function exportKpiRecurring(){
+  var list = window._kpiListRicorrenti || [];
+  if(!list.length){ toast('Prima apri la vista KPI','y'); return; }
+  function topKey(obj){ var best='',bestN=0; for(var k in obj){ if(obj[k]>bestN){best=k;bestN=obj[k];} } return best?best+' ('+bestN+')':''; }
+  var lines = [['CODICE','CAUSALE','RESI','VALORE_TOT_EUR','FORNITORE_FREQ','CLIENTE_FREQ','ULTIMA_DATA'].join(';')];
+  list.forEach(function(x){
+    lines.push([x.cod,x.causale,x.n,x.val.toFixed(2),topKey(x.forn),topKey(x.clienti),x.lastDate||''].map(function(v){
+      return '"'+String(v||'').replace(/"/g,'""')+'"';
+    }).join(';'));
+  });
+  var blob = new Blob(['﻿'+lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'KPI_Codici_Ricorrenti_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('CSV KPI esportato','b');
+}
 
 function dlRow(idx){
   var r=DB_TRI[idx];if(!r)return;
