@@ -662,6 +662,7 @@ select option {
 
   <div style="display:flex;gap:6px;margin-bottom:8px">
     <button class="sb sp" style="flex:1;padding:8px;font-size:11px" onclick="togChart()">📊 Grafici</button>
+    <button class="sb ssb" style="flex:1;padding:8px;font-size:11px" onclick="showCyclesFornitori()">🚚 Cicli</button>
     <button class="sb sy" style="flex:1;padding:8px;font-size:11px" onclick="fineGiornata()">🌙 Fine Giornata</button>
     <button class="sb sr" style="flex:1;padding:8px;font-size:11px" onclick="clearAll()">✕ Svuota</button>
   </div>
@@ -2890,11 +2891,75 @@ function savePkgPhoto(input){
         var tg=document.getElementById('pkgTag'); if(tg) tg.value='';
         toast('📸 Foto pacco salvata'+(tag?' · '+tag:''),'b');
         renderPkgList();
+        // Sync su Firebase se disponibile — la foto e' condivisa con tutti gli
+        // altri dispositivi al primo giro di syncPkgPhotosFromFB.
+        try{
+          if(typeof FB_REF!=='undefined' && FB_REF){
+            FB_REF.root.child('pkgphotos').child(id).set(rec)
+              .then(function(){ toast('☁ Foto pacco sincronizzata','g'); })
+              .catch(function(err){ /* stealthy, mai bloccante */ });
+          }
+        }catch(e){}
       }).catch(function(){ toast('Errore salvataggio foto','r'); });
     };
     img.src=e.target.result;
   };
   rd.readAsDataURL(file);
+}
+
+// Al login Firebase (chiamata da _fbConnectDb): scarica dalla cloud le foto
+// pacco che non hai in locale e le aggiunge a IndexedDB + lista keys. Push
+// anche l'inverso: le foto locali mancanti sul server vanno caricate.
+function syncPkgPhotosFromFB(){
+  if(typeof FB_REF==='undefined' || !FB_REF) return;
+  try{
+    FB_REF.root.child('pkgphotos').once('value').then(function(snap){
+      var remote = snap.val() || {};
+      var localKeys = _pkgKeys();
+      var localSet = {}; localKeys.forEach(function(k){ localSet[k]=true; });
+      var toAddPromises = [];
+      var addedCount = 0;
+      Object.keys(remote).forEach(function(id){
+        if(!localSet[id]){
+          toAddPromises.push(idbSet('pkg:'+id, remote[id]).then(function(){ addedCount++; }));
+        }
+      });
+      // Upload delle foto locali che non sono su FB (es. scattate offline)
+      var toPush = [];
+      localKeys.forEach(function(id){
+        if(!remote[id]){
+          toPush.push(idbGet('pkg:'+id).then(function(rec){
+            if(rec) return FB_REF.root.child('pkgphotos').child(id).set(rec).catch(function(){});
+          }));
+        }
+      });
+      Promise.all(toAddPromises.concat(toPush)).then(function(){
+        if(addedCount > 0){
+          // Aggiorno la lista keys: nuovi arrivi in cima ordinati per timestamp
+          var newKeys = Object.keys(remote).filter(function(id){ return !localSet[id]; })
+                        .sort(function(a,b){ return (remote[b].ts||0) - (remote[a].ts||0); });
+          _pkgSaveKeys(newKeys.concat(localKeys));
+          try{ if(typeof renderPkgList==='function') renderPkgList(); }catch(e){}
+          toast('☁ '+addedCount+' foto pacco sincronizzate','b');
+        }
+      });
+      // Listener child_added: nuove foto uploadate da un altro dispositivo
+      FB_REF.root.child('pkgphotos').on('child_added', function(s){
+        var id = s.key, rec = s.val(); if(!id || !rec) return;
+        if(_pkgKeys().indexOf(id) >= 0) return;
+        idbSet('pkg:'+id, rec).then(function(){
+          var ks = _pkgKeys(); ks.unshift(id); _pkgSaveKeys(ks);
+          try{ renderPkgList(); }catch(e){}
+        });
+      });
+      FB_REF.root.child('pkgphotos').on('child_removed', function(s){
+        var id = s.key; if(!id) return;
+        idbDel('pkg:'+id).catch(function(){});
+        _pkgSaveKeys(_pkgKeys().filter(function(k){ return k!==id; }));
+        try{ renderPkgList(); }catch(e){}
+      });
+    }).catch(function(){});
+  }catch(e){}
 }
 function renderPkgList(){
   var el=document.getElementById('pkgList'); if(!el) return;
@@ -2929,12 +2994,17 @@ function delPkgPhoto(id){
   if(!confirm('Eliminare questa foto pacco?')) return;
   idbDel('pkg:'+id).catch(function(){});
   var keys=_pkgKeys().filter(function(k){ return k!==id; }); _pkgSaveKeys(keys);
+  // Propaga la cancellazione a Firebase (cosi' sparisce anche dagli altri device)
+  try{ if(typeof FB_REF!=='undefined' && FB_REF) FB_REF.root.child('pkgphotos').child(id).remove().catch(function(){}); }catch(e){}
   renderPkgList();
 }
 function clearPkgPhotos(){
   if(!confirm('Svuotare tutte le foto pacco?')) return;
   var keys=_pkgKeys();
-  keys.forEach(function(id){ idbDel('pkg:'+id).catch(function(){}); });
+  keys.forEach(function(id){
+    idbDel('pkg:'+id).catch(function(){});
+    try{ if(typeof FB_REF!=='undefined' && FB_REF) FB_REF.root.child('pkgphotos').child(id).remove().catch(function(){}); }catch(e){}
+  });
   _pkgSaveKeys([]);
   renderPkgList();
 }
@@ -2967,7 +3037,11 @@ function presaEligible(r){
   if(r.fase==='MAGAZZINO') return true;               // in magazzino e' sempre candidabile
   return statoModificatoInUfficio(r);
 }
-function presaReady(r){ return !!(r && r.fase==='MAGAZZINO' && r.stato==='CHIUDERE'); }
+// presaReady: qualsiasi record in MAGAZZINO che non sia gia' in PRESA LOGISTICA.
+// Precedente: solo CHIUDERE. Ora accetta anche altri stati MAG (es. STALLO,
+// ANOMALIA — spesso serve richiedere il ritiro anche quando la pratica non
+// e' formalmente chiusa) purche' il record non abbia gia' la presa aperta.
+function presaReady(r){ return !!(r && r.fase==='MAGAZZINO' && r.stato!=='PRESA LOGISTICA'); }
 function togglePresa(key){
   if(!key) return;
   if(presaSel[key]) delete presaSel[key]; else presaSel[key]=true;
@@ -2991,11 +3065,49 @@ function updPresaBar(){
     document.body.appendChild(bar);
   }
   bar.innerHTML='<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:800;color:#2ecc71">'+sel.length+' coll'+(sel.length===1?'o':'i')+' selezionat'+(sel.length===1?'o':'i')+'</div>'+
-    '<div style="font-size:10px;color:var(--txt3)">'+pronti+' pront'+(pronti===1?'o':'i')+' (MAGAZZINO · CHIUDERE)</div></div>'+
+    '<div style="font-size:10px;color:var(--txt3)">'+pronti+' pront'+(pronti===1?'o':'i')+' (MAGAZZINO — qualsiasi stato ≠ PRESA LOGISTICA)</div></div>'+
     '<button onclick="presaClear()" style="background:none;color:var(--txt3);border:1px solid var(--brd2);border-radius:8px;padding:9px 11px;font-size:12px;cursor:pointer;font-family:inherit;-webkit-appearance:none">Annulla</button>'+
     '<button onclick="richiediPresa()" style="background:'+(pronti?'#0a3a2a':'#1a1a1a')+';color:'+(pronti?'#2ecc71':'#666')+';border:1.5px solid '+(pronti?'#2ecc71':'#333')+';border-radius:8px;padding:9px 14px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;-webkit-appearance:none">📦 Richiedi Presa</button>';
 }
 function presaClear(){ presaSel={}; try{renderList();}catch(e){} updPresaBar(); }
+
+// Richiedi presa da una riga del DB Trimestre (storico). Aggiunge il _key allo
+// stato presa e apre la richiesta come per le righe correnti. La riga storica
+// riceve un override in TRI_OVR quando la mail viene inviata (cambio stato).
+function richiediPresaStorico(key){
+  if(!key) return;
+  var rec = null;
+  if(typeof DB_TRI!=='undefined' && DB_TRI){
+    for(var i=0;i<DB_TRI.length;i++){ if(DB_TRI[i]._key===key){ rec = DB_TRI[i]; break; } }
+  }
+  if(!rec){ toast('Record storico non trovato','r'); return; }
+  if(rec.fase !== 'MAGAZZINO'){ toast('Richiedi presa solo per fase MAGAZZINO','y'); return; }
+  if(rec.stato === 'PRESA LOGISTICA'){ toast('Presa gia\' richiesta','y'); return; }
+  // Marker "storico" per mpRegisterSend che aggiornera' TRI_OVR invece di sendMsg
+  window._presaKeys = [key];
+  window._presaKeysStorico = [key];
+  // Compongo la mail come per le correnti (una sola riga)
+  var forn = (rec.forn || '(senza fornitore)').toUpperCase();
+  var to = '';
+  try {
+    var rule = (typeof findSupRule==='function') ? findSupRule(forn) : null;
+    if(rule && rule.rule && rule.rule.contatti) to = rule.rule.contatti.mail || '';
+  } catch(e){}
+  if(!to){ try{ for(var i=0;i<supDb.length;i++){ if((supDb[i].name||'').toUpperCase()===forn && supDb[i].mail){ to=supDb[i].mail; break; } } }catch(e){} }
+  var NL='\n';
+  var subj = 'RICHIESTA PRESA · '+forn+' · 1 collo';
+  var body =
+    'Buongiorno,'+NL+NL+
+    'Abbiamo 1 collo pronto al ritiro'+NL+
+    'Aspetto: Scatola'+NL+
+    'Indirizzo per il ritiro: '+BR('company.name','Telos Spa')+', '+BR('company.addressShort',BR('company.address','Via Aosta 5 Venaria Reale, 10078, (TO)'))+NL+NL+
+    'Dettaglio articoli:'+NL+
+    '- '+((rec.pre?rec.pre+' ':'')+(rec.cod||''))+' x'+(rec.qty||1)+(rec.rma?(' · RMA '+rec.rma):'')+NL+NL+
+    'In attesa di un vostro gentile riscontro'+NL+
+    'Cordiali saluti'+NL+
+    (deviceName||('Reparto Resi · '+BR('company.name','Telos SPA')));
+  showMailPreview(to, subj, body, [], {who:'presa', forn:forn, nColli:1});
+}
 
 // Costruisce e mostra la mail di richiesta presa (una per fornitore)
 function richiediPresa(){
@@ -3004,10 +3116,10 @@ function richiediPresa(){
   var pronti=sel.filter(presaReady);
   var attesa=sel.length-pronti.length;
   if(!pronti.length){
-    toast('⛔ La presa si richiede solo con stato MAGAZZINO · CHIUDERE ('+attesa+' in attesa)','r');
+    toast('⛔ La presa si richiede solo per record in MAGAZZINO non ancora in PRESA LOGISTICA ('+attesa+' non idoneo/i)','r');
     return;
   }
-  if(attesa>0 && !confirm(attesa+' coll'+(attesa===1?'o non e pronto':'i non sono pronti')+' (stato diverso da MAGAZZINO · CHIUDERE).\n\nProcedo solo con i '+pronti.length+' pronti?')) return;
+  if(attesa>0 && !confirm(attesa+' coll'+(attesa===1?'o non idoneo':'i non idonei')+' (non in MAGAZZINO o gia\' in PRESA LOGISTICA).\n\nProcedo solo con i '+pronti.length+' pronti?')) return;
 
   // Raggruppo per fornitore: ogni fornitore ha la sua mail e le sue regole
   var byForn={};
@@ -3409,7 +3521,7 @@ function renderDBTable(filt, maxShow){
   // Build table
   var html='<table class="dbt" style="width:100%;border-collapse:collapse">';
   html+='<thead><tr>';
-  var hdrs=['DATA','CODICE','PRE','SOGGETTO','FORNITORE','QTA','€','CAUSALE','FASE','STATO','VET.USC.','XLS','MOD.'];
+  var hdrs=['DATA','CODICE','PRE','SOGGETTO','FORNITORE','QTA','€','CAUSALE','FASE','STATO','VET.USC.','XLS','MOD.','PRESA'];
   for(var t=0;t<hdrs.length;t++)
     html+='<th style="font-size:11px;padding:7px 7px;position:sticky;top:0;background:#0a0a0a;z-index:2;color:#aaa;text-align:left;white-space:nowrap;border-bottom:2px solid #2a2a2a">'+hdrs[t]+'</th>';
   html+='</tr></thead><tbody>';
@@ -3434,6 +3546,14 @@ function renderDBTable(filt, maxShow){
     html+='<td style="padding:6px 7px"><button class="sb sg" onclick="dlRow('+ri+')" style="padding:4px 8px;font-size:10px;white-space:nowrap">XLS</button></td>';
     var _canEd=(ROLE==='UFF'||ROLE==='ADM');
     html+='<td style="padding:6px 7px">'+(_canEd?'<button onclick="editRow(\''+r._key+'\')" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.45);border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;-webkit-appearance:none;font-family:inherit" title="Modifica questa riga storico">✎</button>':'<span style="color:#444;font-size:10px" title="Solo UFFICIO/ADMIN">🔒</span>')+'</td>';
+    // Colonna PRESA: pulsante attivo se record e' in MAGAZZINO e non ha ancora PRESA LOGISTICA
+    if(r.fase==='MAGAZZINO' && r.stato!=='PRESA LOGISTICA'){
+      html+='<td style="padding:6px 7px"><button onclick="richiediPresaStorico(\''+xe(r._key||'')+'\')" style="background:rgba(46,204,113,.15);color:#2ECC71;border:1px solid rgba(46,204,113,.4);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;-webkit-appearance:none;font-family:inherit;white-space:nowrap" title="Richiedi presa a '+xe(r.forn||'fornitore')+'">📦</button></td>';
+    } else if(r.stato==='PRESA LOGISTICA'){
+      html+='<td style="padding:6px 7px;font-size:10px;color:#2ECC71;text-align:center" title="Presa gia\' richiesta">✓</td>';
+    } else {
+      html+='<td></td>';
+    }
     html+='</tr>';
   }
   html+='</tbody></table>';
@@ -3647,6 +3767,134 @@ function showKpiRecurring(){
 
   document.body.insertAdjacentHTML('beforeend', html);
   window._kpiListRicorrenti = list; // per export
+}
+
+// ── CICLI FORNITORI ───────────────────────────────────────────────────
+// Ogni fornitore appartiene a un "ciclo" (che coincide col vettore/percorso
+// standard con cui viaggia il reso). I 6 cicli previsti dall'utente:
+//   CATI, CITYLINE, INTERCOMPANY, MITTENTE/DESTINATARIO, CIPI/PIEMME, NAZ/INT.
+// La classificazione parte da GARANZIE_DB[nome].vettore; con override per CATI
+// (il fornitore CATI ha il suo ciclo dedicato) e mappatura di "GLS" su NAZ/INT.
+var CYCLES_ORDER = ['CATI','CITYLINE','INTERCOMPANY','MITTENTE/DESTINATARIO','CIPI/PIEMME','NAZ/INT','ALTRI'];
+var CYCLES_ICON = {
+  'CATI':'🏭','CITYLINE':'🚚','INTERCOMPANY':'🔄',
+  'MITTENTE/DESTINATARIO':'📦','CIPI/PIEMME':'🛻',
+  'NAZ/INT':'🌍','ALTRI':'❔'
+};
+var CYCLES_COLOR = {
+  'CATI':'#8859E5','CITYLINE':'#3B9FD4','INTERCOMPANY':'#2ECC71',
+  'MITTENTE/DESTINATARIO':'#E6B03C','CIPI/PIEMME':'#E05555',
+  'NAZ/INT':'#5BB8E0','ALTRI':'#999'
+};
+function cycleOfSupplier(name){
+  if(!name) return 'ALTRI';
+  var N = String(name).trim().toUpperCase();
+  if(N === 'CATI') return 'CATI';
+  var v = '';
+  try {
+    if(typeof GARANZIE_DB!=='undefined' && GARANZIE_DB && GARANZIE_DB[N]) v = (GARANZIE_DB[N].vettore||'').toUpperCase();
+  } catch(e){}
+  if(!v) return 'ALTRI';
+  if(v.indexOf('CATI')>=0) return 'CATI';
+  if(v.indexOf('CITYLINE')>=0) return 'CITYLINE';
+  if(v.indexOf('INTERCOMPANY')>=0) return 'INTERCOMPANY';
+  if(v.indexOf('MITTENTE')>=0 || v.indexOf('DESTINATARIO')>=0) return 'MITTENTE/DESTINATARIO';
+  if(v.indexOf('CIPI')>=0 || v.indexOf('PIEMME')>=0) return 'CIPI/PIEMME';
+  if(v.indexOf('NAZ')>=0 || v.indexOf('INT')>=0 || v === 'GLS' || v === 'BRT' || v === 'TNT' || v === 'DHL') return 'NAZ/INT';
+  return 'ALTRI';
+}
+
+function showCyclesFornitori(){
+  // Raggruppo tutti i fornitori (da anagrafica + rows correnti) per ciclo
+  var suppliers = {};   // name → { forn, ciclo, nResi, valResi }
+  var contaResi = {};   // forn → n
+  var valResi   = {};   // forn → valore
+
+  // Fornitori da anagrafica (GARANZIE_DB copre la maggior parte)
+  try {
+    if(typeof GARANZIE_DB!=='undefined' && GARANZIE_DB){
+      for(var k in GARANZIE_DB){ if(k) suppliers[k.toUpperCase()] = { forn:k, ciclo:cycleOfSupplier(k), nResi:0, valResi:0 }; }
+    }
+  } catch(e){}
+  // Aggiungo eventuali fornitori usati nei resi ma non in anagrafica
+  var rowsAll = (typeof gra==='function') ? gra() : [];
+  for(var i=0;i<rowsAll.length;i++){
+    var r = rowsAll[i];
+    var f = (r.forn||'').trim().toUpperCase();
+    if(!f) continue;
+    if(!suppliers[f]) suppliers[f] = { forn:r.forn, ciclo:cycleOfSupplier(r.forn), nResi:0, valResi:0 };
+    suppliers[f].nResi++;
+    suppliers[f].valResi += (parseFloat(r.prc)||0) * (parseInt(r.qty)||1);
+  }
+
+  // Raggruppo per ciclo
+  var byCycle = {};
+  CYCLES_ORDER.forEach(function(c){ byCycle[c] = []; });
+  Object.keys(suppliers).forEach(function(k){
+    var s = suppliers[k];
+    (byCycle[s.ciclo] || byCycle['ALTRI']).push(s);
+  });
+  // Ordino ogni ciclo: prima quelli con più resi correnti, poi alfabetico
+  Object.keys(byCycle).forEach(function(c){
+    byCycle[c].sort(function(a,b){ return (b.nResi - a.nResi) || a.forn.localeCompare(b.forn); });
+  });
+
+  var totalSuppliers = Object.keys(suppliers).length;
+  var totalResi = rowsAll.filter(function(r){ return r.forn; }).length;
+
+  var body = '';
+  CYCLES_ORDER.forEach(function(c){
+    var list = byCycle[c];
+    if(!list.length) return;
+    var totCycleResi = list.reduce(function(s,x){ return s + x.nResi; }, 0);
+    var color = CYCLES_COLOR[c] || '#999';
+    body += '<div style="margin-bottom:10px;border:1px solid '+color+'44;border-radius:10px;overflow:hidden">' +
+              '<div onclick="var b=this.nextElementSibling;b.style.display=b.style.display===\'none\'?\'block\':\'none\'" style="background:'+color+'22;color:'+color+';padding:10px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:13px">' +
+                '<span>'+CYCLES_ICON[c]+' '+xe(c)+' <span style="color:var(--txt3);font-weight:500;font-size:11px">('+list.length+' fornitori · '+totCycleResi+' resi correnti)</span></span>' +
+                '<span style="font-size:16px">⇅</span>' +
+              '</div>' +
+              '<div style="display:'+(totCycleResi>0?'block':'none')+';padding:6px;background:#111">';
+    list.forEach(function(s){
+      var badge = s.nResi > 0
+        ? '<span style="background:'+color+'44;color:'+color+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;font-family:monospace">'+s.nResi+' resi · €'+s.valResi.toFixed(0)+'</span>'
+        : '<span style="color:var(--txt3);font-size:10px">nessun reso corrente</span>';
+      body += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #1a1a1a;cursor:'+(s.nResi>0?'pointer':'default')+'"' +
+                (s.nResi>0 ? ' onclick="filterByForn(\''+xe(s.forn.replace(/\\\\|\'/g,""))+'\')"':'') + '>' +
+                '<span style="font-size:12px;font-weight:600">'+xe(s.forn)+'</span>' + badge +
+              '</div>';
+    });
+    body += '</div></div>';
+  });
+
+  var html =
+    '<div id="cyclesBox" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1400;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto;-webkit-overflow-scrolling:touch">' +
+      '<div style="background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:16px;width:100%;max-width:640px;margin:auto">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+          '<div style="font-size:16px;font-weight:800;color:#3B9FD4">🚚 Cicli fornitori</div>' +
+          '<button onclick="document.getElementById(\'cyclesBox\').remove()" style="background:none;border:none;color:#777;font-size:22px;cursor:pointer">✕</button>' +
+        '</div>' +
+        '<div style="font-size:11px;color:#999;margin-bottom:12px;line-height:1.5">' +
+          '<b>'+totalSuppliers+'</b> fornitori in anagrafica · <b>'+totalResi+'</b> resi correnti in lista. ' +
+          'Ogni gruppo mostra i fornitori del suo ciclo (vettore standard). ' +
+          'Click su un fornitore per filtrare la lista.' +
+        '</div>' +
+        '<div style="max-height:70vh;overflow-y:auto;-webkit-overflow-scrolling:touch">' + body + '</div>' +
+      '</div>' +
+    '</div>';
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// Filtra la lista principale per fornitore (chiamata dalle card dei cicli)
+function filterByForn(forn){
+  try {
+    filterState.q = (forn||'').toLowerCase();
+    var s = document.getElementById('srch'); if(s) s.value = forn;
+    listShown = LIST_PAGE;
+    renderList();
+    var box = document.getElementById('cyclesBox'); if(box) box.remove();
+    toast('Filtro: fornitore '+forn,'b');
+  } catch(e){ toast('Errore filtro: '+e.message,'r'); }
 }
 
 function exportKpiRecurring(){
@@ -4933,6 +5181,7 @@ function doFBConnect() {
       document.getElementById('fbModal').style.display = 'none';
       toast('🔥 Firebase connesso! Sync attivo.', 'g');
       try{ if(typeof initChat==='function') initChat(); }catch(e){}
+      try{ if(typeof syncPkgPhotosFromFB==='function') syncPkgPhotosFromFB(); }catch(e){}
     } else {
       if(st){st.textContent = msg || 'Connessione fallita';st.style.color='#E05555';st.style.background='rgba(224,85,85,.1)';st.style.display='block';}
       if(btn) btn.textContent = 'CONNETTI';
@@ -4950,7 +5199,10 @@ function ensureFB() {
   startFB(cfg, function(ok) {
     _fbConnecting = false;
     if (!ok) setTimeout(ensureFB, 5000);             // connessione fallita (rete non pronta) → ritenta
-    else { try{ if(typeof initChat==='function') initChat(); }catch(e){} }
+    else {
+      try{ if(typeof initChat==='function') initChat(); }catch(e){}
+      try{ if(typeof syncPkgPhotosFromFB==='function') syncPkgPhotosFromFB(); }catch(e){}
+    }
   });
 }
 function autoFB() { ensureFB(); }
@@ -7219,7 +7471,38 @@ function mpRegisterSend(canale){
   try{
     if(ctx.who==='presa'){
       var keys=window._presaKeys||[];
+      var storicoKeys = window._presaKeysStorico || [];
       logMailSent('presa'+(canale?(' '+canale):''), to, keys, ctx.forn||'');
+      // Auto-cambio stato al send: tutti i record coinvolti vanno in
+      // MAGAZZINO / PRESA LOGISTICA (il flusso richiesto dall'utente).
+      var todayIso = new Date().toISOString().slice(0,10);
+      keys.forEach(function(k){
+        if(storicoKeys.indexOf(k) >= 0) {
+          // Record storico: applica override in TRI_OVR (non tocca DB_TRI, che e' read-only)
+          try {
+            var base = null;
+            if(typeof DB_TRI!=='undefined' && DB_TRI){
+              for(var i=0;i<DB_TRI.length;i++){ if(DB_TRI[i]._key===k){ base=DB_TRI[i]; break; } }
+            }
+            if(base && typeof TRI_OVR!=='undefined'){
+              var ov = TRI_OVR[k] || {};
+              ov.fase='MAGAZZINO'; ov.stato='PRESA LOGISTICA'; ov.datSta=todayIso;
+              ov._log = (ov._log||[]).concat([{ts:Date.now(),user:deviceName,role:ROLE,action:'PRESA STORICO',changes:{stato:{da:base.stato||'',a:'PRESA LOGISTICA'}}}]).slice(-20);
+              TRI_OVR[k] = ov;
+              if(typeof saveTriOvr==='function') saveTriOvr();
+            }
+          } catch(e){}
+        } else if(rows[k]) {
+          // Record corrente: passa dal normale sendMsg (sync via Firebase)
+          try {
+            sendMsg({type:'update', key:k, changes:{fase:'MAGAZZINO', stato:'PRESA LOGISTICA', datSta:todayIso, _lastEdit:deviceName, _role:ROLE}});
+          } catch(e){}
+        }
+      });
+      try { if(typeof renderList==='function') renderList(); } catch(e){}
+      try { if(typeof renderDB==='function') renderDB(1); } catch(e){}
+      toast('✓ Presa inviata · '+keys.length+' collo/i in PRESA LOGISTICA','b');
+      window._presaKeysStorico = null;
       presaClear();
     } else if(ctx.anoId){
       // anomalia: registro sul record anomalia + sulla riga collegata se esiste
@@ -8889,7 +9172,7 @@ function ocrViaAI(dataUrl, cb){
   var cfg=ocrAIConfig();
   if(!cfg||!cfg.endpoint){ cb(null); return; }
   ocrSetLoading('AI: analisi bolla…');
-  var basePrompt='Sei un esperto nella lettura di bolle/DDT italiani di reso merce, spesso COMPILATI A MANO IN CORSIVO (a volte con righe evidenziate). PRIMA DI TUTTO verifica che l\'immagine contenga DAVVERO un documento di trasporto/bolla/fattura con del testo: se non c\'è alcun documento (un tavolo, un oggetto qualunque, una foto senza testo leggibile) rispondi SOLO {"nessun_documento": true} e nient\'altro. NON INVENTARE MAI nulla: trascrivi esclusivamente ciò che è scritto e leggibile nell\'immagine; un campo non presente resta stringa vuota; in caso di dubbio sull\'esistenza stessa del documento rispondi {"nessun_documento": true}. L\'azienda stampata in ALTO (mittente) è il CLIENTE che restituisce i pezzi: mettila in "soggetto". Il destinatario è sempre TELOS: ignoralo.\n\nREGOLE FONDAMENTALI (le più importanti):\n1) LA BOLLA CONTIENE QUASI SEMPRE PIÙ ARTICOLI (2, 3, 5, anche 10+): uno per BLOCCO di righe. Devi estrarli TUTTI, uno per uno, nell\'ordine in cui compaiono dall\'alto in basso. NON fermarti mai al primo. Scorri attentamente TUTTA la tabella articoli fino alla fine, comprese le righe scritte a mano piccole o parzialmente coperte. Prima di rispondere ricontrolla di aver letto ogni riga articolo del documento.\n2) Ogni articolo di solito ha: quantità (es. "1" oppure "Ø1"), descrizione, sigla marca (es. NGK, BIR, FAU, VAL) e un CODICE tra parentesi o accanto alla descrizione: quello è il codice articolo.\n3) Le righe che iniziano con "RIF." / "RIF.BL" / "RIF.BOLLA" seguite da numero e data sono il RIFERIMENTO alla bolla di consegna originaria dell\'articolo che le precede: mettile nel campo "riferimento" di QUELL\'articolo, NON sono codici articolo.\n4) Sul corsivo ambiguo scegli l\'interpretazione più plausibile per un codice ricambi (cifre e lettere maiuscole).\n\nRispondi SOLO con JSON valido, senza testo extra prima o dopo, con la stessa struttura di questo ESEMPIO (che ha 3 articoli, per ricordarti che devi elencarli TUTTI):\n{\n  "numero_documento": "BL/TRA/44321",\n  "data": "17/05/2026",\n  "soggetto": "AUTOFFICINA ROSSI SNC",\n  "vettore": "CIPI",\n  "causale": "GARANZIA",\n  "articoli": [\n    {"pre":"NGK","codice":"BKR6E","descrizione":"CANDELA","quantita":"4","prezzo":"3.20","riferimento":""},\n    {"pre":"BOS","codice":"0986444981","descrizione":"BOBINA ACCENSIONE","quantita":"1","prezzo":"58.00","riferimento":"RIF.BL/STD/2211 12/03/26"},\n    {"pre":"MAL","codice":"127825","descrizione":"KIT FRIZIONE","quantita":"1","prezzo":"13.24","riferimento":""}\n  ]\n}\n\nI campi mancanti devono essere stringa vuota. Se la bolla ha 1 solo articolo, l\'array avrà 1 elemento; se ne ha 8, l\'array avrà 8 elementi. Non riassumere, non raggruppare, non fondere righe diverse in una sola.';
+  var basePrompt='Sei un esperto nella lettura di bolle/DDT italiani di reso merce, spesso COMPILATI A MANO IN CORSIVO (a volte con righe evidenziate). PRIMA DI TUTTO verifica che l\'immagine contenga DAVVERO un documento di trasporto/bolla/fattura con del testo: se non c\'è alcun documento (un tavolo, un oggetto qualunque, una foto senza testo leggibile) rispondi SOLO {"nessun_documento": true} e nient\'altro. NON INVENTARE MAI nulla: trascrivi esclusivamente ciò che è scritto e leggibile nell\'immagine; un campo non presente resta stringa vuota; in caso di dubbio sull\'esistenza stessa del documento rispondi {"nessun_documento": true}. L\'azienda stampata in ALTO (mittente) è il CLIENTE che restituisce i pezzi: mettila in "soggetto". Il destinatario è sempre TELOS: ignoralo.\n\nREGOLE FONDAMENTALI (le più importanti):\n1) LA BOLLA CONTIENE QUASI SEMPRE PIÙ ARTICOLI (2, 3, 5, anche 10+): uno per BLOCCO di righe. Devi estrarli TUTTI, uno per uno, nell\'ordine in cui compaiono dall\'alto in basso. NON fermarti mai al primo. Scorri attentamente TUTTA la tabella articoli fino alla fine, comprese le righe scritte a mano piccole o parzialmente coperte. Prima di rispondere ricontrolla di aver letto ogni riga articolo del documento.\n2) Ogni articolo di solito ha: quantità (es. "1" oppure "Ø1"), descrizione, sigla marca (es. NGK, BIR, FAU, VAL) e un CODICE tra parentesi o accanto alla descrizione: quello è il codice articolo.\n3) Le righe che iniziano con "RIF." / "RIF.BL" / "RIF.BOLLA" seguite da numero e data sono il RIFERIMENTO alla bolla di consegna originaria dell\'articolo che le precede: mettile nel campo "riferimento" di QUELL\'articolo, NON sono codici articolo.\n4) Sul corsivo ambiguo scegli l\'interpretazione più plausibile per un codice ricambi (cifre e lettere maiuscole).\n\n5) TIMBRI / SCRITTE DI ANOMALIA — MOLTO IMPORTANTE:\n   Cerca sulla bolla eventuali TIMBRI, ETICHETTE ADESIVE, SCRITTE A MANO EVIDENZIATE o FRECCE/ASTERISCHI che segnalino un problema col reso. Parole/timbri tipici:\n   "ANOMALIA", "DIFETTO", "DIFETTOSO", "DANNEGGIATO", "ROTTO", "SPORCO", "MONTATO", "USATO", "INCOMPLETO", "MANCANTE", "SBAGLIATO", "ERRATO", "NON CONFORME", "RIFIUTATO", "PACCO APERTO", "BATTERIA ESAUSTA".\n   Se trovi UNO qualsiasi di questi indicatori, imposta:\n     "flusso_suggerito": "ANOMALIA"\n     "anomalia_rilevata": true\n     "motivo_anomalia": "<trascrivi il testo esatto del timbro/scritta trovato>"\n   Altrimenti (bolla pulita, nessun timbro anomalia):\n     "flusso_suggerito": "STANDARD"\n     "anomalia_rilevata": false\n     "motivo_anomalia": ""\n\nRispondi SOLO con JSON valido, senza testo extra prima o dopo, con la stessa struttura di questo ESEMPIO (che ha 3 articoli, per ricordarti che devi elencarli TUTTI):\n{\n  "numero_documento": "BL/TRA/44321",\n  "data": "17/05/2026",\n  "soggetto": "AUTOFFICINA ROSSI SNC",\n  "vettore": "CIPI",\n  "causale": "GARANZIA",\n  "flusso_suggerito": "STANDARD",\n  "anomalia_rilevata": false,\n  "motivo_anomalia": "",\n  "articoli": [\n    {"pre":"NGK","codice":"BKR6E","descrizione":"CANDELA","quantita":"4","prezzo":"3.20","riferimento":""},\n    {"pre":"BOS","codice":"0986444981","descrizione":"BOBINA ACCENSIONE","quantita":"1","prezzo":"58.00","riferimento":"RIF.BL/STD/2211 12/03/26"},\n    {"pre":"MAL","codice":"127825","descrizione":"KIT FRIZIONE","quantita":"1","prezzo":"13.24","riferimento":""}\n  ]\n}\n\nI campi mancanti devono essere stringa vuota. Se la bolla ha 1 solo articolo, l\'array avrà 1 elemento; se ne ha 8, l\'array avrà 8 elementi. Non riassumere, non raggruppare, non fondere righe diverse in una sola.';
   function attempt(extra, timeout, onDone){
     aiComplete([{type:'text',text:basePrompt+(extra||'')},{type:'image_url',image_url:{url:dataUrl}}], function(content,err){
       if(!content){ onDone(null); return; }
@@ -8937,6 +9220,12 @@ function normalizeAIResult(o){
     vetRic:(o.vettore||'').toString().toUpperCase(),
     rma:(o.numero_documento||'').toString().toUpperCase().replace(/\s+/g,''),
     causale:(o.causale||'').toString().toUpperCase(),
+    // Suggerimenti AI su flusso/anomalia (v34z): rilevati dai timbri/scritte
+    // sulla bolla. Se anomalia_rilevata=true, showOcrConfirm precompila
+    // flusso=ANOMALIA e ricorda foto pezzo + documenti in possesso.
+    flussoSug:(o.flusso_suggerito||'').toString().toUpperCase(),
+    anomaliaRilevata:o.anomalia_rilevata===true||o.anomalia_rilevata==='true',
+    motivoAnomalia:(o.motivo_anomalia||'').toString(),
     note:'',
     articoli:arts
   };
@@ -9033,6 +9322,17 @@ function showOcrConfirm(res, photoUrl, source){
   else if(source==='offline-fallback') _badge='<span style="background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:800">\u26a0 AI non disponibile \u2192 offline</span>';
   else if(source==='offline') _badge='<span style="background:rgba(255,255,255,.06);color:#999;border:1px solid #333;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700">\ud83d\udcf7 Offline (Tesseract) \u00b7 AI non attiva</span>';
   if(_badge) html+='<div style="margin-bottom:8px">'+_badge+'</div>';
+  // Banner ANOMALIA se l'AI ha rilevato timbro/scritta sospetta sulla bolla (v34z)
+  if(res.anomaliaRilevata){
+    html+='<div style="background:rgba(224,85,85,.15);border:2px solid #E05555;border-radius:10px;padding:10px 12px;margin-bottom:10px">' +
+            '<div style="display:flex;align-items:center;gap:6px;color:#E05555;font-weight:800;font-size:13px;margin-bottom:4px">⚠ ANOMALIA rilevata sulla bolla</div>' +
+            '<div style="font-size:11px;color:#f0b0b0;line-height:1.5">' +
+              (res.motivoAnomalia?('Motivo: <b>'+xe(res.motivoAnomalia)+'</b><br>'):'') +
+              'Flusso pre-impostato a <b>ANOMALIA</b> e stato a <b>ANOMALIA RICEVIMENTO</b>. Ricordati di:' +
+              '<ul style="margin:6px 0 0 18px;padding:0"><li>📷 Foto al pezzo (dal pulsante FOTO qui sotto o nel form)</li><li>📋 Elenca in NOTE i documenti in possesso (bolla, modulo, libretto...)</li></ul>' +
+            '</div>' +
+          '</div>';
+  }
   html+='<div style="font-size:11px;color:#888;margin-bottom:12px">Controlla e correggi, poi inserisci nel form.'+(nArt>1?' <b style="color:#3B9FD4">'+nArt+' articoli trovati.</b>':'')+'</div>';
 
   // Lista multi-riga: TUTTI gli articoli visibili contemporaneamente, editabili inline.
@@ -9072,9 +9372,16 @@ function showOcrConfirm(res, photoUrl, source){
   function _oOpts(list,cur){var h=''; for(var oi=0;oi<list.length;oi++){var v=list[oi];h+='<option value="'+v.replace(/"/g,'&quot;')+'"'+(v===cur?' selected':'')+'>'+v+'</option>';} return h;}
   var _selCss='width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block';
   var _curFas=_cV('cFas')||'RICEVIMENTO';
+  // Se AI ha rilevato ANOMALIA: forza il flusso ANOMALIA e stato "ANOMALIA RICEVIMENTO"
+  var _curFlu = _cV('cFlu');
+  var _curSta = _cV('cSta');
+  if(res.anomaliaRilevata || res.flussoSug === 'ANOMALIA'){
+    _curFlu = 'ANOMALIA';
+    _curSta = 'ANOMALIA RICEVIMENTO';
+  }
   var _staL=(typeof STATI!=='undefined' && STATI[_curFas]) ? STATI[_curFas] : [];
-  html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('TIPO FLUSSO')+'<select id="ocrFlu" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_fluL,_cV('cFlu'))+'</select></div><div style="flex:1">'+lab('TIPO DOC')+'<select id="ocrDoc" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_docL,_cV('cDoc'))+'</select></div></div>';
-  html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('FASE')+'<select id="ocrFas" onchange="ocrRefreshStato()" style="'+_selCss+'">'+_oOpts(_fasL,_curFas)+'</select></div><div style="flex:1">'+lab('STATO')+'<select id="ocrSta" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_staL,_cV('cSta')||_staL[0]||'')+'</select></div></div>';
+  html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('TIPO FLUSSO')+'<select id="ocrFlu" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_fluL,_curFlu)+'</select></div><div style="flex:1">'+lab('TIPO DOC')+'<select id="ocrDoc" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_docL,_cV('cDoc'))+'</select></div></div>';
+  html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('FASE')+'<select id="ocrFas" onchange="ocrRefreshStato()" style="'+_selCss+'">'+_oOpts(_fasL,_curFas)+'</select></div><div style="flex:1">'+lab('STATO')+'<select id="ocrSta" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_staL,_curSta||_staL[0]||'')+'</select></div></div>';
   html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('RMA / N\u00b0 BOLLA')+fInp('ocrRma',res.rma,'BL/TRA/...')+'</div><div style="flex:1">'+lab('DATA LISTATO')+'<input id="ocrData" type="date" value="'+xe(res.data||'')+'" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block"></div></div>';
   html+=lab('NOTE')+'<input id="ocrNote" value="'+xe(res.note||(a0.desc||''))+'" placeholder="annotazioni" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:10px;display:block">';
 
