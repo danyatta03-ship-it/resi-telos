@@ -1444,6 +1444,8 @@ function startApp() {
 }
 
 function launchApp() {
+  // Traccia l'accesso al log di sicurezza (visibile dal pannello admin)
+  try{ if(typeof secLogAccess==='function') secLogAccess('login'); }catch(e){}
   // Setup DOM after pages are shown
   setupAfterLogin();
   // Set role badge
@@ -1580,14 +1582,82 @@ function sendMsg(m) {
     // .catch su ogni scrittura: se le regole del database rifiutano l'operazione
     // l'utente lo deve sapere subito, non scoprirlo quando i dati non arrivano ai colleghi.
     var _fail = (typeof fbWriteFail==='function') ? fbWriteFail : function(){};
-    if ((m.type==='add') && m._key && rows[m._key])      { FB_REF.child(m._key).set(rows[m._key]).catch(_fail); return; }
-    if ((m.type==='update') && rows[m.key])               { FB_REF.child(m.key).set(rows[m.key]).catch(_fail);   return; }
-    if (m.type==='remove')                                { FB_REF.child(m.key).remove().catch(_fail);            return; }
-    if (m.type==='clear')                                 { FB_REF.remove().catch(_fail);                         return; }
-    if (m.type==='archive' && m.key)                      { FB_REF.child(m.key).remove().catch(_fail);            return; }
+    if ((m.type==='add') && m._key && rows[m._key])      { FB_REF.child(m._key).set(rows[m._key]).catch(_fail); secLog('add', m._key, {cod:rows[m._key].cod||''}); return; }
+    if ((m.type==='update') && rows[m.key])               { FB_REF.child(m.key).set(rows[m.key]).catch(_fail);   secLog('update', m.key, {changes:Object.keys(m.changes||{}).join(',')}); return; }
+    if (m.type==='remove')                                { FB_REF.child(m.key).remove().catch(_fail);            secLog('remove', m.key, {}); return; }
+    if (m.type==='clear')                                 { FB_REF.remove().catch(_fail);                         secLog('clear', '', {n:Object.keys(rows||{}).length}); return; }
+    if (m.type==='archive' && m.key)                      { FB_REF.child(m.key).remove().catch(_fail);            secLog('archive', m.key, {}); return; }
     return;
   }
   if (!STANDALONE && ws && ws.readyState===1) ws.send(JSON.stringify(m));
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SECURITY LOG — traccia audit su Firebase (chi entra, chi modifica cosa)
+// Scrive in security_log/access/ e security_log/mods/ con retention client
+// side (visione ultimi 500). Se Firebase non e' connesso, il log viene
+// bufferizzato in localStorage e flushato al prossimo login.
+// ══════════════════════════════════════════════════════════════════════
+function secLog(action, key, extra){
+  try{
+    var ev = {
+      ts: Date.now(),
+      device: deviceId,
+      name: deviceName||'?',
+      role: ROLE||'?',
+      action: action,
+      key: key||'',
+      extra: extra||{}
+    };
+    if(typeof FB_REF!=='undefined' && FB_REF){
+      FB_REF.root.child('security_log/mods').push(ev).catch(function(){});
+    } else {
+      // Buffer offline
+      try{
+        var buf = JSON.parse(localStorage.getItem('secLogBuf')||'[]');
+        buf.push(ev);
+        if(buf.length > 200) buf = buf.slice(-200);
+        localStorage.setItem('secLogBuf', JSON.stringify(buf));
+      }catch(e){}
+    }
+  }catch(e){}
+}
+
+// Log di un accesso (login/change device). Scrive in security_log/access/.
+function secLogAccess(kind){
+  try{
+    var ev = {
+      ts: Date.now(),
+      device: deviceId,
+      name: deviceName||'?',
+      role: ROLE||'?',
+      action: kind||'login',
+      ua: (navigator.userAgent||'').slice(0,120)
+    };
+    if(typeof FB_REF!=='undefined' && FB_REF){
+      FB_REF.root.child('security_log/access').push(ev).catch(function(){});
+    } else {
+      try{
+        var buf = JSON.parse(localStorage.getItem('secLogAccBuf')||'[]');
+        buf.push(ev);
+        if(buf.length > 100) buf = buf.slice(-100);
+        localStorage.setItem('secLogAccBuf', JSON.stringify(buf));
+      }catch(e){}
+    }
+  }catch(e){}
+}
+
+// Al login Firebase riuscito: flusha eventuali eventi bufferizzati offline
+function secFlushBuffer(){
+  if(typeof FB_REF==='undefined' || !FB_REF) return;
+  try{
+    var mBuf = JSON.parse(localStorage.getItem('secLogBuf')||'[]');
+    mBuf.forEach(function(ev){ FB_REF.root.child('security_log/mods').push(ev).catch(function(){}); });
+    if(mBuf.length) localStorage.removeItem('secLogBuf');
+    var aBuf = JSON.parse(localStorage.getItem('secLogAccBuf')||'[]');
+    aBuf.forEach(function(ev){ FB_REF.root.child('security_log/access').push(ev).catch(function(){}); });
+    if(aBuf.length) localStorage.removeItem('secLogAccBuf');
+  }catch(e){}
 }
 
 function handleLocal(m) {
@@ -5182,6 +5252,7 @@ function doFBConnect() {
       toast('🔥 Firebase connesso! Sync attivo.', 'g');
       try{ if(typeof initChat==='function') initChat(); }catch(e){}
       try{ if(typeof syncPkgPhotosFromFB==='function') syncPkgPhotosFromFB(); }catch(e){}
+      try{ if(typeof secFlushBuffer==='function') secFlushBuffer(); }catch(e){}
     } else {
       if(st){st.textContent = msg || 'Connessione fallita';st.style.color='#E05555';st.style.background='rgba(224,85,85,.1)';st.style.display='block';}
       if(btn) btn.textContent = 'CONNETTI';
@@ -5202,6 +5273,7 @@ function ensureFB() {
     else {
       try{ if(typeof initChat==='function') initChat(); }catch(e){}
       try{ if(typeof syncPkgPhotosFromFB==='function') syncPkgPhotosFromFB(); }catch(e){}
+      try{ if(typeof secFlushBuffer==='function') secFlushBuffer(); }catch(e){}
     }
   });
 }
@@ -10126,6 +10198,7 @@ function scanFotoFallback(){
       <div class="admNavItem" data-sec="mail" onclick="admGo('mail')"><span class="ic">✉️</span><span>Template Email</span></div>
       <div class="admNavItem" data-sec="cats" onclick="admGo('cats')"><span class="ic">🏷️</span><span>Categorie</span></div>
       <div class="admNavItem" data-sec="stati" onclick="admGo('stati')"><span class="ic">🎯</span><span>Stati Reso</span></div>
+      <div class="admNavItem" data-sec="security" onclick="admGo('security')"><span class="ic">🛡️</span><span>Sicurezza</span></div>
       <div class="admNavItem" data-sec="config" onclick="admGo('config')"><span class="ic">⚙️</span><span>Configurazione</span></div>
       <div class="admNavItem" data-sec="log" onclick="admGo('log')"><span class="ic">📜</span><span>Log Modifiche</span></div>
     </nav>
@@ -10238,7 +10311,7 @@ function admGo(sec){
   ADM_SEC = sec;
   var items = document.querySelectorAll('.admNavItem');
   for(var i=0;i<items.length;i++) items[i].classList.toggle('on', items[i].dataset.sec===sec);
-  var titles = {dash:'Dashboard',users:'Utenti',suppliers:'Fornitori',agents:'Agenti',portals:'Portali',mail:'Template Email',cats:'Categorie',stati:'Stati Reso',config:'Configurazione',log:'Log Modifiche'};
+  var titles = {dash:'Dashboard',users:'Utenti',suppliers:'Fornitori',agents:'Agenti',portals:'Portali',mail:'Template Email',cats:'Categorie',stati:'Stati Reso',security:'Sicurezza',config:'Configurazione',log:'Log Modifiche'};
   document.getElementById('admBcSec').textContent = titles[sec]||sec;
   var body = document.getElementById('admBody');
   var render = window['admRender_'+sec];
@@ -10988,6 +11061,133 @@ function admConfigSave(){
   g.notifyOnFail = document.getElementById('gNf').checked;
   admLog('config','update','general', old.slice(0,200), JSON.stringify(g).slice(0,200));
   admCommit('config','update','Configurazione salvata');
+}
+
+// ── SICUREZZA — audit accessi + modifiche in tempo reale ──
+function admRender_security(){
+  var h =
+    '<div class="admCard"><h3>🛡️ Sicurezza & Audit</h3>' +
+      '<div class="sub" style="line-height:1.6">Registro degli accessi e delle modifiche eseguite su Firebase da tutti i dispositivi. Dati letti in tempo reale dal database. Se un utente accede da un dispositivo nuovo, appare qui subito.</div>' +
+    '</div>' +
+
+    '<div class="admGrid" id="secStats" style="margin-bottom:14px">' +
+      '<div class="admCard"><div class="sub">Utenti online adesso</div><div style="font-size:28px;font-weight:800;color:#2ecc71" id="secOnline">…</div></div>' +
+      '<div class="admCard"><div class="sub">Accessi ultime 24h</div><div style="font-size:28px;font-weight:800;color:#3B9FD4" id="secAcc24">…</div></div>' +
+      '<div class="admCard"><div class="sub">Modifiche ultime 24h</div><div style="font-size:28px;font-weight:800;color:#E6B03C" id="secMod24">…</div></div>' +
+    '</div>' +
+
+    '<div class="admCard"><h3>👥 Chi e\' online adesso</h3>' +
+      '<div id="secPresList" style="font-size:12px;color:#c6d4e2">Caricamento…</div>' +
+    '</div>' +
+
+    '<div class="admCard"><h3>🔑 Ultimi accessi</h3>' +
+      '<div class="sub">Ogni volta che un utente esegue il login sull\'app, l\'evento viene scritto qui. Include ruolo, browser, timestamp.</div>' +
+      '<div style="max-height:340px;overflow-y:auto" id="secAccList">Caricamento…</div>' +
+    '</div>' +
+
+    '<div class="admCard"><h3>✏️ Ultime modifiche</h3>' +
+      '<div class="sub">Ogni aggiunta/modifica/cancellazione di reso finisce qui. Chi, cosa, quando.</div>' +
+      '<div style="max-height:340px;overflow-y:auto" id="secModList">Caricamento…</div>' +
+    '</div>' +
+
+    '<div class="admCard" style="border-color:#5a3020;background:#1a0e0a"><h3>🚨 Kill switch di emergenza</h3>' +
+      '<div class="sub" style="line-height:1.6">Cancella immediatamente TUTTI i dati locali di TUTTI i dispositivi connessi al database (rows + cache). Utile in caso di accesso non autorizzato: azzeri tutto e reimposti PIN + regole.</div>' +
+      '<button class="admBtn dan" onclick="admKillSwitch()" style="margin-top:8px">💣 ATTIVA KILL SWITCH</button>' +
+    '</div>';
+
+  return h;
+}
+
+function admAfter_security(){
+  if(typeof FB_REF==='undefined' || !FB_REF){
+    var stats = document.getElementById('secStats');
+    if(stats){
+      document.getElementById('secOnline').textContent = '—';
+      document.getElementById('secAcc24').textContent = '—';
+      document.getElementById('secMod24').textContent = '—';
+    }
+    ['secPresList','secAccList','secModList'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.innerHTML = '<div style="color:#E05555;font-size:12px;padding:8px 0">⚠ Firebase non connesso. Riprova quando l\'app e\' online: senza sync i log restano solo sul dispositivo locale.</div>';
+    });
+    return;
+  }
+
+  var now = Date.now();
+  var day24 = now - 24*3600*1000;
+
+  // Presence (utenti online in questo momento)
+  FB_REF.root.child('presence').once('value').then(function(snap){
+    var data = snap.val()||{};
+    var arr = Object.keys(data).map(function(k){ return Object.assign({_devId:k}, data[k]||{}); });
+    arr.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    document.getElementById('secOnline').textContent = arr.length;
+    var el = document.getElementById('secPresList');
+    if(!arr.length){ el.innerHTML = '<div style="color:#666;font-style:italic;padding:8px 0">Nessuno online adesso.</div>'; return; }
+    el.innerHTML = arr.map(function(u){
+      var mins = Math.round((now - (u.ts||now))/60000);
+      return '<div style="display:flex;justify-content:space-between;padding:8px 4px;border-bottom:1px solid #223243">'+
+        '<div><b style="color:#fff">'+admEsc(u.name||'?')+'</b> <span class="admChip">'+admEsc(u.role||'?')+'</span></div>'+
+        '<div style="color:#8899a8;font-size:11px">device: '+admEsc((u._devId||'').slice(0,8))+' · attivo '+mins+' min fa</div>'+
+        '</div>';
+    }).join('');
+  }).catch(function(){});
+
+  // Accessi (ultimi 200 in ordine cronologico inverso)
+  FB_REF.root.child('security_log/access').limitToLast(200).once('value').then(function(snap){
+    var data = snap.val()||{};
+    var arr = Object.keys(data).map(function(k){ return data[k]; }).sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    var n24 = arr.filter(function(e){ return (e.ts||0) >= day24; }).length;
+    document.getElementById('secAcc24').textContent = n24;
+    var el = document.getElementById('secAccList');
+    if(!arr.length){ el.innerHTML = '<div style="color:#666;font-style:italic;padding:8px 0">Nessun accesso registrato ancora.</div>'; return; }
+    el.innerHTML = '<table class="admTable"><thead><tr><th>Quando</th><th>Utente</th><th>Ruolo</th><th>Device</th><th>Browser</th></tr></thead><tbody>' +
+      arr.slice(0,100).map(function(e){
+        return '<tr>' +
+          '<td style="font-size:11px;color:#8899a8;white-space:nowrap">'+new Date(e.ts).toLocaleString('it-IT')+'</td>' +
+          '<td><b style="color:#fff">'+admEsc(e.name||'?')+'</b></td>' +
+          '<td><span class="admChip">'+admEsc(e.role||'?')+'</span></td>' +
+          '<td style="font-size:10px;color:#8899a8;font-family:monospace">'+admEsc((e.device||'').slice(0,10))+'</td>' +
+          '<td style="font-size:10px;color:#8899a8;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+admEsc(e.ua||'')+'">'+admEsc((e.ua||'').split(') ')[0]||'')+'</td>' +
+        '</tr>';
+      }).join('') + '</tbody></table>';
+  }).catch(function(){});
+
+  // Modifiche (ultimi 200)
+  FB_REF.root.child('security_log/mods').limitToLast(200).once('value').then(function(snap){
+    var data = snap.val()||{};
+    var arr = Object.keys(data).map(function(k){ return data[k]; }).sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    var n24 = arr.filter(function(e){ return (e.ts||0) >= day24; }).length;
+    document.getElementById('secMod24').textContent = n24;
+    var el = document.getElementById('secModList');
+    if(!arr.length){ el.innerHTML = '<div style="color:#666;font-style:italic;padding:8px 0">Nessuna modifica registrata ancora.</div>'; return; }
+    var actColor = {add:'#2ecc71', update:'#3B9FD4', remove:'#E05555', archive:'#8859E5', clear:'#E05555'};
+    el.innerHTML = '<table class="admTable"><thead><tr><th>Quando</th><th>Utente</th><th>Azione</th><th>Record</th><th>Dettaglio</th></tr></thead><tbody>' +
+      arr.slice(0,100).map(function(e){
+        var col = actColor[e.action]||'#999';
+        var det = e.extra ? Object.keys(e.extra).map(function(k){ return k+':'+String(e.extra[k]||'').slice(0,40); }).join(' · ') : '';
+        return '<tr>' +
+          '<td style="font-size:11px;color:#8899a8;white-space:nowrap">'+new Date(e.ts).toLocaleString('it-IT')+'</td>' +
+          '<td><b style="color:#fff">'+admEsc(e.name||'?')+'</b> <span class="admChip">'+admEsc(e.role||'?')+'</span></td>' +
+          '<td><span style="color:'+col+';font-weight:700;font-size:11px;letter-spacing:.5px;text-transform:uppercase">'+admEsc(e.action||'')+'</span></td>' +
+          '<td style="font-family:monospace;font-size:10px;color:#8899a8">'+admEsc((e.key||'').slice(0,14))+'</td>' +
+          '<td style="font-size:10px;color:#c6d4e2">'+admEsc(det)+'</td>' +
+        '</tr>';
+      }).join('') + '</tbody></table>';
+  }).catch(function(){});
+}
+
+// Kill switch: scrive _killswitch/ts che tutti i dispositivi ascoltano.
+// Ogni client cancella la propria cache locale (rows + IndexedDB) alla ricezione.
+function admKillSwitch(){
+  if(typeof FB_REF==='undefined' || !FB_REF){ admToast('Firebase non connesso','err'); return; }
+  admConfirm('KILL SWITCH — cancella dati locali su TUTTI i dispositivi',
+    'Vuoi davvero azzerare i dati locali su tutti i PC/telefoni connessi? I record su Firebase NON vengono toccati, ma ogni client verra\' resettato al prossimo refresh. Utile solo per emergenza. Continuo?',
+    function(){
+      FB_REF.root.child('_killswitch').set({ts:Date.now(), by:deviceName||'ADMIN'})
+        .then(function(){ admToast('💣 Kill switch inviato — tutti i dispositivi si azzereranno','ok'); admLog('security','killswitch','','','sent'); admCommit('security','killswitch','Kill switch attivato'); })
+        .catch(function(err){ admToast('Errore: '+err.message,'err'); });
+    });
 }
 
 // ── LOG ──
