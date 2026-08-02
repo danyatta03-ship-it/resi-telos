@@ -667,6 +667,7 @@ select option {
     <button class="sb sp" style="flex:1;padding:8px;font-size:11px" onclick="togChart()">📊 Grafici</button>
     <button class="sb ssb" style="flex:1;padding:8px;font-size:11px" onclick="showCyclesFornitori()">🚚 Cicli</button>
     <button class="sb sy uffOnlyBtn" style="flex:1;padding:8px;font-size:11px;display:none" onclick="showScadenzeCicli()" title="Scadenzario UFF: giorni residui per ciclo">⏰ Scadenze</button>
+    <button class="sb sy" style="flex:1;padding:8px;font-size:11px" onclick="mfuCheckDue(false)" title="Mail inviate in attesa di risposta (5 gg lavorativi)">📬 Follow-up</button>
     <button class="sb sy" style="flex:1;padding:8px;font-size:11px" onclick="fineGiornata()">🌙 Fine Giornata</button>
     <button class="sb sr" style="flex:1;padding:8px;font-size:11px" onclick="clearAll()">✕ Svuota</button>
   </div>
@@ -1491,6 +1492,8 @@ function launchApp() {
   // Promemoria fine giornata (orario configurabile nelle impostazioni)
   setInterval(checkReminder,60000);
   setTimeout(checkReminder,5000);
+  // v34b: notifiche browser + follow-up mail
+  try{ notifBoot(); }catch(e){}
 }
 
 function applyRoleUI() {
@@ -1521,6 +1524,10 @@ function showSettings() {
     '<div class="sh-section">PROMEMORIA FINE GIORNATA</div>'+
     '<div style="font-size:10px;color:var(--txt2);margin-bottom:6px;line-height:1.5">A quest\'ora l\'app propone di esportare e svuotare (vuoto = disattivato).</div>'+
     '<input id="set_rem" type="time" value="'+xe(rem)+'" style="margin-bottom:10px">'+
+    '<div class="sh-section">NOTIFICHE</div>'+
+    '<div style="font-size:10px;color:var(--txt2);margin-bottom:6px;line-height:1.5">Ricevi avvisi per scadenze fornitori, richieste di presa logistica e follow-up mail scadute.</div>'+
+    '<button onclick="notifAsk()" style="width:100%;background:rgba(59,159,212,.12);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);padding:10px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">\ud83d\udd14 Attiva notifiche browser</button>'+
+    '<button onclick="mfuCheckDue(false)" style="width:100%;background:rgba(230,176,60,.12);color:#E6B03C;border:1px solid rgba(230,176,60,.4);padding:10px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:10px">\ud83d\udcec Mostra follow-up mail in attesa</button>'+
     '<button onclick="saveSettings()" style="width:100%;background:linear-gradient(135deg,#002010,#004020);color:var(--grn);border:1px solid rgba(0,230,118,.3);padding:13px;font-size:15px;font-weight:700;border-radius:var(--rad);cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:8px">\u2713 SALVA</button>'+
     '<button onclick="csht()" style="width:100%;background:none;color:var(--txt3);border:none;padding:11px;font-size:13px;cursor:pointer;font-family:inherit">Annulla</button>';
   document.getElementById('ov').classList.add('on');
@@ -7503,6 +7510,18 @@ function checkAndEmailFornitore(row) {
   // Ask user before opening
   if(confirm('Inviare email al fornitore '+row.forn+'?\n'+(email?'Email: '+email:'(nessuna email salvata - si apre Outlook vuoto)'))){
     openMail(mailto);
+    // v34b: registra follow-up mail fornitore
+    try{
+      if(email && typeof mfuAdd==='function'){
+        mfuAdd({
+          to:email,
+          subject:decodeURIComponent(subj),
+          body:decodeURIComponent(body),
+          cod:row.cod||'', forn:row.forn||'', sogg:row.sogg||'',
+          kind:'fornitore'
+        });
+      }
+    }catch(e){}
   }
 }
 
@@ -7702,6 +7721,18 @@ function mpOpenOutlook(){
   // apertura diretta nel gesto utente (non naviga: il browser passa il mailto all'app)
   try{ window.location.href=url; }catch(e){ openMail(url); }
   mpRegisterSend('Outlook');
+  // v34b: registra follow-up mail (agente/cliente in base al ctx)
+  try{
+    var ctx = window._mpCtx||{};
+    if(to && typeof mfuAdd==='function'){
+      var kind = (ctx.who==='agente') ? 'agente' : (ctx.who==='cliente' ? 'cliente' : (ctx.who==='presa' ? 'presa' : 'mail'));
+      mfuAdd({
+        to:to, subject:subj, body:body,
+        cod:ctx.cod||'', forn:ctx.forn||'', sogg:ctx.sogg||'',
+        kind:kind
+      });
+    }
+  }catch(e){}
   toast('📧 Se Outlook è installato come app predefinita si apre. Altrimenti usa "Outlook Web".','b');
 }
 
@@ -8432,6 +8463,19 @@ function sendPresaLogisticaMail(row){
     if(!confirm('Email fornitore '+( row.forn||'')+" non trovata nel database.\nAprire Outlook senza destinatario?")) return;
   }
   openMail(data.mailto);
+  // v34b: registra follow-up (verifica risposta tra 5 gg lavorativi) + notifica cross-device
+  try{
+    if(data.email && typeof mfuAdd==='function'){
+      mfuAdd({
+        to:data.email, cc:data.vetEmail||'',
+        subject:'Richiesta presa colli - Telos SPA',
+        body:'(Corpo mail standard presa logistica — vedi template)',
+        cod:row&&row.cod||'', forn:row&&row.forn||'', sogg:row&&row.sogg||'',
+        kind:'presa'
+      });
+    }
+    if(typeof notifBroadcast==='function') notifBroadcast('presa', (deviceName||'Operatore')+' ha richiesto la presa per '+(row&&row.forn||'?')+((row&&row.cod)?(' · '+row.cod):''));
+  }catch(e){}
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -11502,6 +11546,293 @@ function admGlobalSearch(q){
   body.innerHTML = h;
 }
 function _gsLabel(k){return {users:'Utenti',suppliers:'Fornitori',agents:'Agenti',mailTpl:'Template Email',portals:'Portali',categories:'Categorie'}[k]||k;}
+
+// ══════════════════════════════════════════════════════════════════════
+// v34b — NOTIFICHE BROWSER + FOLLOW-UP MAIL RI-SOLLECITO
+// ══════════════════════════════════════════════════════════════════════
+
+// ── A. Notification API wrapper ──────────────────────────────────────
+var NOTIF_ENABLED = false;
+function notifSupported(){ try{ return typeof Notification!=='undefined'; }catch(e){ return false; } }
+function notifInit(){
+  try{ NOTIF_ENABLED = notifSupported() && Notification.permission==='granted'; }catch(e){}
+}
+function notifAsk(cb){
+  if(!notifSupported()){ toast('Notifiche non supportate da questo browser','r'); if(cb)cb(false); return; }
+  if(Notification.permission==='granted'){ NOTIF_ENABLED=true; toast('Notifiche già attive','b'); if(cb)cb(true); return; }
+  if(Notification.permission==='denied'){ toast('Notifiche bloccate. Sbloccale dalle impostazioni del browser (icona lucchetto)','r'); if(cb)cb(false); return; }
+  try{
+    Notification.requestPermission().then(function(p){
+      NOTIF_ENABLED = (p==='granted');
+      toast(NOTIF_ENABLED?'✓ Notifiche attivate':'Notifiche non attivate','b');
+      if(cb)cb(NOTIF_ENABLED);
+    });
+  }catch(e){}
+}
+function notify(title, body, opts){
+  opts = opts || {};
+  // Se la finestra è visibile mostro un toast in-app (meno invasivo delle notifiche desktop)
+  if(document.visibilityState==='visible' && !opts.forceNative){
+    try{ toast('🔔 '+title+(body?' — '+body:''),'b'); }catch(e){}
+    return;
+  }
+  if(!NOTIF_ENABLED || !notifSupported()) return;
+  try{
+    var n = new Notification(title, {body:body||'', icon:'./icon-192.png', badge:'./icon-192.png', tag:opts.tag||''});
+    if(opts.onclick) n.onclick = opts.onclick;
+    setTimeout(function(){ try{ n.close(); }catch(e){} }, opts.timeout||9000);
+  }catch(e){}
+}
+
+// ── B. Giorni lavorativi (esclude Sab/Dom) ───────────────────────────
+function addBusinessDays(date, n){
+  var d = new Date(date);
+  var added = 0;
+  while(added < n){
+    d.setDate(d.getDate()+1);
+    var day = d.getDay();
+    if(day!==0 && day!==6) added++;
+  }
+  return d;
+}
+
+// ── C. Store follow-up mail (persistito su Firebase se disponibile) ──
+var MFU_REF = null;
+var MFU_LOCAL = {};   // id -> record
+function _mfuLoadLocal(){ try{ MFU_LOCAL = JSON.parse(localStorage.getItem('mfu')||'{}')||{}; }catch(e){ MFU_LOCAL={}; } }
+function _mfuSaveLocal(){ try{ localStorage.setItem('mfu', JSON.stringify(MFU_LOCAL)); }catch(e){} }
+function mfuInit(){
+  _mfuLoadLocal();
+  if(typeof FB_REF==='undefined' || !FB_REF || !FB_REF.root) return;
+  try{
+    MFU_REF = FB_REF.root.child('mailFollowups');
+    MFU_REF.on('value', function(snap){
+      MFU_LOCAL = snap.val() || {};
+      _mfuSaveLocal();
+      mfuCheckDue(true);
+    });
+  }catch(e){}
+}
+function mfuAdd(rec){
+  if(!rec || !rec.to) return;
+  var id = 'mfu_'+Date.now()+Math.random().toString(36).slice(2,6);
+  var now = Date.now();
+  var dueDate = addBusinessDays(new Date(now), 5);
+  var full = {
+    id:id, sentAt:now, dueAt:dueDate.getTime(),
+    to:rec.to||'', cc:rec.cc||'', subject:rec.subject||'', body:rec.body||'',
+    cod:rec.cod||'', forn:rec.forn||'', sogg:rec.sogg||'',
+    who:deviceName||'', kind:rec.kind||'generic',
+    replied:false, dismissed:false, followUpCount:0
+  };
+  MFU_LOCAL[id] = full;
+  _mfuSaveLocal();
+  if(MFU_REF){ try{ MFU_REF.child(id).set(full).catch(function(){}); }catch(e){} }
+  // Notifica cross-device: qualcuno ha inviato una mail
+  notifBroadcast('mail', (deviceName||'Operatore')+' ha inviato mail a '+(rec.to||'?')+(rec.forn?(' ('+rec.forn+')'):''));
+  toast('📬 Follow-up registrato · verifica risposta tra 5 gg lavorativi','b');
+}
+function mfuUpdate(id, changes){
+  if(!MFU_LOCAL[id]) return;
+  for(var k in changes) MFU_LOCAL[id][k] = changes[k];
+  _mfuSaveLocal();
+  if(MFU_REF){ try{ MFU_REF.child(id).update(changes).catch(function(){}); }catch(e){} }
+}
+function mfuDue(){
+  var now = Date.now(); var out = [];
+  for(var id in MFU_LOCAL){
+    var r = MFU_LOCAL[id];
+    if(r && !r.replied && !r.dismissed && (r.dueAt||0)<=now) out.push(r);
+  }
+  return out.sort(function(a,b){ return (a.dueAt||0)-(b.dueAt||0); });
+}
+function mfuCheckDue(silentIfEmpty){
+  var due = mfuDue();
+  if(!due.length){ if(!silentIfEmpty) toast('Nessun follow-up in attesa','b'); return; }
+  if(document.getElementById('mfuBox')) return;
+  mfuShowPopup(due);
+}
+function _fmtDDMMYYYY(ts){
+  var d = new Date(ts||Date.now());
+  return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+}
+function mfuShowPopup(list){
+  var old=document.getElementById('mfuBox'); if(old)old.remove();
+  var box=document.createElement('div'); box.id='mfuBox';
+  box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1600;display:flex;align-items:center;justify-content:center;padding:14px;overflow-y:auto;-webkit-overflow-scrolling:touch';
+  var h='<div style="background:#111;border:2px solid #E6B03C;border-radius:14px;padding:18px;width:100%;max-width:540px;max-height:88vh;overflow-y:auto">';
+  h+='<div style="font-size:16px;font-weight:800;color:#E6B03C;margin-bottom:4px">📬 Follow-up mail in attesa ('+list.length+')</div>';
+  h+='<div style="font-size:11px;color:#999;margin-bottom:14px;line-height:1.5">Sono passati almeno 5 giorni lavorativi da queste comunicazioni. Il destinatario ha risposto?</div>';
+  for(var i=0;i<list.length;i++){
+    var r=list[i];
+    var days = Math.floor((Date.now()-(r.sentAt||Date.now()))/86400000);
+    var kindLbl = {presa:'PRESA LOGISTICA', mail:'MAIL', ano:'MAIL ANOMALIA', fornitore:'MAIL FORNITORE', cliente:'MAIL CLIENTE', agente:'MAIL AGENTE'}[r.kind]||'MAIL';
+    h+='<div style="border:1px solid #E6B03C55;border-radius:10px;padding:12px;margin-bottom:10px;background:#0d0d0d">';
+    h+='<div style="font-size:10px;color:#E6B03C;font-weight:800;letter-spacing:.5px">'+xe(kindLbl)+' · inviata '+days+' gg fa · da '+xe(r.who||'?')+(r.followUpCount>0?' · '+r.followUpCount+' solleciti':'')+'</div>';
+    h+='<div style="font-size:13px;color:#fff;font-weight:700;margin-top:4px">'+xe(r.to||'—')+'</div>';
+    if(r.subject) h+='<div style="font-size:11px;color:#ccc;margin-top:2px">'+xe(r.subject)+'</div>';
+    var meta=[r.cod,r.forn,r.sogg].filter(Boolean).join(' · ');
+    if(meta) h+='<div style="font-size:10px;color:#888;margin-top:2px">'+xe(meta)+'</div>';
+    h+='<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">';
+    h+='<button onclick="mfuMarkReplied(\''+r.id+'\')" style="flex:1 1 40%;background:rgba(52,211,153,.15);color:#34D399;border:1px solid #34D399;padding:9px 8px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer">✓ Ha risposto</button>';
+    h+='<button onclick="mfuResollect(\''+r.id+'\')" style="flex:1 1 40%;background:rgba(230,176,60,.15);color:#E6B03C;border:1px solid #E6B03C;padding:9px 8px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer">↻ Ri-sollecito</button>';
+    h+='<button onclick="mfuSnooze(\''+r.id+'\')" style="background:none;color:#888;border:1px solid #333;padding:9px 10px;border-radius:8px;font-size:11px;cursor:pointer">+2gg</button>';
+    h+='<button onclick="mfuDismiss(\''+r.id+'\')" style="background:none;color:#666;border:1px solid #333;padding:9px 10px;border-radius:8px;font-size:11px;cursor:pointer">Chiudi caso</button>';
+    h+='</div></div>';
+  }
+  h+='<button onclick="document.getElementById(\'mfuBox\').remove()" style="width:100%;background:none;color:#888;border:1px solid #333;padding:10px;border-radius:8px;font-size:12px;cursor:pointer;margin-top:6px">Rimanda tutto</button>';
+  h+='</div>';
+  box.innerHTML=h; document.body.appendChild(box);
+}
+function mfuMarkReplied(id){
+  mfuUpdate(id, {replied:true, repliedAt:Date.now(), repliedBy:deviceName||''});
+  toast('✓ Mail marcata come risposta','b');
+  mfuRefreshPopup();
+}
+function mfuDismiss(id){
+  mfuUpdate(id, {dismissed:true, dismissedAt:Date.now()});
+  toast('Caso chiuso','b');
+  mfuRefreshPopup();
+}
+function mfuSnooze(id){
+  var newDue = addBusinessDays(new Date(), 2).getTime();
+  mfuUpdate(id, {dueAt:newDue});
+  toast('⏰ Rimandato di 2 giorni lavorativi','b');
+  mfuRefreshPopup();
+}
+function mfuResollect(id){
+  var r = MFU_LOCAL[id]; if(!r) return;
+  var giorno = _fmtDDMMYYYY(r.sentAt);
+  var articoloStr;
+  if(r.cod){
+    articoloStr = 'all’articolo '+r.cod;
+    if(r.forn) articoloStr += ' del fornitore '+r.forn;
+  } else if(r.forn){
+    articoloStr = 'agli articoli del fornitore '+r.forn;
+  } else {
+    articoloStr = 'agli articoli oggetto della precedente comunicazione';
+  }
+  var prefix =
+    'Buongiorno,\n\n'+
+    'Abbiamo provato a contattarla il '+giorno+' riguardo '+articoloStr+'. '+
+    'Data la mancata risposta, siamo qui a richiedere cortesemente un riscontro.\n\n'+
+    'Le riportiamo di seguito il testo del messaggio originale per comodità.\n\n'+
+    '────────────────────────\n\n'+
+    (r.body||'')+
+    '\n\n────────────────────────\n'+
+    'Cordiali saluti,\n'+(deviceName||'Reparto Resi')+' — Telos SPA';
+  var subj = 'RI-SOLLECITO: '+(r.subject||'Reso Telos SPA');
+  var mailto = 'mailto:'+encodeURIComponent(r.to);
+  var sep='?';
+  if(r.cc){ mailto += sep+'cc='+encodeURIComponent(r.cc); sep='&'; }
+  mailto += sep+'subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(prefix);
+  try{ openMail(mailto); }catch(e){}
+  var newDue = addBusinessDays(new Date(), 5).getTime();
+  mfuUpdate(id, {dueAt:newDue, followUpCount:(r.followUpCount||0)+1, lastResollectAt:Date.now(), subject:subj, body:prefix});
+  toast('↻ Ri-sollecito inviato · nuovo check tra 5 gg lavorativi','b');
+  mfuRefreshPopup();
+}
+function mfuRefreshPopup(){
+  var due = mfuDue();
+  var box = document.getElementById('mfuBox'); if(box) box.remove();
+  if(due.length) mfuShowPopup(due);
+}
+
+// ── D. Helper unico per invio mail con registrazione follow-up ──────
+// Punti di chiamata: sendPresaLogisticaMail, doAnoMail, ecc.
+// Aggiungere: sendMailAndTrack(mailtoUrl, {to, cc, subject, body, cod, forn, sogg, kind})
+function sendMailAndTrack(url, meta){
+  try{ openMail(url); }catch(e){}
+  if(meta && meta.to) mfuAdd(meta);
+}
+
+// ── E. Notifiche scadenze fornitori (giorniResidui <= 3) ────────────
+var _notifiedScad = {};   // "key_YYYYMMDD" -> true (dedup per giornata)
+function notifCheckScadenze(){
+  if(typeof gra!=='function' || typeof scadenzaInfo!=='function') return;
+  if(ROLE!=='UFF' && ROLE!=='ADM') return;
+  var arr = gra().filter(function(r){ return r.fase==='UFFICIO RESI' || r.fase==='MAGAZZINO'; });
+  var today = new Date().toISOString().slice(0,10);
+  var urgenti = [], scaduti = [];
+  arr.forEach(function(r){
+    var info = scadenzaInfo(r);
+    if(!info || !info.hasData) return;
+    if(info.giorniResidui <= 0){
+      var kk = 'sc_'+(r._key||r.cod)+'_'+today;
+      if(!_notifiedScad[kk]){ _notifiedScad[kk] = true; scaduti.push(r); }
+    } else if(info.giorniResidui <= 3){
+      var ku = 'ur_'+(r._key||r.cod)+'_'+today;
+      if(!_notifiedScad[ku]){ _notifiedScad[ku] = true; urgenti.push(r); }
+    }
+  });
+  if(scaduti.length){
+    notify('⚠ Resi SCADUTI', scaduti.length+' resi hanno superato la scadenza fornitore', {
+      tag:'scad-crit',
+      onclick:function(){ try{ window.focus(); if(typeof showScadenzeCicli==='function') showScadenzeCicli(); }catch(e){} }
+    });
+  }
+  if(urgenti.length){
+    notify('⏰ Scadenze imminenti', urgenti.length+' resi con scadenza ≤ 3 giorni', {
+      tag:'scad-warn',
+      onclick:function(){ try{ window.focus(); if(typeof showScadenzeCicli==='function') showScadenzeCicli(); }catch(e){} }
+    });
+  }
+}
+
+// ── F. Broadcast notifica cross-device via Firebase ─────────────────
+function notifBroadcast(kind, msg){
+  if(typeof FB_REF==='undefined' || !FB_REF || !FB_REF.root) return;
+  try{
+    FB_REF.root.child('notifEvents').push({
+      ts:Date.now(), kind:kind, msg:msg||'',
+      by:deviceName||'', role:ROLE||''
+    });
+  }catch(e){}
+}
+
+// ── G. Listener eventi cross-device (presa/mail/generic) ────────────
+var _notifEvBootTs = 0;
+function notifEventsInit(){
+  if(typeof FB_REF==='undefined' || !FB_REF || !FB_REF.root) return;
+  _notifEvBootTs = Date.now();
+  try{
+    FB_REF.root.child('notifEvents').limitToLast(20).on('child_added', function(s){
+      var v = s.val(); if(!v || !v.ts) return;
+      if(v.ts < _notifEvBootTs) return;      // storico: skip
+      if(v.by === deviceName) return;         // sono io: skip
+      var title;
+      if(v.kind==='presa')        title = '📦 Presa logistica richiesta';
+      else if(v.kind==='mail')    title = '✉ Mail inviata da un collega';
+      else if(v.kind==='scad')    title = '⏰ Scadenza segnalata';
+      else                        title = '🔔 Notifica reparto';
+      notify(title, v.msg||'', {tag:v.kind||''});
+    });
+  }catch(e){}
+}
+
+// ── H. Boot notifiche (chiamato da launchApp) ───────────────────────
+function notifBoot(){
+  try{ notifInit(); }catch(e){}
+  try{ mfuInit(); }catch(e){}
+  try{ notifEventsInit(); }catch(e){}
+  // Al login: chiedi il permesso (una sola volta per sessione)
+  try{
+    if(notifSupported() && Notification.permission==='default' && !sessionStorage.getItem('notifAsked')){
+      sessionStorage.setItem('notifAsked','1');
+      setTimeout(function(){ notifAsk(); }, 3500);
+    }
+  }catch(e){}
+  // Check dopo il boot: scadenze + follow-up mail (silenzioso se vuoto)
+  setTimeout(function(){
+    try{ notifCheckScadenze(); }catch(e){}
+    try{ mfuCheckDue(true); }catch(e){}
+  }, 6000);
+  // Periodico ogni 30 minuti
+  setInterval(function(){
+    try{ notifCheckScadenze(); }catch(e){}
+    try{ mfuCheckDue(true); }catch(e){}
+  }, 30*60*1000);
+}
 </script>
 
 </body>
