@@ -1120,7 +1120,7 @@ var ROLE_PERMS = {
   // canViewPhases: fasi VISIBILI (fuori dalle quali i record vengono nascosti in lista).
   // canViewOwnOnly: se true, l'utente vede solo i record che ha inserito lui.
   // canSeeTabs:     tab principali (in alto) mostrati; '*' = tutti; altrimenti sono gli id (pgIns/pgList/pgAno/pgUbi/pgTri/pgHist/pgCon).
-  RIC: { canAdd:true, canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'], canViewAll:false, canViewPhases:['RICEVIMENTO'], canViewOwnOnly:true,  canBulk:false, canAdvanceTo:['UFFICIO RESI'], canSendBack:false, canSeeTabs:['pgIns','pgList'] },
+  RIC: { canAdd:true, canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'], canViewAll:false, canViewPhases:['*'], canViewOwnOnly:true,  canBulk:false, canAdvanceTo:['UFFICIO RESI'], canSendBack:false, canSeeTabs:['pgIns','pgList'] },
   UFF: { canAdd:true, canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:false, canViewPhases:['UFFICIO RESI'], canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true,  canSeeTabs:['*'] },
   MAG: { canAdd:true, canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO'],         canViewAll:false, canViewPhases:['MAGAZZINO'],    canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true, canSeeTabs:['*'] },
   ADM: { canAdd:true, canDelete:true,  canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:true,  canViewPhases:['*'],            canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true, canSeeTabs:['*'] }
