@@ -3,7 +3,7 @@
 // App shell: network-first (aggiornamenti subito, offline dal cache)
 // Dati anagrafica/storico: cache-first con refresh in background
 // ═══════════════════════════════════════════════════════
-var CACHE = 'resi-telos-v34a3';
+var CACHE = 'resi-telos-v34a4';
 var PRECACHE = [
   './',
   './index.html',
