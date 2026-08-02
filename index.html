@@ -2130,13 +2130,26 @@ function addRow() {
   if(_dup && !confirm('⚠ Esiste già l\'articolo "'+cod+'" '+(_rmaV&&_dup.rma===_rmaV?'con la stessa bolla ('+_rmaV+')':'in data '+fd(datArr))+'.\nVuoi aggiungerlo comunque come duplicato?')) return;
 
   var flusso=gv('cFlu'),tipoDoc=gv('cDoc');
+  // Auto-avanzamento a UFFICIO RESI: se il reso e' inserito in RICEVIMENTO con
+  // stato "pulito" (nessuna anomalia, nessuno stallo, nessun flusso ANOMALIA),
+  // salta direttamente a UFFICIO RESI / OK PER UFFICIO cosi' l'ufficio lo
+  // vede subito pronto per la lavorazione. Le anomalie e gli stalli restano
+  // in RICEVIMENTO perche' hanno bisogno di verifica supplementare.
+  var _autoFase = fase, _autoStato = stato;
+  var _isProblematic = (stato && (stato.indexOf('ANOMALIA')>=0 || stato.indexOf('STALLO')>=0))
+                       || flusso === 'ANOMALIA'
+                       || (gv('cAno')||'').trim();
+  if(fase === 'RICEVIMENTO' && !_isProblematic){
+    _autoFase = 'UFFICIO RESI';
+    _autoStato = 'OK PER UFFICIO';
+  }
   var row={
     datArr:datArr,vetRic:vetRic,datElab:gv('hElab'),sogg:gv('hSogg'),
     pre:gv('cPre'),cod:cod,
     qty:parseInt(document.getElementById('cQty').value)||1,
     forn:forno,prc:parseFloat(document.getElementById('cPrc').value)||0,
     vetUsc:gv('cVUsc'),flusso:flusso,causale:causale,
-    anomalia:gv('cAno'),tipoDoc:tipoDoc,fase:fase,stato:stato,
+    anomalia:gv('cAno'),tipoDoc:tipoDoc,fase:_autoFase,stato:_autoStato,
     datSta:gv('cDSta'),rma:gv('cRma'),
     contatto:gv('cCon'),datCon:gv('cDCon'),
     agente:gv('hAge'),docRic:gv('cDocR'),
