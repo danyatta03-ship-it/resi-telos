@@ -489,10 +489,13 @@ select option {
           <div class="f"><label><span>PREZZO €</span></label><input type="number" id="cPrc" value="0" step="0.01" min="0" inputmode="decimal"></div>
         </div>
         <div class="f" style="position:relative"><label><span>FORNITORE <span class="req">&#10033;</span></span></label>
-          <input id="cFor" placeholder="es. BOSCH" autocomplete="off" oninput="uv(this);onForn(this);showForSugg(this.value);showFornitoreInfo(this.value)" onchange="showFornitoreInfo(this.value);ce(this)" onblur="setTimeout(function(){var b=document.getElementById('forSuggBox');if(b)b.style.display='none'},200)">
+          <input id="cFor" placeholder="es. BOSCH" autocomplete="off" oninput="uv(this);onForn(this);showForSugg(this.value);showFornitoreInfo(this.value);hintGiorniReso(this.value)" onchange="showFornitoreInfo(this.value);ce(this);hintGiorniReso(this.value)" onblur="setTimeout(function(){var b=document.getElementById('forSuggBox');if(b)b.style.display='none'},200)">
           <div id="forSuggBox" style="display:none;position:absolute;left:0;right:0;top:100%;background:#1a1a1a;border:1px solid #3B9FD4;border-radius:8px;z-index:100;max-height:200px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.6)"></div>
         </div>
         <div id="fornInfoBox" style="display:none;margin-top:2px"></div>
+        <div class="f"><label style="display:flex;align-items:center;justify-content:space-between"><span>DATA ACQUISTO DAL FORNITORE <span class="req">&#10033;</span></span><span id="cDatAcqHint" style="font-size:9px;color:var(--txt3);font-weight:400"></span></label>
+          <input type="date" id="cDatAcqForn" oninput="ce(this)" onchange="ce(this)" title="Data acquisto dal fornitore: usata per calcolare la scadenza reso">
+        </div>
       </div>
     </div>
     <div class="card">
@@ -663,6 +666,7 @@ select option {
   <div style="display:flex;gap:6px;margin-bottom:8px">
     <button class="sb sp" style="flex:1;padding:8px;font-size:11px" onclick="togChart()">📊 Grafici</button>
     <button class="sb ssb" style="flex:1;padding:8px;font-size:11px" onclick="showCyclesFornitori()">🚚 Cicli</button>
+    <button class="sb sy uffOnlyBtn" style="flex:1;padding:8px;font-size:11px;display:none" onclick="showScadenzeCicli()" title="Scadenzario UFF: giorni residui per ciclo">⏰ Scadenze</button>
     <button class="sb sy" style="flex:1;padding:8px;font-size:11px" onclick="fineGiornata()">🌙 Fine Giornata</button>
     <button class="sb sr" style="flex:1;padding:8px;font-size:11px" onclick="clearAll()">✕ Svuota</button>
   </div>
@@ -1120,7 +1124,7 @@ var ROLE_PERMS = {
   // canViewPhases: fasi VISIBILI (fuori dalle quali i record vengono nascosti in lista).
   // canViewOwnOnly: se true, l'utente vede solo i record che ha inserito lui.
   // canSeeTabs:     tab principali (in alto) mostrati; '*' = tutti; altrimenti sono gli id (pgIns/pgList/pgAno/pgUbi/pgTri/pgHist/pgCon).
-  RIC: { canAdd:true, canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'], canViewAll:false, canViewPhases:['RICEVIMENTO'], canViewOwnOnly:true,  canBulk:false, canAdvanceTo:['UFFICIO RESI'], canSendBack:false, canSeeTabs:['pgIns','pgList'] },
+  RIC: { canAdd:true, canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'], canViewAll:false, canViewPhases:['*'], canViewOwnOnly:true,  canBulk:false, canAdvanceTo:['UFFICIO RESI'], canSendBack:false, canSeeTabs:['pgIns','pgList'] },
   UFF: { canAdd:true, canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:false, canViewPhases:['UFFICIO RESI'], canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true,  canSeeTabs:['*'] },
   MAG: { canAdd:true, canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO'],         canViewAll:false, canViewPhases:['MAGAZZINO'],    canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true, canSeeTabs:['*'] },
   ADM: { canAdd:true, canDelete:true,  canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:true,  canViewPhases:['*'],            canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true, canSeeTabs:['*'] }
@@ -1497,6 +1501,10 @@ function applyRoleUI() {
   // Delete buttons visible only to ADM/MAG
   var dels = document.querySelectorAll('.del-btn');
   for(var i=0;i<dels.length;i++) dels[i].style.display=p.canDelete?'':'none';
+  // Scadenzario cicli: visibile solo a UFF/ADM
+  var _uffBtns = document.querySelectorAll('.uffOnlyBtn');
+  var _uffShow = (ROLE==='UFF' || ROLE==='ADM');
+  for(var j=0;j<_uffBtns.length;j++) _uffBtns[j].style.display = _uffShow ? '' : 'none';
 }
 
 var setRoleSel='';
@@ -2084,8 +2092,8 @@ function fillStato(fi,si) {
 // ADD ROW
 // ══════════════════════════════════════════════════
 function addRow() {
-  var cod=gv('cCod'),forno=gv('cFor'),causale=gv('cCau'),fase=gv('cFas'),stato=gv('cSta'),datArr=gv('hArr'),vetRic=gv('hVet');
-  var checks=[{id:'hArr',v:datArr},{id:'hVet',v:vetRic},{id:'cCod',v:cod},{id:'cFor',v:forno},{id:'cCau',v:causale},{id:'cFas',v:fase},{id:'cSta',v:stato}];
+  var cod=gv('cCod'),forno=gv('cFor'),causale=gv('cCau'),fase=gv('cFas'),stato=gv('cSta'),datArr=gv('hArr'),vetRic=gv('hVet'),datAcqForn=gv('cDatAcqForn');
+  var checks=[{id:'hArr',v:datArr},{id:'hVet',v:vetRic},{id:'cCod',v:cod},{id:'cFor',v:forno},{id:'cCau',v:causale},{id:'cFas',v:fase},{id:'cSta',v:stato},{id:'cDatAcqForn',v:datAcqForn}];
   checks.push({id:'cDoc',v:gv('cDoc')});
   var ok=true,fe=null;
   for(var i=0;i<checks.length;i++){if(!checks[i].v){var el=document.getElementById(checks[i].id);if(el){el.classList.add('err');if(!fe)fe=el;}ok=false;}}
@@ -2130,14 +2138,27 @@ function addRow() {
   if(_dup && !confirm('⚠ Esiste già l\'articolo "'+cod+'" '+(_rmaV&&_dup.rma===_rmaV?'con la stessa bolla ('+_rmaV+')':'in data '+fd(datArr))+'.\nVuoi aggiungerlo comunque come duplicato?')) return;
 
   var flusso=gv('cFlu'),tipoDoc=gv('cDoc');
+  // Auto-avanzamento a UFFICIO RESI: se il reso e' inserito in RICEVIMENTO con
+  // stato "pulito" (nessuna anomalia, nessuno stallo, nessun flusso ANOMALIA),
+  // salta direttamente a UFFICIO RESI / OK PER UFFICIO cosi' l'ufficio lo
+  // vede subito pronto per la lavorazione. Le anomalie e gli stalli restano
+  // in RICEVIMENTO perche' hanno bisogno di verifica supplementare.
+  var _autoFase = fase, _autoStato = stato;
+  var _isProblematic = (stato && (stato.indexOf('ANOMALIA')>=0 || stato.indexOf('STALLO')>=0))
+                       || flusso === 'ANOMALIA'
+                       || (gv('cAno')||'').trim();
+  if(fase === 'RICEVIMENTO' && !_isProblematic){
+    _autoFase = 'UFFICIO RESI';
+    _autoStato = 'OK PER UFFICIO';
+  }
   var row={
     datArr:datArr,vetRic:vetRic,datElab:gv('hElab'),sogg:gv('hSogg'),
     pre:gv('cPre'),cod:cod,
     qty:parseInt(document.getElementById('cQty').value)||1,
     forn:forno,prc:parseFloat(document.getElementById('cPrc').value)||0,
     vetUsc:gv('cVUsc'),flusso:flusso,causale:causale,
-    anomalia:gv('cAno'),tipoDoc:tipoDoc,fase:fase,stato:stato,
-    datSta:gv('cDSta'),rma:gv('cRma'),
+    anomalia:gv('cAno'),tipoDoc:tipoDoc,fase:_autoFase,stato:_autoStato,
+    datSta:gv('cDSta'),rma:gv('cRma'),datAcqForn:datAcqForn,
     contatto:gv('cCon'),datCon:gv('cDCon'),
     agente:gv('hAge'),docRic:gv('cDocR'),
     datDoc:'',note:gv('cNote'),photo:pendName||'',photoThumb:pendThumb||'',photoKeys:pendPhotos.map(function(p){return p.name;}),
@@ -2156,11 +2177,12 @@ function addRow() {
     applyMB();
 
     // Reset article fields
-    var ri=['cPre','cCod','cFor','cRma','cNote'];
+    var ri=['cPre','cCod','cFor','cRma','cNote','cDatAcqForn'];
     for(var i=0;i<ri.length;i++){var el=document.getElementById(ri[i]);if(el)el.value='';}
     document.getElementById('cQty').value='1';
     document.getElementById('cPrc').value='0';
     document.getElementById('cliTip').style.display='none';
+    var _hah=document.getElementById('cDatAcqHint'); if(_hah) _hah.textContent='';
     clearPhoto();
     pendingMotivoNR='';
     toast(row.motivoNR?('Aggiunto · NON RENDIBILE · '+row.motivoNR):('✓ '+row.cod+' aggiunto — pronto per il prossimo'),'b');
@@ -2575,6 +2597,16 @@ function requireRMA(r, fase){
   toast('⛔ Serve il numero RMA/RNC per passare a MAGAZZINO','r');
   return false;
 }
+// Blocco: senza DATA ACQUISTO FORNITORE non si esce da UFFICIO RESI.
+// Serve per il scadenzario cicli (calcolo giorni residui vs GARANZIE_DB.giorni).
+function requireDatAcqForn(r, fase){
+  if(fase!=='MAGAZZINO') return true;
+  if(!r || r.fase!=='UFFICIO RESI') return true;
+  var d=((r&&r.datAcqForn)||'').trim();
+  if(d) return true;
+  toast('⛔ Compila DATA ACQUISTO DAL FORNITORE prima di passare a MAGAZZINO','r');
+  return false;
+}
 function advFase(key,fase){
   var r=rows[key];if(!r)return;
   var perms=ROLE_PERMS[ROLE]||{};
@@ -2586,6 +2618,11 @@ function advFase(key,fase){
   // Blocco: niente UFFICIO RESI senza RMA
   if(!requireRMA(r,fase)){
     try{ editRow(key); setTimeout(function(){ var el=document.getElementById('ei_rma'); if(el){ el.focus(); el.style.border='1.5px solid #E05555'; } },350); }catch(e){}
+    return;
+  }
+  // Blocco: niente UFFICIO RESI -> MAGAZZINO senza DATA ACQUISTO FORNITORE
+  if(!requireDatAcqForn(r,fase)){
+    try{ editRow(key); setTimeout(function(){ var el=document.getElementById('ei_datAcqForn'); if(el){ el.focus(); el.style.border='1.5px solid #E05555'; el.scrollIntoView({behavior:'smooth',block:'center'}); } },350); }catch(e){}
     return;
   }
   var auto=AUTO_STATO[fase]||'';
@@ -3955,6 +3992,114 @@ function showCyclesFornitori(){
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
+// ── SCADENZARIO CICLI (v34a2) ─────────────────────────────────────────
+// Vista UFF-only: per ogni ciclo, elenco dei resi ordinati per giorni
+// residui alla scadenza (giorni_reso del fornitore - giorni trascorsi
+// da datAcqForn). I resi senza datAcqForn appaiono in fondo evidenziati.
+function parseGiorniReso(g){
+  if(!g && g!==0) return null;
+  var s = String(g).trim().toUpperCase();
+  if(!s) return null;
+  // "48 H" -> 2 giorni; "10" -> 10; "48h" -> 2
+  var mH = s.match(/^(\d+)\s*H$/);
+  if(mH) return Math.max(1, Math.round(parseInt(mH[1],10)/24));
+  var mN = s.match(/^\d+$/);
+  if(mN) return parseInt(s,10);
+  return null;
+}
+function scadenzaInfo(r){
+  // Restituisce { giorniReso, giorniPassati, giorniResidui, hasData } o null se fornitore senza giorni_reso
+  var g = (typeof getGaranziaInfo==='function') ? getGaranziaInfo(r.forn||'') : null;
+  var gr = g ? parseGiorniReso(g.giorni) : null;
+  if(gr===null) return null;
+  var d = (r.datAcqForn||'').trim();
+  if(!d) return { giorniReso:gr, giorniPassati:null, giorniResidui:null, hasData:false };
+  var acq = new Date(d+'T00:00:00');
+  var now = new Date(); now.setHours(0,0,0,0);
+  var pas = Math.floor((now - acq)/86400000);
+  return { giorniReso:gr, giorniPassati:pas, giorniResidui:gr - pas, hasData:true };
+}
+function showScadenzeCicli(){
+  if(ROLE!=='UFF' && ROLE!=='ADM'){ toast('Riservato a UFFICIO/ADMIN','r'); return; }
+  var rowsAll = (typeof gra==='function') ? gra() : [];
+  // Prendo solo i resi ancora aperti (UFFICIO RESI o MAGAZZINO): dopo FINALE non ha senso il conteggio
+  var open = rowsAll.filter(function(r){ return r.fase==='UFFICIO RESI' || r.fase==='MAGAZZINO'; });
+  var byCycle = {};
+  CYCLES_ORDER.forEach(function(c){ byCycle[c] = []; });
+  open.forEach(function(r){
+    var c = cycleOfSupplier(r.forn||'');
+    var info = scadenzaInfo(r);
+    (byCycle[c] || byCycle['ALTRI']).push({ r:r, info:info });
+  });
+  // Ordino ogni ciclo: prima chi ha giorniResidui più basso (anche negativo);
+  // chi non ha datAcqForn va in fondo; chi non ha giorni_reso in fondo di tutti
+  function sortKey(x){
+    if(!x.info) return 1e9;                       // fornitore senza giorni_reso
+    if(!x.info.hasData) return 5e8;                // datAcqForn mancante
+    return x.info.giorniResidui;
+  }
+  Object.keys(byCycle).forEach(function(c){
+    byCycle[c].sort(function(a,b){ return sortKey(a) - sortKey(b); });
+  });
+
+  function chipDays(info){
+    if(!info) return '<span style="background:#222;color:#777;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700">— gg reso non noto</span>';
+    if(!info.hasData) return '<span style="background:rgba(224,85,85,.18);color:#E05555;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:800;border:1px solid #E05555">⚠ MANCA DATA ACQUISTO</span>';
+    var d = info.giorniResidui;
+    var color = '#2ECC71'; if(d<=0) color='#E05555'; else if(d<=3) color='#E05555'; else if(d<=7) color='#E6B03C';
+    var label = (d<0 ? 'SCADUTO da '+(-d)+' gg' : d===0 ? 'SCADE OGGI' : d+' gg rimasti');
+    return '<span style="background:'+color+'22;color:'+color+';padding:3px 9px;border-radius:8px;font-size:11px;font-weight:800;border:1px solid '+color+'66">'+label+'</span>' +
+           ' <span style="color:var(--txt3);font-size:9px">('+info.giorniReso+'gg · acq '+info.giorniPassati+'gg fa)</span>';
+  }
+
+  var body='';
+  var totOpen = open.length, totCritici = 0;
+  CYCLES_ORDER.forEach(function(c){
+    var list = byCycle[c];
+    if(!list.length) return;
+    var color = CYCLES_COLOR[c] || '#999';
+    var nCrit = list.filter(function(x){ return x.info && x.info.hasData && x.info.giorniResidui<=3; }).length;
+    var nManca = list.filter(function(x){ return x.info && !x.info.hasData; }).length;
+    totCritici += nCrit;
+    body += '<div style="margin-bottom:12px;border:1px solid '+color+'44;border-radius:10px;overflow:hidden">' +
+              '<div style="background:'+color+'22;color:'+color+';padding:10px 14px;font-weight:800;font-size:13px;display:flex;justify-content:space-between;align-items:center">' +
+                '<span>'+(CYCLES_ICON[c]||'')+' '+xe(c)+' <span style="color:var(--txt3);font-weight:500;font-size:11px">('+list.length+' aperti)</span></span>' +
+                (nCrit>0 ? '<span style="background:#E0555522;color:#E05555;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:800">'+nCrit+' urgenti</span>' : '') +
+              '</div>' +
+              '<div style="padding:6px;background:#111">';
+    list.forEach(function(x){
+      var r = x.r;
+      var codArt = (r.pre?'<span style="color:var(--ora)">'+xe(r.pre)+' </span>':'')+xe(r.cod||'');
+      body += '<div onclick="var b=document.getElementById(\'scadBox\');if(b)b.remove();editRow(\''+xe(r._key||'')+'\')" style="padding:9px 12px;border-bottom:1px solid #1a1a1a;cursor:pointer">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">' +
+                  '<div style="font-size:12px;font-weight:700;color:#fff">'+codArt+' <span style="color:var(--txt3);font-weight:400;font-size:10px">· '+xe(r.forn||'')+'</span></div>' +
+                  chipDays(x.info) +
+                '</div>' +
+                '<div style="font-size:10px;color:var(--txt3);margin-top:3px">'+xe(r.sogg||'—')+' · '+xe(r.fase||'')+' · '+xe(r.stato||'')+'</div>' +
+              '</div>';
+    });
+    body += '</div></div>';
+  });
+
+  if(!body) body = '<div style="text-align:center;color:var(--txt3);padding:30px 10px">Nessun reso aperto in UFFICIO/MAGAZZINO.</div>';
+
+  var html =
+    '<div id="scadBox" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1400;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto;-webkit-overflow-scrolling:touch">' +
+      '<div style="background:#111;border:2px solid #E6B03C;border-radius:14px;padding:16px;width:100%;max-width:720px;margin:auto">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+          '<div style="font-size:16px;font-weight:800;color:#E6B03C">⏰ Scadenzario cicli</div>' +
+          '<button onclick="document.getElementById(\'scadBox\').remove()" style="background:none;border:none;color:#777;font-size:22px;cursor:pointer">✕</button>' +
+        '</div>' +
+        '<div style="font-size:11px;color:#999;margin-bottom:12px;line-height:1.5">' +
+          '<b>'+totOpen+'</b> resi aperti · <b style="color:#E05555">'+totCritici+'</b> critici (≤3gg / scaduti). ' +
+          'Ordinati per giorni residui alla scadenza fornitore. Click su una riga per aprire il dettaglio.' +
+        '</div>' +
+        '<div style="max-height:75vh;overflow-y:auto;-webkit-overflow-scrolling:touch">' + body + '</div>' +
+      '</div>' +
+    '</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
 // Filtra la lista principale per fornitore (chiamata dalle card dei cicli)
 function filterByForn(forn){
   try {
@@ -4299,6 +4444,14 @@ function editRow(key){
     html+='<div style="background:rgba(91,184,224,.04);border:1px solid rgba(91,184,224,.1);border-radius:var(--rad2);padding:9px;font-size:11px;color:var(--yel);margin-bottom:9px">🔒 Non puoi modificare la fase in questo ruolo ('+ROLE+').</div>';
   }
   html+='<div class="r2">'+fld('VETTORE USCITA',sl('vetUsc',['CIPI/PIEMME','CITYLINE','MITTENTE/DESTINATARIO','INTERCOMPANY','NAZ/INT','CATI','UPS','GLS','BRT','DHL'],r.vetUsc))+fld('DATA STATO',inp('datSta',r.datSta,'','date'))+'</div>';
+  // DATA ACQUISTO FORNITORE: inserita dal RIC, editabile anche in modifica.
+  // Usata dal scadenzario cicli per calcolare i giorni residui
+  // (giorni_reso del fornitore - giorni trascorsi dall'acquisto).
+  var _giornVal = '';
+  var _gInfo = (typeof getGaranziaInfo==='function') ? getGaranziaInfo(r.forn||'') : null;
+  if(_gInfo && _gInfo.giorni) _giornVal = String(_gInfo.giorni).trim();
+  var _hint = _giornVal ? ' <span style="color:var(--txt3);font-weight:400;font-size:9px">('+xe(r.forn||'')+' ammette '+xe(_giornVal)+' gg)</span>' : '';
+  html+=fld('DATA ACQUISTO DAL FORNITORE'+_hint,inp('datAcqForn',r.datAcqForn,'','date'));
   html+=fld('RMA/RNC',inp('rma',r.rma));
   html+='<div class="sh-section">VETTORE RICEVIMENTO</div>';
   html+=fld('VETTORE RIC.',sl('vetRic',['PIEMME','CIPI','AGENTE','COLLEGA','AD','DIEMME','GLS','VINCA','BANCO','PIENNE','BRT','UPS','DHL','TNT','LGT','CITYLINE','NUOVA DEMOS'],r.vetRic));
@@ -4337,7 +4490,7 @@ function svEdit(key){
     forn:gei('forn').toUpperCase(),sogg:gei('sogg').toUpperCase(),
     causale:gei('causale'),anomalia:_anomVal,flusso:gei('flusso'),tipoDoc:gei('tipoDoc'),
     fase:gei('fase'),stato:gei('stato'),rma:gei('rma'),vetRic:gei('vetRic'),
-    vetUsc:gei('vetUsc'),datSta:gei('datSta'),
+    vetUsc:gei('vetUsc'),datSta:gei('datSta'),datAcqForn:gei('datAcqForn'),
     note:document.getElementById('ei_note')?document.getElementById('ei_note').value.trim():'',
     _lastEdit:deviceName,_lastEditTs:Date.now(),_lastEditRole:ROLE
   };
@@ -4347,6 +4500,13 @@ function svEdit(key){
     toast('⛔ Serve il numero RMA/RNC per passare a MAGAZZINO','r');
     var _rmaEl=document.getElementById('ei_rma');
     if(_rmaEl){ try{ _rmaEl.focus(); _rmaEl.scrollIntoView({behavior:'smooth',block:'center'}); _rmaEl.style.border='1.5px solid #E05555'; }catch(e){} }
+    return;
+  }
+  // Blocco: per passare da UFFICIO RESI a MAGAZZINO serve la DATA ACQUISTO DAL FORNITORE
+  if(_wasUff && ch.fase==='MAGAZZINO' && !(ch.datAcqForn||'').trim()){
+    toast('⛔ Compila DATA ACQUISTO DAL FORNITORE prima di passare a MAGAZZINO','r');
+    var _daEl=document.getElementById('ei_datAcqForn');
+    if(_daEl){ try{ _daEl.focus(); _daEl.scrollIntoView({behavior:'smooth',block:'center'}); _daEl.style.border='1.5px solid #E05555'; }catch(e){} }
     return;
   }
   // Blocco: RICEVIMENTO + flusso ANOMALIA non puo' avere stato "DA GESTIRE"
@@ -8224,33 +8384,29 @@ function buildPresaLogisticaMail(row){
   var email = forn&&forn.mail ? forn.mail : '';
   var vetEmail = forn&&forn.vetMail ? forn.vetMail : '';
   var fornNome = row.forn||'';
-  var vetNome  = forn ? forn.vet : '';
-  var vetRef   = forn ? forn.vetRef : '';
-  var vetTel   = forn ? forn.vetTel : '';
-  var orario   = forn ? (forn.orario1+(forn.orario2?' / '+forn.orario2:'')) : '';
-  var spediz   = forn ? (forn.franco?'Porto Franco':forn.asseg?'Porto Assegnato':'') : '';
-
-  var codArt = (row.pre?row.pre+' ':'')+( row.cod||'');
   var NL = '\n';
 
-  var subj = 'Reso da ritirare - '+(row.sogg||'')+' - '+codArt;
+  var subj = 'Richiesta presa colli - Telos SPA';
 
+  // Template predefinito per richiesta presa logistica
   var body =
-    'Gentile '+fornNome+','+ NL+NL+
-    'Si prega di ritirare il seguente articolo reso:'+NL+NL+
-    'Articolo:    '+codArt+NL+
-    'Cliente:     '+(row.sogg||'')+NL+
-    (row.qty?'Quantità:    '+row.qty+NL:'')+
-    (row.causale?'Causale:     '+row.causale+NL:'')+
-    (row.rma?'RMA/Rif:     '+row.rma+NL:'')+
-    NL+
-    (vetNome?'Vettore:     '+vetNome+(vetRef?' - '+vetRef:'')+(vetTel?' - '+vetTel:'')+NL:'')+
-    (orario?'Orario ritiro: '+orario+NL:'')+
-    (spediz?'Spedizione:  '+spediz+NL:'')+
-    NL+
-    'Per qualsiasi comunicazione:'+NL+
-    'resi.torino@telosgroup.it'+NL+NL+
-    'Cordiali saluti,'+NL+
+    'Buongiorno,'+NL+NL+
+    'Abbiamo preparato colli pronti per il ritiro del vostro vettore (LGT)'+NL+
+    'Qui di seguito tutti i riferimenti:'+NL+NL+
+    'Tipologia e dettaglio merci:'+NL+
+    '(Vedi allegati: foto DDT e foto colli)'+NL+NL+
+    'Indirizzo di ritiro:'+NL+
+    'Telos spa – Via Aosta 5 – 10078 – Venaria Reale (To)'+NL+NL+
+    'Orari e disponibilità:'+NL+
+    'Dal Lunedì al Venerdì'+NL+
+    'Dalle ore 08.30 alle ore 12.30 e dalle ore 14.00 alle ore 18.00'+NL+NL+
+    'Richiediamo cortesemente conferma di avvenuta consegna alla presente e/o tramite contatto telefonico'+NL+
+    'Numero Fisso: 011/4242932 int. 4'+NL+
+    'Numero Cellulare: 378/3062876'+NL+NL+
+    'Cordiali Saluti,'+NL+
+    'Grazie e Buon Lavoro'+NL+NL+
+    '---'+NL+
+    'Inviato da: '+(deviceName||'Operatore Telos')+NL+
     'Reparto Resi - Telos SPA';
 
   // CC to vettore if available
@@ -8425,6 +8581,16 @@ function getGaranziaInfo(fornName){
     if(n.indexOf(k)>=0||k.indexOf(n)>=0) return GARANZIE_DB[k];
   }
   return null;
+}
+
+// Aggiorna il hint accanto al campo DATA ACQUISTO FORNITORE con i giorni
+// entro cui rendere previsti dal fornitore (GARANZIE_DB[nome].giorni).
+function hintGiorniReso(fornName){
+  var h=document.getElementById('cDatAcqHint'); if(!h) return;
+  if(!fornName||fornName.length<2){ h.textContent=''; return; }
+  var g=(typeof getGaranziaInfo==='function')?getGaranziaInfo(fornName):null;
+  var gg=(g&&g.giorni)?String(g.giorni).trim():'';
+  h.textContent = gg ? (fornName.toUpperCase()+' ammette '+gg+' gg') : '';
 }
 
 function showFornitoreInfo(fornName){
