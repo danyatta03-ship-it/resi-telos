@@ -13,65 +13,113 @@
 /* PC/tablet largo: alzo la luminosita' e il contrasto — su monitor grandi il tema mobile molto scuro risulta smorto. Sotto 900px resta come prima (mobile). */
 @media (min-width:900px){:root{--bg:#101015;--bg1:#1a1a20;--bg2:#26262e;--bg3:#2f2f36;--brd:#3e3e46;--brd2:#4a4a54;--txt:#FFFFFF;--txt2:#F0F0F0;--txt3:#B8B8C0;--blu:#4FB0E5;--yel:#7ACAE8}}
 /* v34d LIGHT THEME — attivato con html[data-theme="light"] (default resta dark).
-   Toggle sui due pallini di stato nell'header (cdot / sdot). */
+   Toggle sui due pallini di stato nell'header (cdot / sdot).
+   RICHIESTA v34d2: header (con logo Telos) resta NERO; il resto del body
+   diventa bianco con contorni e caratteri NERI. */
 html[data-theme="light"]{
-  --bg:#f4f5f7;--bg1:#ffffff;--bg2:#eef0f4;--bg3:#e2e5ec;
-  --brd:#d0d4dc;--brd2:#b8bec8;
-  --txt:#161821;--txt2:#33363e;--txt3:#5e6470;
-  --grn:#1E7DB0;--grn2:#155F87;--blu:#1E7DB0;
-  --red:#C0392B;--yel:#B37400;--ora:#B37400;--pur:#161821
+  --bg:#ffffff;--bg1:#ffffff;--bg2:#ffffff;--bg3:#f4f5f7;
+  --brd:#000000;--brd2:#000000;
+  --txt:#000000;--txt2:#161821;--txt3:#4a4f58;
+  --grn:#0F5F8A;--grn2:#0A4869;--blu:#0F5F8A;
+  --red:#B23028;--yel:#A16100;--ora:#A16100;--pur:#000000
 }
-/* Popup/overlay che usano #111 hardcoded: fondo bianco in light mode */
-html[data-theme="light"] .popup-wrap>div,
+/* HEADER resta scuro anche in light: logo Telos su fondo nero */
+html[data-theme="light"] .hdr{background:#080808!important;border-bottom-color:#000!important;color:#fff!important}
+html[data-theme="light"] .role-badge{background:#1a1a1a!important;color:#fff!important;border-color:#333!important}
+html[data-theme="light"] .online-b{background:rgba(59,159,212,.06)!important;color:#3B9FD4!important;border-color:rgba(59,159,212,.3)!important}
+/* Body / pagine: BIANCO */
+html[data-theme="light"] html,
+html[data-theme="light"] body{background:#ffffff!important;color:#000000!important}
+html[data-theme="light"] .pg{background:#ffffff!important;color:#000000!important}
+/* Tab bar: bianco con testo nero */
+html[data-theme="light"] .tabs{background:#ffffff!important;border-bottom-color:#000!important}
+html[data-theme="light"] .tab{color:#333!important;background:transparent!important}
+html[data-theme="light"] .tab.on{color:#0F5F8A!important;border-bottom-color:#0F5F8A!important}
+/* Search bar in alto */
+html[data-theme="light"] #globalSearchBar{background:#ffffff!important;border-bottom-color:#000!important}
+html[data-theme="light"] #globalSearchBar input{background:#ffffff!important;color:#000!important;border-color:#000!important}
+/* Card ricevimento (le grandi box tipo IDENTIFICAZIONE, CLASSIFICAZIONE, ecc): BIANCO con bordo NERO */
+html[data-theme="light"] body .card{background:#ffffff!important;border:1.5px solid #000!important;color:#000!important}
+html[data-theme="light"] body .card .ch{background:transparent!important;color:#000!important;border-bottom:1px solid #000!important}
+html[data-theme="light"] body .card .ch span{color:#000!important;font-weight:800!important}
+html[data-theme="light"] body .card .cb{background:#ffffff!important;color:#000!important}
+html[data-theme="light"] .f label span{color:#000!important;font-weight:800!important}
+html[data-theme="light"] .f label{color:#000!important}
+/* Sezione titoli (data listato e ricezione ecc) */
+html[data-theme="light"] .sh-section{background:transparent!important;color:#000!important;border-color:#000!important;font-weight:800!important}
+/* Input / select / textarea: bianco con bordo nero e testo nero */
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea{background:#ffffff!important;color:#000000!important;border:1.5px solid #000!important}
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder{color:#7a7f88!important}
+html[data-theme="light"] .srch,
+html[data-theme="light"] .db-search,
+html[data-theme="light"] .flt-inp,
+html[data-theme="light"] .flt-sel{background:#ffffff!important;color:#000!important;border-color:#000!important}
+/* Righe articolo in LISTA: bianco con bordo nero, testo nero */
+html[data-theme="light"] .ac{background:#ffffff!important;border:1.5px solid #000!important;color:#000!important}
+html[data-theme="light"] .ac.locked{background:#f5f5f7!important;border-color:#333!important}
+html[data-theme="light"] .ac .ac-sogg,
+html[data-theme="light"] .ac .ac-cod,
+html[data-theme="light"] .ac .ac-price,
+html[data-theme="light"] .ac .ac-date,
+html[data-theme="light"] .ac .ac-who{color:#000!important}
+/* Chip: fondo bianco con bordo nero */
+html[data-theme="light"] .chip{background:#ffffff!important;color:#000!important;border:1px solid #000!important}
+/* Sheet / edit overlay */
+html[data-theme="light"] .sh{background:#ffffff!important;color:#000!important;border-color:#000!important}
+html[data-theme="light"] .sh .sh-title,
+html[data-theme="light"] .sh .sh-body{color:#000!important}
+/* Popup / dialog: fondo bianco con bordo nero */
+html[data-theme="light"] .popup-box,
+html[data-theme="light"] .cmod-box{background:#ffffff!important;border:1.5px solid #000!important;color:#000!important}
+html[data-theme="light"] .popup-label,
+html[data-theme="light"] .popup-sub{color:#000!important}
+html[data-theme="light"] .role-card{background:#ffffff!important;border:1.5px solid #000!important;color:#000!important}
+html[data-theme="light"] .role-card .rn,
+html[data-theme="light"] .role-card .rd{color:#000!important}
+/* Overlay: fondo trasparente più chiaro */
+html[data-theme="light"] .popup-wrap{background:rgba(20,20,25,.55)!important}
+/* Popup runtime che usano background hardcoded (#111 / #0d0d0d) */
 html[data-theme="light"] #cyclesBox>div,
 html[data-theme="light"] #scadBox>div,
 html[data-theme="light"] #mfuBox>div,
 html[data-theme="light"] #garDocsBox>div,
-html[data-theme="light"] #mailWhoBox>div{background:#ffffff!important;color:#161821!important}
-html[data-theme="light"] #cyclesBox,
-html[data-theme="light"] #scadBox,
-html[data-theme="light"] #mfuBox,
-html[data-theme="light"] #garDocsBox,
-html[data-theme="light"] #mailWhoBox{background:rgba(200,205,215,.7)!important}
-/* Card interne dei popup: alzo su bianco con bordo tenue */
+html[data-theme="light"] #mailWhoBox>div,
+html[data-theme="light"] #mfuBox>div>div,
+html[data-theme="light"] #scadBox>div>div,
+html[data-theme="light"] #cyclesBox>div>div{background:#ffffff!important;border-color:#000!important;color:#000!important}
 html[data-theme="light"] #cyclesBox div[style*="background:#111"],
 html[data-theme="light"] #scadBox div[style*="background:#111"],
-html[data-theme="light"] #mfuBox div[style*="background:#111"]{background:#f6f7fa!important;color:#161821!important}
+html[data-theme="light"] #mfuBox div[style*="background:#111"]{background:#ffffff!important;color:#000!important;border-color:#000!important}
 html[data-theme="light"] #cyclesBox div[style*="background:#0d0d0d"],
 html[data-theme="light"] #scadBox div[style*="background:#0d0d0d"],
-html[data-theme="light"] #mfuBox div[style*="background:#0d0d0d"]{background:#ffffff!important;color:#161821!important;border-color:#e0e3e8!important}
+html[data-theme="light"] #mfuBox div[style*="background:#0d0d0d"]{background:#ffffff!important;color:#000!important;border-color:#000!important}
 html[data-theme="light"] #cyclesBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #scadBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #mfuBox div[style*="border-bottom:1px solid #1a1a1a"],
-html[data-theme="light"] #notifList div[style*="border-bottom:1px solid #1a1a1a"]{border-bottom-color:#e6e8ec!important}
-/* Input / select / textarea: bianco con testo scuro */
-html[data-theme="light"] input,
-html[data-theme="light"] select,
-html[data-theme="light"] textarea{background:#ffffff!important;color:#161821!important;border-color:#c0c4cc!important}
-html[data-theme="light"] input::placeholder,
-html[data-theme="light"] textarea::placeholder{color:#8a8f99!important}
-/* Card ricevimento / lista */
-html[data-theme="light"] .card{background:var(--bg1)!important;border-color:var(--brd)!important;color:var(--txt)!important}
-html[data-theme="light"] .card .ch{color:var(--txt2)!important}
-html[data-theme="light"] .ac{background:var(--bg1)!important;border-color:var(--brd)!important;color:var(--txt)!important}
-html[data-theme="light"] .ac.locked{background:#f0f0f4!important}
-/* Chip standard: aumento contrasto in light */
-html[data-theme="light"] .chip{background:#eef1f5!important;color:#161821!important;border-color:#c8ccd3!important}
-/* Header più chiaro in light + logo/testi leggibili */
-html[data-theme="light"] .hdr{background:#ffffff!important;border-bottom-color:var(--brd)!important;color:var(--txt)!important}
-html[data-theme="light"] .role-badge{background:#f0f2f5!important;color:#161821!important;border-color:var(--brd)!important}
-html[data-theme="light"] .online-b{background:#e8f4fb!important;color:#1E7DB0!important;border-color:#c8dfef!important}
-/* Tab bar */
-html[data-theme="light"] .tabs{background:#ffffff!important;border-bottom-color:var(--brd)!important}
-html[data-theme="light"] .tab{color:var(--txt3)!important;background:transparent!important}
-html[data-theme="light"] .tab.on{color:#1E7DB0!important}
-/* Sheet / edit overlay */
-html[data-theme="light"] .sh{background:#ffffff!important;color:#161821!important;border-color:var(--brd)!important}
-html[data-theme="light"] .sh-section{color:#5e6470!important;border-color:var(--brd)!important}
-/* Chat bubbles vecchio scuro → light */
-html[data-theme="light"] #chatMsgsOv{background:#f4f5f7!important}
-/* Fondo body */
-html[data-theme="light"] html, html[data-theme="light"] body{background:var(--bg)!important;color:var(--txt)!important}
+html[data-theme="light"] #notifList div[style*="border-bottom:1px solid #1a1a1a"]{border-bottom-color:#000!important}
+/* Centro Notifiche */
+html[data-theme="light"] #pgNotif{background:#ffffff!important;color:#000!important}
+html[data-theme="light"] #notifList>div{color:#000!important}
+/* Bottoni non specifici: aumento contrasto per readable */
+html[data-theme="light"] .sb{color:#000!important;border-color:#000!important}
+html[data-theme="light"] .sb.sg{background:#e6f5e0!important;color:#0a5b1a!important;border-color:#0a5b1a!important}
+html[data-theme="light"] .sb.sr{background:#fde3e0!important;color:#b23028!important;border-color:#b23028!important}
+html[data-theme="light"] .sb.sy{background:#fff3d6!important;color:#7f5200!important;border-color:#7f5200!important}
+html[data-theme="light"] .sb.sn{background:#ffffff!important;color:#000!important;border-color:#000!important}
+html[data-theme="light"] .sb.sp,
+html[data-theme="light"] .sb.ssb{background:#e0edf7!important;color:#0F5F8A!important;border-color:#0F5F8A!important}
+html[data-theme="light"] .badd,
+html[data-theme="light"] .bnxt,
+html[data-theme="light"] .bcam,
+html[data-theme="light"] .bflt{background:#0F5F8A!important;color:#fff!important;border-color:#0F5F8A!important}
+/* Footer con AI / CHAT / stats */
+html[data-theme="light"] .foot,
+html[data-theme="light"] #footBar{background:#ffffff!important;border-top-color:#000!important;color:#000!important}
+/* Chat bubbles */
+html[data-theme="light"] #chatMsgsOv{background:#ffffff!important;color:#000!important}
 /* Cursore sui due pallini header per indicare che sono cliccabili */
 .cdot, .sdot{cursor:pointer}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
