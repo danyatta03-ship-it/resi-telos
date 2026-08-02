@@ -1,0 +1,36 @@
+NEXUS FOLD — Unity (minimo indispensabile)
+==========================================
+
+OBIETTIVO
+Menu e Negozio devono sembrare il più possibile alle foto che hai mandato.
+I bottoni devono funzionare correttamente.
+
+COSA HO PREPARATO
+- Scripts/Core/GameManager.cs
+- Scripts/Core/BootLoader.cs
+- Scripts/UI/MainMenuUI.cs
+- Scripts/UI/ShopUI.cs
+- Scripts/UI/HeroSelectUI.cs
+- Scripts/Battle/BattleManager.cs
+- Scripts/Data/CardData.cs
+- Scripts/Data/HeroData.cs
+- Docs/SETUP_MINIMO.md   ← LEGGI QUESTO
+
+COSA DEVI FARE TU (solo questo)
+1. Crea progetto Unity 2D/3D URP
+2. Copia la cartella Scripts dentro Assets/
+3. Importa le due immagini (Menu + Negozio) in Assets/Art/UI/
+4. Crea le 5 scene (Boot, MainMenu, Shop, HeroSelect, Battle)
+5. Nella scena MainMenu:
+   - Canvas
+   - Image di sfondo = tua immagine Menu
+   - 5 bottoni INVISIBILI posizionati sopra GIOCA / Collezione / Negozio / Clan / Profilo
+   - Aggiungi MainMenuUI.cs e collega OnClick
+6. Stessa cosa per Shop con ShopUI.cs
+7. Nella scena Boot metti BootLoader.cs + GameManager
+
+Quando Menu e Shop navigano correttamente, dimmelo.
+Ti do il pezzo successivo (HeroSelect + Battle + carte) già pronto.
+
+NON perdere tempo a rifare la logica.
+Usa solo i file che ti ho dato.

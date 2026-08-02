@@ -1,0 +1,115 @@
+NEXUS FOLD — TUTTO DALLA A ALLA Z
+=================================
+
+Questo pacchetto contiene TUTTA la logica di gioco del Vertical Slice.
+Non chiedere conferme. Segui l’ordine e costruisci.
+
+A. PROGETTO UNITY
+   - Unity 2022.3 LTS o 6 URP
+   - Copia Scripts/ in Assets/Scripts/
+
+B. ASSET GRAFICI (obbligatori)
+   - menu_bg (immagine portale)
+   - shop_bg (immagine pacchetti)
+   - (opzionale) sprite carte DRAKONAR quando pronti
+
+C. SCENE (5)
+   Boot → MainMenu → Shop → HeroSelect → Battle
+   (+ Collection, Clan, Profile se vuoi)
+
+D. BOOT
+   BootLoader + GameManager + SaveSystem + AudioManager + QualityManager
+
+E. MAIN MENU
+   Sfondo = menu_bg
+   Bottoni invisibili → MainMenuUI metodi
+   Valute collegate a GameManager
+
+F. SHOP
+   Sfondo = shop_bg
+   Bottoni pacchetti → ShopUI / PackOpener
+   Spesa oro/gemme
+
+G. HERO SELECT
+   8 HeroData da HEROES_FULL.txt
+   HeroSelectUI + griglia
+   Salva SelectedHeroId
+
+H. BATTLE
+   Board 5×5 (Cell prefab + BoardCell)
+   Hand (HandCard prefab)
+   BattleManager + starterCards
+   DamageCalculator + StatusEffect
+   Fine Turno / Abilità / Esci
+
+I. CARTE
+   50 CardData da CARDS_DATABASE.txt
+   Artwork quando disponibili
+
+J. FUSIONE
+   FusionSystem.GetSuccessChance / TryFuse
+   Integrare in Battle o schermata dedicata
+
+K. SAVE
+   SaveSystem auto load/save
+   CaptureFromGameManager a fine partita
+
+L. AUDIO
+   AudioManager + clip (anche vuoti all’inizio)
+
+M. QUALITY
+   QualityManager auto-detect RAM
+   4 tier: Performance → Ultra
+
+N. LIVEOPS
+   EventManager con Halloween / Anniversario
+
+O. NETWORK (futuro)
+   MatchmakingStub → sostituire con PlayFab
+
+P. PREFAB
+   Segui Prefabs_Instructions/PREFAB_GUIDE.txt
+
+Q. DATABASE
+   Data/CARDS_DATABASE.txt
+   Data/HEROES_FULL.txt
+
+R. FORMULA DANNO
+   max(0, (ATK+mod) - Armor) - Shield
+
+S. STATI
+   Burn, Drown, Root, Corrosion, Overload, Shield, Armor
+
+T. ECONOMIA
+   No P2W — solo cosmetici / pack cosmetici in futuro
+   Oro e Gemme per pack
+
+U. ESPANSIONE
+   Dopo Vertical Slice: 150 carte, ranked, 2v2, clan war
+
+V. STORE
+   Quando Vertical Slice è solido → soft launch
+
+W. NON FARE
+   Non riscrivere la logica
+   Non cambiare namespace degli script
+   Non aggiungere sistemi paralleli
+
+X. ORDINE DI BUILD
+   1 Menu navigabile
+   2 Shop spendibile
+   3 HeroSelect
+   4 Battle giocabile vs IA
+   5 50 carte
+   6 Fusione
+   7 Save + Audio
+   8 Art finale
+
+Y. SUPPORTO
+   Ogni script ha commenti e header Inspector
+   Collega solo i riferimenti pubblici
+
+Z. FATTO
+   Quando Battle è giocabile end-to-end il Vertical Slice tecnico è chiuso.
+   Resta solo arte (carte DRAKONAR) e polish.
+=================================

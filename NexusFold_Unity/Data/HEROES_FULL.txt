@@ -1,0 +1,65 @@
+# 8 EROI — Compila HeroData in Unity con questi valori
+
+ID: ashen
+Nome: Ashen Vex
+Fazione: Cinder Court
+HP: 18
+AbilityCost: 2
+AbilityId: burn_aoe
+Ability: Aura +1 ATK alleati Cinder. Attiva (2): 3 danni area + Bruciatura (5 se Lava). Passiva: +1 ATK quando alleato Cinder muore.
+
+ID: thalassa
+Nome: Thalassa
+Fazione: Abyssal Choir
+HP: 20
+AbilityCost: 3
+AbilityId: drown_line
+Ability: Aura: nemici a Portata 2 -1 VEL. Attiva (3): Annegamento + -2 VEL su riga/colonna. Passiva: cura 2 quando nemico con Annegamento muore.
+
+ID: sylva
+Nome: Sylva
+Fazione: Verdant Cycle
+HP: 22
+AbilityCost: 2
+AbilityId: sacrifice_buff
+Ability: Aura: alleati recuperano 1 Vita. Attiva (2): sacrifica token → +2 Vita +1 ATK adiacenti. Passiva: genera Germoglio quando subisce danni.
+
+ID: kassian
+Nome: Kassian
+Fazione: Umbral Syndicate
+HP: 16
+AbilityCost: 2
+AbilityId: drain
+Ability: Aura: alleati rubano +1 Vita. Attiva (2): ruba 4 Vita + Corrosione. Passiva: +1 ATK temp quando ruba.
+
+ID: lumina
+Nome: Lumina
+Fazione: Aether Choir
+HP: 19
+AbilityCost: 3
+AbilityId: heal
+Ability: Aura: alleati +2 Vita max. Attiva (3): Scudo 6/9 + cleanse. Passiva: una volta/turno salva alleato spendendo 4 Vita.
+
+ID: titanus
+Nome: Titanus
+Fazione: Iron Psalm
+HP: 24
+AbilityCost: 2
+AbilityId: overload
+Ability: Aura: alleati +3 Armatura. Attiva (2): +4 ATK + Sovraccarico. Passiva: alleati riducono danni di 2.
+
+ID: kaleidos
+Nome: Kaleidos
+Fazione: Prism Conclave
+HP: 17
+AbilityCost: 2
+AbilityId: copy_atk
+Ability: Aura: buff Prism +1 turno. Attiva (2): copia ATK tra alleati. Passiva: 30% danno riflesso.
+
+ID: nullus
+Nome: Nullus
+Fazione: Null Orchard
+HP: 18
+AbilityCost: 3
+AbilityId: null_portal
+Ability: Aura: caselle vicine = Terreno Null. Attiva (3): crea Portale Null. Passiva: guadagna Energia quando nemico gioca vicino.

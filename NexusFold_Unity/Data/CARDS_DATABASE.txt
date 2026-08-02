@@ -1,0 +1,75 @@
+# NEXUS FOLD — Database 50 Carte Vertical Slice
+# Formato: Nome | Tipo | Costo | ATK | HP | SPD | RNG | Fazione | Rarità | Effetto
+# Crea CardData in Unity e compila questi valori.
+
+=== EROI (costo 0) ===
+Ashen Vex | Hero | 0 | 4 | 18 | 2 | 1 | Cinder | Legendary | Aura +1 ATK; Attiva: danno area + Bruciatura
+Thalassa | Hero | 0 | 2 | 20 | 1 | 3 | Abyssal | Legendary | Aura -1 VEL; Attiva: Annegamento riga/colonna
+Sylva | Hero | 0 | 3 | 22 | 1 | 1 | Verdant | Legendary | Aura regen 1; Attiva: sacrificio → buff
+Kassian | Hero | 0 | 5 | 16 | 3 | 1 | Umbral | Legendary | Aura +1 drain; Attiva: ruba 4 vita + Corrosione
+Lumina | Hero | 0 | 3 | 19 | 2 | 2 | Aether | Legendary | Aura +2 vita max; Attiva: Scudo + Cleanse
+Titanus | Hero | 0 | 4 | 24 | 1 | 2 | Iron | Legendary | Aura +3 Armatura; Attiva: +4 ATK + Sovraccarico
+Kaleidos | Hero | 0 | 2 | 17 | 2 | 3 | Prism | Legendary | Aura buff +1 turno; Attiva: copia ATK
+Nullus | Hero | 0 | 3 | 18 | 2 | 4 | Null | Legendary | Aura terreno Null; Attiva: Portale Null
+
+=== CINDER COURT ===
+Cinder Drake | Creature | 3 | 4 | 5 | 3 | 1 | Cinder | Rare | +2 ATK vs Bruciatura; Attiva: 2 danni + Bruciatura
+Ember Aristocrat | Creature | 4 | 3 | 7 | 2 | 1 | Cinder | Rare | Quando muore: 3 danni adiacente
+Molten Herald | Creature | 5 | 4 | 8 | 2 | 2 | Cinder | Epic | Attiva: crea Lava + Bruciatura
+Coal Wyrm | Creature | 6 | 5 | 12 | 1 | 1 | Cinder | Epic | +3/+3 su Lava
+Infernal Decree | Spell | 3 | 0 | 0 | 0 | 0 | Cinder | Rare | 5 danni; se Bruciatura distruggi
+Throne of Embers | Relic | 4 | 0 | 0 | 0 | 0 | Cinder | Epic | Inizio turno: Bruciatura casuale
+
+=== ABYSSAL CHOIR ===
+Depth Siren | Creature | 3 | 2 | 6 | 2 | 2 | Abyssal | Rare | Quando attacca: Annegamento
+Kraken Spawn | Creature | 5 | 3 | 9 | 1 | 3 | Abyssal | Epic | Attiva: 2 danni + Annegamento su riga
+Abyssal Chanter | Creature | 4 | 2 | 7 | 2 | 2 | Abyssal | Rare | Aura: +1 Portata Abyssal adiacenti
+Tidebreaker Leviathan | Creature | 7 | 4 | 14 | 1 | 2 | Abyssal | Legendary | Quando entra: sposta nemici di 1
+Silent Current | Spell | 2 | 0 | 0 | 0 | 0 | Abyssal | Rare | Annegamento a 2 nemici + -2 VEL
+Pearl of the Deep | Relic | 3 | 0 | 0 | 0 | 0 | Abyssal | Rare | Quando nemico Annegamento: cura 1
+
+=== VERDANT CYCLE ===
+Vine Stalker | Creature | 2 | 2 | 3 | 3 | 1 | Verdant | Common | Quando attacca: genera Germoglio 1/1
+Ancient Treant | Creature | 5 | 3 | 11 | 1 | 1 | Verdant | Epic | Inizio turno: +1 Vita permanente
+Bloom Predator | Creature | 4 | 3 | 6 | 2 | 1 | Verdant | Rare | Quando token muore: +2/+2
+Spore Colony | Creature | 3 | 1 | 4 | 2 | 1 | Verdant | Rare | Quando muore: 2 Germogli
+Overgrowth | Spell | 3 | 0 | 0 | 0 | 0 | Verdant | Rare | +3/+3 e Radicamento
+Living Grove | Relic | 4 | 0 | 0 | 0 | 0 | Verdant | Epic | Inizio turno: genera Germoglio se <3 token
+
+=== UMBRAL SYNDICATE ===
+Night Stalker | Creature | 3 | 4 | 4 | 3 | 1 | Umbral | Rare | Danno doppio se bersaglio <50% Vita
+Essence Thief | Creature | 4 | 3 | 5 | 2 | 1 | Umbral | Rare | Attacca e ruba 3 Vita
+Phantom Blade | Creature | 2 | 3 | 3 | 4 | 1 | Umbral | Common | Primo attacco non intercettabile
+Void Reaper | Creature | 6 | 5 | 8 | 2 | 1 | Umbral | Epic | Attiva: ruba 6 Vita + +2 ATK
+Shadow Contract | Spell | 2 | 0 | 0 | 0 | 0 | Umbral | Rare | Ruba 4 Vita + Corrosione
+Umbral Cloak | Relic | 3 | 0 | 0 | 0 | 0 | Umbral | Rare | Primo attacco Umbral non intercettabile
+
+=== AETHER CHOIR ===
+Oath Guardian | Creature | 4 | 2 | 9 | 1 | 1 | Aether | Rare | Intercetta 50% danni adiacenti
+Lumen Knight | Creature | 3 | 3 | 5 | 2 | 1 | Aether | Rare | Quando attacca: cura 3 alleato
+Radiant Herald | Creature | 5 | 2 | 7 | 2 | 2 | Aether | Epic | Aura: +1/+1 a Portata 2
+Sacred Binding | Spell | 2 | 0 | 0 | 0 | 0 | Aether | Rare | Cleanse + Scudo 5
+Aether Ward | Relic | 3 | 0 | 0 | 0 | 0 | Aether | Rare | Prima morte alleata: sopravvive con 1
+
+=== IRON PSALM ===
+Psalm Sentinel | Creature | 4 | 3 | 8 | 1 | 1 | Iron | Rare | Quando subisce danni: +1 ATK
+Overload Crusher | Creature | 5 | 4 | 9 | 1 | 1 | Iron | Epic | Attiva: +4 ATK + Sovraccarico
+Cathedral Colossus | Creature | 7 | 5 | 16 | 1 | 1 | Iron | Legendary | Riduce danni di 3
+Sacred Overcharge | Spell | 3 | 0 | 0 | 0 | 0 | Iron | Rare | +5 ATK + Sovraccarico
+Iron Reliquary | Relic | 4 | 0 | 0 | 0 | 0 | Iron | Epic | Inizio turno: +1 Armatura Iron
+
+=== PRISM CONCLAVE ===
+Crystal Warden | Creature | 4 | 2 | 8 | 1 | 1 | Prism | Rare | Quando riceve buff: Scudo 3
+Prism Striker | Creature | 3 | 3 | 4 | 3 | 1 | Prism | Rare | Quando attacca: alleato +2 ATK
+Refractor Beast | Creature | 5 | 3 | 7 | 2 | 1 | Prism | Epic | Attiva: copia ATK alleato 2 turni
+Amplify | Spell | 2 | 0 | 0 | 0 | 0 | Prism | Rare | +4 ATK (+6 se Prism)
+Crystal Core | Relic | 3 | 0 | 0 | 0 | 0 | Prism | Rare | Quando buff: +1 Armatura a questa
+
+=== NULL ORCHARD ===
+Void Petal | Creature | 3 | 2 | 5 | 2 | 2 | Null | Rare | Quando entra: casella = Null
+Absence Stalker | Creature | 4 | 3 | 6 | 3 | 1 | Null | Rare | Attiva: sposta nemico di 2
+Null Weaver | Creature | 5 | 2 | 8 | 2 | 2 | Null | Epic | Nemici Portata 1 pagano +1 Energia
+Orchard Titan | Creature | 7 | 4 | 13 | 1 | 2 | Null | Legendary | Quando entra: 2 Portali Null
+Null Bloom | Spell | 4 | 0 | 0 | 0 | 0 | Null | Epic | Area 2x2 = Null per 3 turni
+
+# TOTALE: 8 Eroi + 42 carte supporto = 50

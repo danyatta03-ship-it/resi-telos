@@ -1,0 +1,97 @@
+═══════════════════════════════════════════
+  GUIDA PREFAB — Costruisci questi in Unity
+═══════════════════════════════════════════
+
+1. CELL PREFAB (per il campo 5×5)
+---------------------------------
+Hierarchy → UI → Image  (nome: Cell)
+- RectTransform: stretch, size flexible
+- Image: colore scuro #1A1A28, raycast target ON
+- Add Component → Button
+- Add Component → BoardCell
+  - Assegna background = Image dello stesso oggetto
+  - (Opzionale) crea figli:
+      CardArt (Image, nascosta di default)
+      NameText (Text o TMP)
+      StatsText (Text o TMP)
+- Salva come Prefab in Assets/Prefabs/UI/Cell.prefab
+
+2. HAND CARD PREFAB
+-------------------
+UI → Image (nome: HandCard)
+- Width 140, Height 190
+- Image: frame scuro
+- Figli:
+  CostBadge (Image + Text) top-left
+  CardName (Text) center
+  Stats (Text) bottom  "ATK / HP"
+- Button su root
+- Prefab: Assets/Prefabs/UI/HandCard.prefab
+
+3. HERO BUTTON PREFAB
+---------------------
+UI → Image
+- Figli: Icon (Image o Text emoji), Name (Text), HP (Text)
+- Button
+- Prefab: Assets/Prefabs/UI/HeroButton.prefab
+
+4. PACK REWARD CARD (per apertura pacchetto)
+-------------------------------------------
+UI → Image
+- Animabile (CanvasGroup per fade)
+- Figli: Cost, Name, Faction, Stats, RarityLabel
+- Prefab: Assets/Prefabs/UI/RewardCard.prefab
+
+5. MAIN MENU CANVAS SETUP
+-------------------------
+Canvas
+  Scaler: Scale With Screen Size, 1080×1920, Match 0.5
+  Background (Image/RawImage) → sprite menu
+  Hotspot_Gioca (Button, Image alpha 0)
+  Hotspot_Collezione
+  Hotspot_Negozio
+  Hotspot_Clan
+  Hotspot_Profilo
+  CurrencyGems (Text)
+  CurrencyGold (Text)
+  → MainMenuUI script sul Canvas
+     Collega OnClick di ogni hotspot
+
+6. BATTLE CANVAS SETUP
+----------------------
+Canvas
+  HUD_Top
+    HeroName, HeroHP, Energy, EnemyHP, TurnLabel
+  Board (Grid Layout Group 5 colonne, cell size auto)
+  Hand (Horizontal Layout Group)
+  Buttons
+    BtnEndTurn → BattleManager.OnClickEndTurn
+    BtnFuse → (futuro)
+    BtnAbility → BattleManager.OnClickHeroAbility
+    BtnBack → BattleManager.OnClickBack
+  → BattleManager script
+     boardParent = Board
+     cellPrefab = Cell.prefab
+     handParent = Hand
+     handCardPrefab = HandCard.prefab
+     starterCards = array di CardData
+     heroes = array di HeroData
+
+7. SCRIPTABLE OBJECTS DA CREARE
+-------------------------------
+Per ogni eroe:
+  Right-click → Create → NexusFold → Hero Data
+  Compila da Data/HEROES_FULL.txt
+
+Per ogni carta:
+  Create → NexusFold → Card Data
+  Compila da Data/CARDS_DATABASE.txt
+
+Metti tutti in:
+  Assets/ScriptableObjects/Heroes/
+  Assets/ScriptableObjects/Cards/
+
+═══════════════════════════════════════════
+Quando questi prefab esistono e sono collegati,
+il gioco è giocabile end-to-end.
+═══════════════════════════════════════════

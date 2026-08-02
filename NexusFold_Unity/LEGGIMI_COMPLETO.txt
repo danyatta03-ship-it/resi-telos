@@ -1,0 +1,106 @@
+═══════════════════════════════════════════
+  NEXUS FOLD — PACCHETTO UNITY COMPLETO
+  Fai solo i passaggi obbligatori
+═══════════════════════════════════════════
+
+OBIETTIVO VISIVO
+Menu e Negozio devono essere uguali (o quasi) alle tue foto.
+Metodo: usa le immagini come sfondo full-screen + bottoni invisibili sopra.
+
+───────────────────────────────────────────
+STRUTTURA SCRIPT (tutto già scritto)
+───────────────────────────────────────────
+Scripts/
+  Core/
+    GameManager.cs       → valute, scene, eroe, singleton
+    BootLoader.cs        → avvio automatico
+    StatusEffect.cs      → Bruciatura, Annegamento, Scudo, ecc.
+  UI/
+    MainMenuUI.cs        → GIOCA, Collezione, Negozio, Clan, Profilo
+    ShopUI.cs            → acquisto pacchetti
+    HeroSelectUI.cs      → scelta eroe
+    CollectionUI.cs      → griglia carte
+  Battle/
+    BattleManager.cs     → campo 5×5, mano, attacco, movimento, turni
+    BoardCell.cs         → singola casella
+  Data/
+    CardData.cs          → ScriptableObject carta
+    HeroData.cs          → ScriptableObject eroe
+  Fusion/
+    FusionSystem.cs      → probabilità DNA + creazione risultato
+  Economy/
+    PackOpener.cs        → roll rarità + consumo valuta
+
+Data/
+  CARDS_DATABASE.txt     → tutte le 50 carte con stats e effetti
+
+───────────────────────────────────────────
+PASSI OBBLIGATORI (TU)
+───────────────────────────────────────────
+1. Unity Hub → New Project → URP (2D o 3D)
+2. Copia cartella Scripts/ dentro Assets/
+3. Crea Assets/Art/UI/ e importa:
+   - immagine MENU (portale)
+   - immagine NEGOZIO (pacchetti)
+   Texture Type = Sprite (2D and UI)
+4. Crea scene in Assets/Scenes/:
+   Boot, MainMenu, Shop, HeroSelect, Battle
+   Aggiungile in Build Settings in quest’ordine
+5. Scena Boot:
+   - GameObject vuoto + BootLoader.cs
+   - GameObject vuoto + GameManager.cs
+6. Scena MainMenu:
+   - Canvas (Scale With Screen Size 1080×1920)
+   - Image/RawImage sfondo = tua foto Menu (stretch)
+   - 5 Button con Image alpha=0 posizionati su:
+     GIOCA → MainMenuUI.OnClickGioca
+     Collezione → OnClickCollezione
+     Negozio → OnClickNegozio
+     Clan → OnClickClan
+     Profilo → OnClickProfilo
+   - Aggiungi MainMenuUI.cs al Canvas
+7. Scena Shop:
+   - Stesso metodo con immagine Negozio
+   - Bottoni invisibili sui pacchetti → ShopUI.BuyBasic / BuyRare / ...
+   - Bottone Indietro → OnClickBack
+8. Premi Play sulla scena Boot
+
+───────────────────────────────────────────
+DOPO CHE MENU E SHOP FUNZIONANO
+───────────────────────────────────────────
+HeroSelect:
+  - Grid di bottoni eroe
+  - 8 HeroData (Create → NexusFold → Hero Data)
+  - Compila da CARDS_DATABASE.txt sezione EROI
+  - HeroSelectUI + OnClickStartBattle
+
+Battle:
+  - Testi HP / Energia / Turno
+  - Board 5×5 (Grid Layout + prefab cella con BoardCell)
+  - Mano (prefab carta)
+  - BattleManager + starterCards (alcuni CardData)
+  - Bottoni Fine Turno / Abilità / Esci
+
+Carte:
+  - Create → NexusFold → Card Data per ogni riga di CARDS_DATABASE.txt
+  - Assegna artwork quando le hai generate
+
+Fusione:
+  - Chiama FusionSystem.TryFuse(cardA, cardB, out result)
+  - Usa in Battle o in schermata dedicata
+
+───────────────────────────────────────────
+PRIORITÀ
+───────────────────────────────────────────
+1. Menu navigabile (oggi)
+2. Shop con spesa valuta (oggi)
+3. HeroSelect (dopo)
+4. Battle giocabile (dopo)
+5. 50 CardData + art (dopo)
+6. Fusione + stati (dopo)
+7. Polish VFX / animazioni (dopo)
+
+Non inventare sistemi nuovi.
+Usa solo questi script.
+Quando un pezzo funziona, passa al successivo.
+═══════════════════════════════════════════
