@@ -12,6 +12,68 @@
 :root{--bg:#080808;--bg1:#111111;--bg2:#1a1a1a;--bg3:#222222;--brd:#2a2a2a;--brd2:#333333;--txt:#FFFFFF;--txt2:#E0E0E0;--txt3:#999999;--grn:#3B9FD4;--grn2:#2980B9;--blu:#3B9FD4;--red:#E05555;--yel:#5BB8E0;--ora:#3B9FD4;--pur:#E0E0E0;--rad:10px;--rad2:7px}
 /* PC/tablet largo: alzo la luminosita' e il contrasto — su monitor grandi il tema mobile molto scuro risulta smorto. Sotto 900px resta come prima (mobile). */
 @media (min-width:900px){:root{--bg:#101015;--bg1:#1a1a20;--bg2:#26262e;--bg3:#2f2f36;--brd:#3e3e46;--brd2:#4a4a54;--txt:#FFFFFF;--txt2:#F0F0F0;--txt3:#B8B8C0;--blu:#4FB0E5;--yel:#7ACAE8}}
+/* v34d LIGHT THEME — attivato con html[data-theme="light"] (default resta dark).
+   Toggle sui due pallini di stato nell'header (cdot / sdot). */
+html[data-theme="light"]{
+  --bg:#f4f5f7;--bg1:#ffffff;--bg2:#eef0f4;--bg3:#e2e5ec;
+  --brd:#d0d4dc;--brd2:#b8bec8;
+  --txt:#161821;--txt2:#33363e;--txt3:#5e6470;
+  --grn:#1E7DB0;--grn2:#155F87;--blu:#1E7DB0;
+  --red:#C0392B;--yel:#B37400;--ora:#B37400;--pur:#161821
+}
+/* Popup/overlay che usano #111 hardcoded: fondo bianco in light mode */
+html[data-theme="light"] .popup-wrap>div,
+html[data-theme="light"] #cyclesBox>div,
+html[data-theme="light"] #scadBox>div,
+html[data-theme="light"] #mfuBox>div,
+html[data-theme="light"] #garDocsBox>div,
+html[data-theme="light"] #mailWhoBox>div{background:#ffffff!important;color:#161821!important}
+html[data-theme="light"] #cyclesBox,
+html[data-theme="light"] #scadBox,
+html[data-theme="light"] #mfuBox,
+html[data-theme="light"] #garDocsBox,
+html[data-theme="light"] #mailWhoBox{background:rgba(200,205,215,.7)!important}
+/* Card interne dei popup: alzo su bianco con bordo tenue */
+html[data-theme="light"] #cyclesBox div[style*="background:#111"],
+html[data-theme="light"] #scadBox div[style*="background:#111"],
+html[data-theme="light"] #mfuBox div[style*="background:#111"]{background:#f6f7fa!important;color:#161821!important}
+html[data-theme="light"] #cyclesBox div[style*="background:#0d0d0d"],
+html[data-theme="light"] #scadBox div[style*="background:#0d0d0d"],
+html[data-theme="light"] #mfuBox div[style*="background:#0d0d0d"]{background:#ffffff!important;color:#161821!important;border-color:#e0e3e8!important}
+html[data-theme="light"] #cyclesBox div[style*="border-bottom:1px solid #1a1a1a"],
+html[data-theme="light"] #scadBox div[style*="border-bottom:1px solid #1a1a1a"],
+html[data-theme="light"] #mfuBox div[style*="border-bottom:1px solid #1a1a1a"],
+html[data-theme="light"] #notifList div[style*="border-bottom:1px solid #1a1a1a"]{border-bottom-color:#e6e8ec!important}
+/* Input / select / textarea: bianco con testo scuro */
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea{background:#ffffff!important;color:#161821!important;border-color:#c0c4cc!important}
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder{color:#8a8f99!important}
+/* Card ricevimento / lista */
+html[data-theme="light"] .card{background:var(--bg1)!important;border-color:var(--brd)!important;color:var(--txt)!important}
+html[data-theme="light"] .card .ch{color:var(--txt2)!important}
+html[data-theme="light"] .ac{background:var(--bg1)!important;border-color:var(--brd)!important;color:var(--txt)!important}
+html[data-theme="light"] .ac.locked{background:#f0f0f4!important}
+/* Chip standard: aumento contrasto in light */
+html[data-theme="light"] .chip{background:#eef1f5!important;color:#161821!important;border-color:#c8ccd3!important}
+/* Header più chiaro in light + logo/testi leggibili */
+html[data-theme="light"] .hdr{background:#ffffff!important;border-bottom-color:var(--brd)!important;color:var(--txt)!important}
+html[data-theme="light"] .role-badge{background:#f0f2f5!important;color:#161821!important;border-color:var(--brd)!important}
+html[data-theme="light"] .online-b{background:#e8f4fb!important;color:#1E7DB0!important;border-color:#c8dfef!important}
+/* Tab bar */
+html[data-theme="light"] .tabs{background:#ffffff!important;border-bottom-color:var(--brd)!important}
+html[data-theme="light"] .tab{color:var(--txt3)!important;background:transparent!important}
+html[data-theme="light"] .tab.on{color:#1E7DB0!important}
+/* Sheet / edit overlay */
+html[data-theme="light"] .sh{background:#ffffff!important;color:#161821!important;border-color:var(--brd)!important}
+html[data-theme="light"] .sh-section{color:#5e6470!important;border-color:var(--brd)!important}
+/* Chat bubbles vecchio scuro → light */
+html[data-theme="light"] #chatMsgsOv{background:#f4f5f7!important}
+/* Fondo body */
+html[data-theme="light"] html, html[data-theme="light"] body{background:var(--bg)!important;color:var(--txt)!important}
+/* Cursore sui due pallini header per indicare che sono cliccabili */
+.cdot, .sdot{cursor:pointer}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:16px;overflow:hidden}
 
@@ -417,8 +479,8 @@ select option {
   <div class="hdr-title"><span style="color:#3B9FD4;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">RESI VENARIA</span><span class="hdr-mode" id="hdrMode"></span></div>
   <div id="rolePill" class="role-badge" onclick="showSettings()" style="cursor:pointer">—</div>
   <div class="online-b"><div class="opulse"></div><span id="onlineN">1</span></div>
-  <div class="cdot" id="cdot" title="Connessione"></div>
-  <div class="sdot" id="sdot"></div>
+  <div class="cdot" id="cdot" title="Connessione · click per cambiare tema" onclick="toggleTheme()"></div>
+  <div class="sdot" id="sdot" title="Sync · click per cambiare tema" onclick="toggleTheme()"></div>
   <button id="fbBtn" onclick="openFBModal()" style="background:none;border:none;font-size:14px;cursor:pointer;padding:2px 4px;flex-shrink:0" title="Configura Firebase sync">&#128293;</button>
 </div>
 
@@ -11591,6 +11653,32 @@ function admGlobalSearch(q){
   body.innerHTML = h;
 }
 function _gsLabel(k){return {users:'Utenti',suppliers:'Fornitori',agents:'Agenti',mailTpl:'Template Email',portals:'Portali',categories:'Categorie'}[k]||k;}
+
+// ══════════════════════════════════════════════════════════════════════
+// v34d — TOGGLE DARK / LIGHT THEME (default dark)
+// ══════════════════════════════════════════════════════════════════════
+function applyTheme(mode){
+  var m = (mode==='light') ? 'light' : 'dark';
+  try{
+    if(m==='light') document.documentElement.setAttribute('data-theme','light');
+    else document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('theme', m);
+  }catch(e){}
+}
+function toggleTheme(){
+  var cur = 'dark';
+  try{ cur = localStorage.getItem('theme')||'dark'; }catch(e){}
+  var next = (cur==='light') ? 'dark' : 'light';
+  applyTheme(next);
+  try{ if(typeof toast==='function') toast('🎨 Tema '+(next==='light'?'CHIARO':'SCURO'),'b'); }catch(e){}
+}
+// Auto-load al boot (prima possibile per evitare flash)
+(function(){
+  try{
+    var m = localStorage.getItem('theme');
+    if(m==='light') document.documentElement.setAttribute('data-theme','light');
+  }catch(e){}
+})();
 
 // ══════════════════════════════════════════════════════════════════════
 // v34b — NOTIFICHE BROWSER + FOLLOW-UP MAIL RI-SOLLECITO
