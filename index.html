@@ -438,6 +438,7 @@ select option {
   <button class="tab"    id="tabUbi"  onclick="gTab('pgUbi')">LOGISTICA</button>
   <button class="tab"    id="tabTri"  onclick="gTab('pgTri')">TRIMESTRE</button>
   <button class="tab"    id="tabHist" onclick="gTab('pgHist')">STORICO</button>
+  <button class="tab"    id="tabNotif" onclick="gTab('pgNotif')">🔔 NOTIFICHE <span class="nbadge" id="notifBadge" style="display:none">0</span></button>
   <button class="tab"    id="tabCon"  onclick="gTab('pgCon')">CONTATTI</button>
 </div>
 
@@ -831,6 +832,28 @@ select option {
   <div id="anoList"></div>
 </div>
 
+
+<!-- ═══ CENTRO NOTIFICHE (v34c) ═══ -->
+<div class="pg" id="pgNotif" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--brd)">
+    <div style="font-size:13px;font-weight:800;color:#E6B03C">🔔 CENTRO NOTIFICHE</div>
+    <div style="display:flex;gap:6px">
+      <select id="notifFilter" onchange="renderNotifCenter()" style="background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:6px 10px;font-size:11px;border-radius:7px;-webkit-appearance:none;outline:none;font-family:inherit">
+        <option value="all">Tutte</option>
+        <option value="presa">Presa logistica</option>
+        <option value="mail">Mail inviate</option>
+        <option value="mod">Modifiche resi</option>
+        <option value="anomalia">Anomalie</option>
+        <option value="sollecito">Solleciti</option>
+        <option value="scad">Scadenze</option>
+      </select>
+      <button class="sb ssb" onclick="renderNotifCenter()" title="Aggiorna">🔄</button>
+      <button class="sb sr" onclick="notifClearAll()" title="Cancella storico (solo ADM)">🗑</button>
+    </div>
+  </div>
+  <div id="notifStats" style="font-size:10px;color:var(--txt3);margin-bottom:8px"></div>
+  <div id="notifList" style="display:flex;flex-direction:column;gap:0"></div>
+</div>
 
 <!-- ═══ CONTATTI ═══ -->
 <div class="pg" id="pgCon" style="display:none">
@@ -2048,8 +2071,8 @@ function setDataContatto() {
 // NAVIGATION
 // ══════════════════════════════════════════════════
 function gTab(pg) {
-  var all=['pgIns','pgList','pgAno','pgUbi','pgTri','pgHist','pgCon'];
-  var tabs=['tabIns','tabList','tabAno','tabUbi','tabTri','tabHist','tabCon'];
+  var all=['pgIns','pgList','pgAno','pgUbi','pgTri','pgHist','pgNotif','pgCon'];
+  var tabs=['tabIns','tabList','tabAno','tabUbi','tabTri','tabHist','tabNotif','tabCon'];
   // Blocco accesso a tab non permessi al ruolo corrente
   var perms = (typeof ROLE_PERMS!=='undefined' && ROLE_PERMS[ROLE]) || {};
   var allowedTabs = perms.canSeeTabs || ['*'];
@@ -2076,6 +2099,7 @@ function gTab(pg) {
   if(pg==='pgUbi')swUbiTab('ubi');
   if(pg==='pgAno'){syncListToAnomalie();renderAnoList();}
   if(pg==='pgCon')renderContatti();
+  if(pg==='pgNotif'){ try{ renderNotifCenter(); if(typeof notifClearBadge==='function')notifClearBadge(); }catch(e){} }
 }
 
 function setMode(m) {
@@ -2183,6 +2207,8 @@ function addRow() {
     if(stato==='ANOMALIA RICEVIMENTO'||(gv('cAno')&&gv('cAno')!=='')){
       saveAnomalia(row);
       if(stato==='ANOMALIA RICEVIMENTO') gTab('pgAno');
+      // v34c: log anomalia nel Centro Notifiche
+      try{ if(typeof notifLog==='function') notifLog('anomalia', 'ha inserito una nuova anomalia'+(row.cod?(' — '+row.cod):'')+(row.forn?(' · '+row.forn):'')); }catch(e){}
     }
     if(vetRic)saveMem('vetRic',vetRic);if(flusso)saveMem('flusso',flusso);if(causale)saveMem('causale',causale);
     if(tipoDoc)saveMem('tipoDoc',tipoDoc);if(fase)saveMem('fase',fase);if(stato)saveMem('stato',stato);
@@ -4550,7 +4576,26 @@ function svEdit(key){
     return;
   }
   var prev=rows[key]||{};
-  function finalize(){ editMotivoNR=''; sendMsg({type:'update',key:key,changes:ch}); csht(); toast('Salvato'+(ch.motivoNR?' · '+ch.motivoNR:''),'b'); }
+  window._svEditPrev = prev;
+  function finalize(){
+    editMotivoNR='';
+    sendMsg({type:'update',key:key,changes:ch});
+    csht();
+    toast('Salvato'+(ch.motivoNR?' · '+ch.motivoNR:''),'b');
+    // v34c: log modifica reso nel Centro Notifiche
+    try{
+      if(typeof notifLog==='function'){
+        var _code = (rows[key]&&rows[key].cod) || (ch.cod) || key;
+        var _diffs = [];
+        var _prev = window._svEditPrev || {};
+        ['stato','fase','causale','flusso','anomalia'].forEach(function(k){
+          if(ch[k]!=null && _prev[k]!=null && String(_prev[k])!==String(ch[k])) _diffs.push(k+': '+_prev[k]+'→'+ch[k]);
+        });
+        var _detail = _diffs.length ? (' ('+_diffs.slice(0,2).join(', ')+')') : '';
+        notifLog('mod', 'ha modificato il reso '+_code+_detail);
+      }
+    }catch(e){}
+  }
   // NON RENDIBILE → motivazione obbligatoria (dal campo scheda, dalla scelta al volo o dal popup)
   if(ch.stato==='NON RENDIBILE'){
     var m=gei('motivoNR')||editMotivoNR||prev.motivoNR||'';
@@ -8474,7 +8519,7 @@ function sendPresaLogisticaMail(row){
         kind:'presa'
       });
     }
-    if(typeof notifBroadcast==='function') notifBroadcast('presa', (deviceName||'Operatore')+' ha richiesto la presa per '+(row&&row.forn||'?')+((row&&row.cod)?(' · '+row.cod):''));
+    if(typeof notifLog==='function') notifLog('presa', 'ha inviato una richiesta presa'+((row&&row.forn)?(' — '+row.forn):'')+((row&&row.cod)?(' · '+row.cod):''));
   }catch(e){}
 }
 
@@ -11628,8 +11673,8 @@ function mfuAdd(rec){
   MFU_LOCAL[id] = full;
   _mfuSaveLocal();
   if(MFU_REF){ try{ MFU_REF.child(id).set(full).catch(function(){}); }catch(e){} }
-  // Notifica cross-device: qualcuno ha inviato una mail
-  notifBroadcast('mail', (deviceName||'Operatore')+' ha inviato mail a '+(rec.to||'?')+(rec.forn?(' ('+rec.forn+')'):''));
+  // Notifica cross-device + log locale
+  if(typeof notifLog==='function') notifLog('mail', 'ha inviato mail a '+(rec.to||'?')+(rec.forn?(' — '+rec.forn):''));
   toast('📬 Follow-up registrato · verifica risposta tra 5 gg lavorativi','b');
 }
 function mfuUpdate(id, changes){
@@ -11729,6 +11774,7 @@ function mfuResollect(id){
   try{ openMail(mailto); }catch(e){}
   var newDue = addBusinessDays(new Date(), 5).getTime();
   mfuUpdate(id, {dueAt:newDue, followUpCount:(r.followUpCount||0)+1, lastResollectAt:Date.now(), subject:subj, body:prefix});
+  if(typeof notifLog==='function') notifLog('sollecito', 'ha inviato un ri-sollecito a '+(r.to||'?')+(r.cod?(' — reso '+r.cod):''));
   toast('↻ Ri-sollecito inviato · nuovo check tra 5 gg lavorativi','b');
   mfuRefreshPopup();
 }
@@ -11790,23 +11836,142 @@ function notifBroadcast(kind, msg){
   }catch(e){}
 }
 
-// ── G. Listener eventi cross-device (presa/mail/generic) ────────────
+// ── G. Listener eventi cross-device + storico Centro Notifiche ──────
+// NOTIF_LOG: array in memoria di tutti gli eventi caricati (per pgNotif).
+// Alimentato da Firebase notifEvents/ (storico completo, non solo ultimi 20).
 var _notifEvBootTs = 0;
+var NOTIF_LOG = [];
+var NOTIF_UNREAD = 0;
+function _notifPersistLocal(){
+  try{
+    // Tieni solo ultimi 500 per non gonfiare localStorage
+    var arr = NOTIF_LOG.slice(-500);
+    localStorage.setItem('notifLog', JSON.stringify(arr));
+  }catch(e){}
+}
+function _notifLoadLocal(){
+  try{ NOTIF_LOG = JSON.parse(localStorage.getItem('notifLog')||'[]')||[]; }catch(e){ NOTIF_LOG = []; }
+}
+function _notifPush(evt){
+  if(!evt || !evt.ts) return;
+  // Dedup su firebaseKey o su ts+by+msg
+  var fk = evt.fbKey || (evt.ts+'|'+(evt.by||'')+'|'+(evt.msg||''));
+  for(var i=0;i<NOTIF_LOG.length;i++){
+    var e = NOTIF_LOG[i];
+    if((e.fbKey && e.fbKey===evt.fbKey) || (e._dedup===fk)) return;
+  }
+  evt._dedup = fk;
+  NOTIF_LOG.push(evt);
+  NOTIF_LOG.sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+  _notifPersistLocal();
+}
+function _notifTitleFor(kind){
+  return {
+    presa:'📦 Presa logistica richiesta',
+    mail:'✉ Mail inviata',
+    mod:'✎ Modifica reso',
+    anomalia:'⚠ Nuova anomalia',
+    sollecito:'↻ Sollecito automatico',
+    scad:'⏰ Scadenza segnalata'
+  }[kind] || '🔔 Notifica reparto';
+}
 function notifEventsInit(){
+  _notifLoadLocal();
   if(typeof FB_REF==='undefined' || !FB_REF || !FB_REF.root) return;
   _notifEvBootTs = Date.now();
   try{
-    FB_REF.root.child('notifEvents').limitToLast(20).on('child_added', function(s){
+    // Carica storico completo (limitToLast 300) + listener nuove
+    FB_REF.root.child('notifEvents').limitToLast(300).on('child_added', function(s){
       var v = s.val(); if(!v || !v.ts) return;
-      if(v.ts < _notifEvBootTs) return;      // storico: skip
-      if(v.by === deviceName) return;         // sono io: skip
-      var title;
-      if(v.kind==='presa')        title = '📦 Presa logistica richiesta';
-      else if(v.kind==='mail')    title = '✉ Mail inviata da un collega';
-      else if(v.kind==='scad')    title = '⏰ Scadenza segnalata';
-      else                        title = '🔔 Notifica reparto';
-      notify(title, v.msg||'', {tag:v.kind||''});
+      var evt = { fbKey:s.key, ts:v.ts, kind:v.kind||'', msg:v.msg||'', by:v.by||'', role:v.role||'', meta:v.meta||{} };
+      _notifPush(evt);
+      // Notifica push SOLO per eventi nuovi (dopo boot) non miei
+      if(v.ts >= _notifEvBootTs && v.by !== deviceName){
+        var title = _notifTitleFor(v.kind);
+        notify(title, v.msg||'', {tag:v.kind||''});
+        NOTIF_UNREAD++;
+        notifUpdateBadge();
+      }
+      // Re-render se la pagina è visibile
+      try{
+        var pgN = document.getElementById('pgNotif');
+        if(pgN && pgN.style.display!=='none') renderNotifCenter();
+      }catch(e){}
     });
+  }catch(e){}
+}
+function notifUpdateBadge(){
+  var b = document.getElementById('notifBadge'); if(!b) return;
+  if(NOTIF_UNREAD > 0){ b.textContent = NOTIF_UNREAD>99?'99+':NOTIF_UNREAD; b.style.display=''; }
+  else { b.style.display='none'; }
+}
+function notifClearBadge(){ NOTIF_UNREAD = 0; notifUpdateBadge(); }
+function notifClearAll(){
+  if(ROLE!=='ADM'){ toast('Solo ADMIN può cancellare lo storico notifiche','r'); return; }
+  if(!confirm('Cancellare TUTTO lo storico notifiche? L\'azione è irreversibile.')) return;
+  NOTIF_LOG = []; _notifPersistLocal();
+  if(typeof FB_REF!=='undefined' && FB_REF && FB_REF.root){
+    try{ FB_REF.root.child('notifEvents').remove().catch(function(){}); }catch(e){}
+  }
+  renderNotifCenter();
+  toast('Storico notifiche cancellato','y');
+}
+
+// Rendering Centro Notifiche
+function renderNotifCenter(){
+  var list = document.getElementById('notifList');
+  var stats = document.getElementById('notifStats');
+  if(!list) return;
+  var filt = ((document.getElementById('notifFilter')||{}).value)||'all';
+  var arr = NOTIF_LOG.slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  if(filt!=='all') arr = arr.filter(function(e){ return e.kind===filt; });
+  if(stats) stats.textContent = arr.length+' eventi'+(filt!=='all'?(' · filtro: '+filt):'')+' · storico da Firebase';
+  if(!arr.length){
+    list.innerHTML = '<div style="text-align:center;color:var(--txt3);padding:40px 10px;font-size:12px">Nessuna notifica.</div>';
+    return;
+  }
+  var html='', lastDay='';
+  var today = new Date().toISOString().slice(0,10);
+  var yest = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  for(var i=0;i<arr.length;i++){
+    var e = arr[i];
+    var d = new Date(e.ts);
+    var dayIso = d.toISOString().slice(0,10);
+    if(dayIso !== lastDay){
+      lastDay = dayIso;
+      var lbl = dayIso===today?'OGGI':(dayIso===yest?'IERI':d.toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}).toUpperCase());
+      html += '<div style="font-size:10px;font-weight:800;color:#E6B03C;letter-spacing:1px;margin:12px 0 6px 2px">'+xe(lbl)+'</div>';
+    }
+    var hh = ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    var icon = { presa:'📦', mail:'✉', mod:'✎', anomalia:'⚠', sollecito:'↻', scad:'⏰' }[e.kind] || '🔔';
+    var color= { presa:'#3B9FD4', mail:'#5BB8E0', mod:'#8859E5', anomalia:'#E05555', sollecito:'#E6B03C', scad:'#E6B03C' }[e.kind] || '#999';
+    var who  = e.by || '?';
+    var msg  = e.msg || '';
+    // Rimuove "NAME ha " di prefisso se già inizia col nome (per non duplicarlo nella cella "utente")
+    var action = msg;
+    if(action.toUpperCase().indexOf(who.toUpperCase()+' ')===0) action = action.slice(who.length+1);
+    html += '<div style="display:flex;gap:10px;padding:10px 6px;border-bottom:1px solid #1a1a1a;align-items:flex-start">' +
+              '<div style="flex-shrink:0;width:44px;text-align:center">' +
+                '<div style="font-size:11px;color:'+color+';font-weight:800;font-family:monospace">'+hh+'</div>' +
+                '<div style="font-size:18px;line-height:1;margin-top:3px">'+icon+'</div>' +
+              '</div>' +
+              '<div style="flex:1;min-width:0">' +
+                '<div style="font-size:12px;color:#fff;font-weight:700">'+xe(who)+(e.role?(' <span style="color:var(--txt3);font-weight:400;font-size:10px">· '+xe(e.role)+'</span>'):'')+'</div>' +
+                '<div style="font-size:12px;color:'+color+';margin-top:2px;line-height:1.4">'+xe(action)+'</div>' +
+              '</div>' +
+            '</div>';
+  }
+  list.innerHTML = html;
+}
+
+// Helper esteso: broadcast + push in log locale (senza dover attendere il round-trip Firebase per vedersi la propria)
+function notifLog(kind, msg, meta){
+  var evt = { ts:Date.now(), kind:kind, msg:msg||'', by:deviceName||'', role:ROLE||'', meta:meta||{} };
+  _notifPush(evt);
+  try{ notifBroadcast(kind, msg); }catch(e){}
+  try{
+    var pgN = document.getElementById('pgNotif');
+    if(pgN && pgN.style.display!=='none') renderNotifCenter();
   }catch(e){}
 }
 
