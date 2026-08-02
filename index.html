@@ -8237,33 +8237,29 @@ function buildPresaLogisticaMail(row){
   var email = forn&&forn.mail ? forn.mail : '';
   var vetEmail = forn&&forn.vetMail ? forn.vetMail : '';
   var fornNome = row.forn||'';
-  var vetNome  = forn ? forn.vet : '';
-  var vetRef   = forn ? forn.vetRef : '';
-  var vetTel   = forn ? forn.vetTel : '';
-  var orario   = forn ? (forn.orario1+(forn.orario2?' / '+forn.orario2:'')) : '';
-  var spediz   = forn ? (forn.franco?'Porto Franco':forn.asseg?'Porto Assegnato':'') : '';
-
-  var codArt = (row.pre?row.pre+' ':'')+( row.cod||'');
   var NL = '\n';
 
-  var subj = 'Reso da ritirare - '+(row.sogg||'')+' - '+codArt;
+  var subj = 'Richiesta presa colli - Telos SPA';
 
+  // Template predefinito per richiesta presa logistica
   var body =
-    'Gentile '+fornNome+','+ NL+NL+
-    'Si prega di ritirare il seguente articolo reso:'+NL+NL+
-    'Articolo:    '+codArt+NL+
-    'Cliente:     '+(row.sogg||'')+NL+
-    (row.qty?'Quantità:    '+row.qty+NL:'')+
-    (row.causale?'Causale:     '+row.causale+NL:'')+
-    (row.rma?'RMA/Rif:     '+row.rma+NL:'')+
-    NL+
-    (vetNome?'Vettore:     '+vetNome+(vetRef?' - '+vetRef:'')+(vetTel?' - '+vetTel:'')+NL:'')+
-    (orario?'Orario ritiro: '+orario+NL:'')+
-    (spediz?'Spedizione:  '+spediz+NL:'')+
-    NL+
-    'Per qualsiasi comunicazione:'+NL+
-    'resi.torino@telosgroup.it'+NL+NL+
-    'Cordiali saluti,'+NL+
+    'Buongiorno,'+NL+NL+
+    'Abbiamo preparato colli pronti per il ritiro del vostro vettore (LGT)'+NL+
+    'Qui di seguito tutti i riferimenti:'+NL+NL+
+    'Tipologia e dettaglio merci:'+NL+
+    '(Vedi allegati: foto DDT e foto colli)'+NL+NL+
+    'Indirizzo di ritiro:'+NL+
+    'Telos spa – Via Aosta 5 – 10078 – Venaria Reale (To)'+NL+NL+
+    'Orari e disponibilità:'+NL+
+    'Dal Lunedì al Venerdì'+NL+
+    'Dalle ore 08.30 alle ore 12.30 e dalle ore 14.00 alle ore 18.00'+NL+NL+
+    'Richiediamo cortesemente conferma di avvenuta consegna alla presente e/o tramite contatto telefonico'+NL+
+    'Numero Fisso: 011/4242932 int. 4'+NL+
+    'Numero Cellulare: 378/3062876'+NL+NL+
+    'Cordiali Saluti,'+NL+
+    'Grazie e Buon Lavoro'+NL+NL+
+    '---'+NL+
+    'Inviato da: '+(deviceName||'Operatore Telos')+NL+
     'Reparto Resi - Telos SPA';
 
   // CC to vettore if available
