@@ -2143,13 +2143,18 @@ function addRow() {
   // salta direttamente a UFFICIO RESI / OK PER UFFICIO cosi' l'ufficio lo
   // vede subito pronto per la lavorazione. Le anomalie e gli stalli restano
   // in RICEVIMENTO perche' hanno bisogno di verifica supplementare.
-  var _autoFase = fase, _autoStato = stato;
-  var _isProblematic = (stato && (stato.indexOf('ANOMALIA')>=0 || stato.indexOf('STALLO')>=0))
-                       || flusso === 'ANOMALIA'
-                       || (gv('cAno')||'').trim();
-  if(fase === 'RICEVIMENTO' && !_isProblematic){
+  var _autoFase = fase, _autoStato = stato, _autoJumped = false;
+  var _fs = String(fase||'').trim().toUpperCase();
+  var _ss = String(stato||'').trim().toUpperCase();
+  var _fl = String(flusso||'').trim().toUpperCase();
+  var _an = String(gv('cAno')||'').trim();
+  var _isProblematic = (_ss.indexOf('ANOMALIA')>=0 || _ss.indexOf('STALLO')>=0)
+                       || _fl === 'ANOMALIA'
+                       || !!_an;
+  if(_fs === 'RICEVIMENTO' && !_isProblematic){
     _autoFase = 'UFFICIO RESI';
     _autoStato = 'OK PER UFFICIO';
+    _autoJumped = true;
   }
   var row={
     datArr:datArr,vetRic:vetRic,datElab:gv('hElab'),sogg:gv('hSogg'),
@@ -2176,8 +2181,8 @@ function addRow() {
     if(tipoDoc)saveMem('tipoDoc',tipoDoc);if(fase)saveMem('fase',fase);if(stato)saveMem('stato',stato);
     applyMB();
 
-    // Reset article fields
-    var ri=['cPre','cCod','cFor','cRma','cNote','cDatAcqForn'];
+    // Reset article fields (cAno azzerato per evitare leak tra inserimenti in raffica)
+    var ri=['cPre','cCod','cFor','cRma','cNote','cDatAcqForn','cAno'];
     for(var i=0;i<ri.length;i++){var el=document.getElementById(ri[i]);if(el)el.value='';}
     document.getElementById('cQty').value='1';
     document.getElementById('cPrc').value='0';
@@ -2185,7 +2190,11 @@ function addRow() {
     var _hah=document.getElementById('cDatAcqHint'); if(_hah) _hah.textContent='';
     clearPhoto();
     pendingMotivoNR='';
-    toast(row.motivoNR?('Aggiunto · NON RENDIBILE · '+row.motivoNR):('✓ '+row.cod+' aggiunto — pronto per il prossimo'),'b');
+    var _tmsg;
+    if(row.motivoNR) _tmsg = 'Aggiunto · NON RENDIBILE · '+row.motivoNR;
+    else if(_autoJumped) _tmsg = '✓ '+row.cod+' → UFFICIO RESI · OK PER UFFICIO';
+    else _tmsg = '✓ '+row.cod+' aggiunto — pronto per il prossimo';
+    toast(_tmsg,'b');
     // Resta sul form per inserimenti a raffica (bolle multi-articolo);
     // la LISTA si aggiorna comunque quando la apri (gTab la ri-renderizza).
     updBS();
