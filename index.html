@@ -489,10 +489,13 @@ select option {
           <div class="f"><label><span>PREZZO €</span></label><input type="number" id="cPrc" value="0" step="0.01" min="0" inputmode="decimal"></div>
         </div>
         <div class="f" style="position:relative"><label><span>FORNITORE <span class="req">&#10033;</span></span></label>
-          <input id="cFor" placeholder="es. BOSCH" autocomplete="off" oninput="uv(this);onForn(this);showForSugg(this.value);showFornitoreInfo(this.value)" onchange="showFornitoreInfo(this.value);ce(this)" onblur="setTimeout(function(){var b=document.getElementById('forSuggBox');if(b)b.style.display='none'},200)">
+          <input id="cFor" placeholder="es. BOSCH" autocomplete="off" oninput="uv(this);onForn(this);showForSugg(this.value);showFornitoreInfo(this.value);hintGiorniReso(this.value)" onchange="showFornitoreInfo(this.value);ce(this);hintGiorniReso(this.value)" onblur="setTimeout(function(){var b=document.getElementById('forSuggBox');if(b)b.style.display='none'},200)">
           <div id="forSuggBox" style="display:none;position:absolute;left:0;right:0;top:100%;background:#1a1a1a;border:1px solid #3B9FD4;border-radius:8px;z-index:100;max-height:200px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.6)"></div>
         </div>
         <div id="fornInfoBox" style="display:none;margin-top:2px"></div>
+        <div class="f"><label style="display:flex;align-items:center;justify-content:space-between"><span>DATA ACQUISTO DAL FORNITORE <span class="req">&#10033;</span></span><span id="cDatAcqHint" style="font-size:9px;color:var(--txt3);font-weight:400"></span></label>
+          <input type="date" id="cDatAcqForn" oninput="ce(this)" onchange="ce(this)" title="Data acquisto dal fornitore: usata per calcolare la scadenza reso">
+        </div>
       </div>
     </div>
     <div class="card">
@@ -2089,8 +2092,8 @@ function fillStato(fi,si) {
 // ADD ROW
 // ══════════════════════════════════════════════════
 function addRow() {
-  var cod=gv('cCod'),forno=gv('cFor'),causale=gv('cCau'),fase=gv('cFas'),stato=gv('cSta'),datArr=gv('hArr'),vetRic=gv('hVet');
-  var checks=[{id:'hArr',v:datArr},{id:'hVet',v:vetRic},{id:'cCod',v:cod},{id:'cFor',v:forno},{id:'cCau',v:causale},{id:'cFas',v:fase},{id:'cSta',v:stato}];
+  var cod=gv('cCod'),forno=gv('cFor'),causale=gv('cCau'),fase=gv('cFas'),stato=gv('cSta'),datArr=gv('hArr'),vetRic=gv('hVet'),datAcqForn=gv('cDatAcqForn');
+  var checks=[{id:'hArr',v:datArr},{id:'hVet',v:vetRic},{id:'cCod',v:cod},{id:'cFor',v:forno},{id:'cCau',v:causale},{id:'cFas',v:fase},{id:'cSta',v:stato},{id:'cDatAcqForn',v:datAcqForn}];
   checks.push({id:'cDoc',v:gv('cDoc')});
   var ok=true,fe=null;
   for(var i=0;i<checks.length;i++){if(!checks[i].v){var el=document.getElementById(checks[i].id);if(el){el.classList.add('err');if(!fe)fe=el;}ok=false;}}
@@ -2155,7 +2158,7 @@ function addRow() {
     forn:forno,prc:parseFloat(document.getElementById('cPrc').value)||0,
     vetUsc:gv('cVUsc'),flusso:flusso,causale:causale,
     anomalia:gv('cAno'),tipoDoc:tipoDoc,fase:_autoFase,stato:_autoStato,
-    datSta:gv('cDSta'),rma:gv('cRma'),
+    datSta:gv('cDSta'),rma:gv('cRma'),datAcqForn:datAcqForn,
     contatto:gv('cCon'),datCon:gv('cDCon'),
     agente:gv('hAge'),docRic:gv('cDocR'),
     datDoc:'',note:gv('cNote'),photo:pendName||'',photoThumb:pendThumb||'',photoKeys:pendPhotos.map(function(p){return p.name;}),
@@ -2174,11 +2177,12 @@ function addRow() {
     applyMB();
 
     // Reset article fields
-    var ri=['cPre','cCod','cFor','cRma','cNote'];
+    var ri=['cPre','cCod','cFor','cRma','cNote','cDatAcqForn'];
     for(var i=0;i<ri.length;i++){var el=document.getElementById(ri[i]);if(el)el.value='';}
     document.getElementById('cQty').value='1';
     document.getElementById('cPrc').value='0';
     document.getElementById('cliTip').style.display='none';
+    var _hah=document.getElementById('cDatAcqHint'); if(_hah) _hah.textContent='';
     clearPhoto();
     pendingMotivoNR='';
     toast(row.motivoNR?('Aggiunto · NON RENDIBILE · '+row.motivoNR):('✓ '+row.cod+' aggiunto — pronto per il prossimo'),'b');
@@ -4440,15 +4444,14 @@ function editRow(key){
     html+='<div style="background:rgba(91,184,224,.04);border:1px solid rgba(91,184,224,.1);border-radius:var(--rad2);padding:9px;font-size:11px;color:var(--yel);margin-bottom:9px">🔒 Non puoi modificare la fase in questo ruolo ('+ROLE+').</div>';
   }
   html+='<div class="r2">'+fld('VETTORE USCITA',sl('vetUsc',['CIPI/PIEMME','CITYLINE','MITTENTE/DESTINATARIO','INTERCOMPANY','NAZ/INT','CATI','UPS','GLS','BRT','DHL'],r.vetUsc))+fld('DATA STATO',inp('datSta',r.datSta,'','date'))+'</div>';
-  // DATA ACQUISTO FORNITORE: usata dal scadenzario cicli per calcolare i giorni residui
-  // (giorni_reso del fornitore - giorni trascorsi dall'acquisto). Editabile da UFF/ADM.
-  if(ROLE==='UFF' || ROLE==='ADM'){
-    var _giornVal = '';
-    var _gInfo = (typeof getGaranziaInfo==='function') ? getGaranziaInfo(r.forn||'') : null;
-    if(_gInfo && _gInfo.giorni) _giornVal = String(_gInfo.giorni).trim();
-    var _hint = _giornVal ? ' <span style="color:var(--txt3);font-weight:400;font-size:9px">('+xe(r.forn||'')+' ammette '+xe(_giornVal)+' gg)</span>' : '';
-    html+=fld('DATA ACQUISTO DAL FORNITORE'+_hint,inp('datAcqForn',r.datAcqForn,'','date'));
-  }
+  // DATA ACQUISTO FORNITORE: inserita dal RIC, editabile anche in modifica.
+  // Usata dal scadenzario cicli per calcolare i giorni residui
+  // (giorni_reso del fornitore - giorni trascorsi dall'acquisto).
+  var _giornVal = '';
+  var _gInfo = (typeof getGaranziaInfo==='function') ? getGaranziaInfo(r.forn||'') : null;
+  if(_gInfo && _gInfo.giorni) _giornVal = String(_gInfo.giorni).trim();
+  var _hint = _giornVal ? ' <span style="color:var(--txt3);font-weight:400;font-size:9px">('+xe(r.forn||'')+' ammette '+xe(_giornVal)+' gg)</span>' : '';
+  html+=fld('DATA ACQUISTO DAL FORNITORE'+_hint,inp('datAcqForn',r.datAcqForn,'','date'));
   html+=fld('RMA/RNC',inp('rma',r.rma));
   html+='<div class="sh-section">VETTORE RICEVIMENTO</div>';
   html+=fld('VETTORE RIC.',sl('vetRic',['PIEMME','CIPI','AGENTE','COLLEGA','AD','DIEMME','GLS','VINCA','BANCO','PIENNE','BRT','UPS','DHL','TNT','LGT','CITYLINE','NUOVA DEMOS'],r.vetRic));
@@ -4487,8 +4490,7 @@ function svEdit(key){
     forn:gei('forn').toUpperCase(),sogg:gei('sogg').toUpperCase(),
     causale:gei('causale'),anomalia:_anomVal,flusso:gei('flusso'),tipoDoc:gei('tipoDoc'),
     fase:gei('fase'),stato:gei('stato'),rma:gei('rma'),vetRic:gei('vetRic'),
-    vetUsc:gei('vetUsc'),datSta:gei('datSta'),
-    datAcqForn:(document.getElementById('ei_datAcqForn')?gei('datAcqForn'):((rows[key]&&rows[key].datAcqForn)||'')),
+    vetUsc:gei('vetUsc'),datSta:gei('datSta'),datAcqForn:gei('datAcqForn'),
     note:document.getElementById('ei_note')?document.getElementById('ei_note').value.trim():'',
     _lastEdit:deviceName,_lastEditTs:Date.now(),_lastEditRole:ROLE
   };
@@ -8579,6 +8581,16 @@ function getGaranziaInfo(fornName){
     if(n.indexOf(k)>=0||k.indexOf(n)>=0) return GARANZIE_DB[k];
   }
   return null;
+}
+
+// Aggiorna il hint accanto al campo DATA ACQUISTO FORNITORE con i giorni
+// entro cui rendere previsti dal fornitore (GARANZIE_DB[nome].giorni).
+function hintGiorniReso(fornName){
+  var h=document.getElementById('cDatAcqHint'); if(!h) return;
+  if(!fornName||fornName.length<2){ h.textContent=''; return; }
+  var g=(typeof getGaranziaInfo==='function')?getGaranziaInfo(fornName):null;
+  var gg=(g&&g.giorni)?String(g.giorni).trim():'';
+  h.textContent = gg ? (fornName.toUpperCase()+' ammette '+gg+' gg') : '';
 }
 
 function showFornitoreInfo(fornName){
