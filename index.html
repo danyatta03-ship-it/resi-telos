@@ -2284,7 +2284,7 @@ function addRow() {
   // salta direttamente a UFFICIO RESI / OK PER UFFICIO cosi' l'ufficio lo
   // vede subito pronto per la lavorazione. Le anomalie e gli stalli restano
   // in RICEVIMENTO perche' hanno bisogno di verifica supplementare.
-  var _autoFase = fase, _autoStato = stato, _autoJumped = false;
+  var _autoFase = fase, _autoStato = stato, _autoJumped = false, _forcedNR = null;
   var _fs = String(fase||'').trim().toUpperCase();
   var _ss = String(stato||'').trim().toUpperCase();
   var _fl = String(flusso||'').trim().toUpperCase();
@@ -2292,7 +2292,18 @@ function addRow() {
   var _isProblematic = (_ss.indexOf('ANOMALIA')>=0 || _ss.indexOf('STALLO')>=0)
                        || _fl === 'ANOMALIA'
                        || !!_an;
-  if(_fs === 'RICEVIMENTO' && !_isProblematic){
+  // v34e: blocco rendibilità (prezzo < minimo fornitore o fuori tempistiche)
+  //   → forza fase=FINALE, stato=NON RENDIBILE, motivoNR automatico.
+  //   Ha precedenza su qualsiasi altra scelta dell'utente.
+  _forcedNR = (typeof checkForzaNonRendibile==='function') ? checkForzaNonRendibile({
+    forn:forno, prc:parseFloat(document.getElementById('cPrc').value)||0, datAcqForn:datAcqForn
+  }) : null;
+  if(_forcedNR){
+    _autoFase = 'FINALE';
+    _autoStato = 'NON RENDIBILE';
+    _autoJumped = false;
+    toast('⛔ Reso NON RENDIBILE ('+_forcedNR.motivo+'): '+_forcedNR.why,'r');
+  } else if(_fs === 'RICEVIMENTO' && !_isProblematic){
     _autoFase = 'UFFICIO RESI';
     _autoStato = 'OK PER UFFICIO';
     _autoJumped = true;
@@ -2308,8 +2319,12 @@ function addRow() {
     contatto:gv('cCon'),datCon:gv('cDCon'),
     agente:gv('hAge'),docRic:gv('cDocR'),
     datDoc:'',note:gv('cNote'),photo:pendName||'',photoThumb:pendThumb||'',photoKeys:pendPhotos.map(function(p){return p.name;}),
-    _who:deviceName,_role:ROLE,motivoNR:''
+    _who:deviceName,_role:ROLE,motivoNR:(_forcedNR?_forcedNR.motivo:'')
   };
+  // v34e: log rendibilità forzata nel Centro Notifiche
+  if(_forcedNR){
+    try{ if(typeof notifLog==='function') notifLog('mod', 'reso '+(cod||'')+' NON RENDIBILE automatico — '+_forcedNR.why); }catch(e){}
+  }
   function commit(){
     sendMsg({type:'add',row:row});
     autoLearn(row);
@@ -2644,6 +2659,40 @@ function canBack(r){
 // MOTIVO "NON RENDIBILE" — popup con tendina + Altro
 // ══════════════════════════════════════════════════
 var MOTIVI_NR = ['SCATOLA DANNEGGIATA','PREZZO INFERIORE','FUORI TEMPISTICHE'];
+
+// v34e: Verifica se il reso è "non rendibile" per regole automatiche del fornitore.
+// Ritorna null se rendibile, altrimenti {motivo, why} con la motivazione da forzare.
+// Controlli:
+//   1) Prezzo < valoreMin del fornitore (GARANZIE_DB[nome].valoreMin) → PREZZO INFERIORE
+//   2) Giorni trascorsi da datAcqForn > giorni_reso del fornitore → FUORI TEMPISTICHE
+// Il chiamante deve forzare fase=FINALE, stato=NON RENDIBILE, motivoNR=motivo.
+function checkForzaNonRendibile(ctx){
+  if(!ctx) return null;
+  var forn = String(ctx.forn||'').trim();
+  if(!forn) return null;
+  var g = (typeof getGaranziaInfo==='function') ? getGaranziaInfo(forn) : null;
+  if(!g) return null;
+  // 1) PREZZO INFERIORE
+  var prc = parseFloat(ctx.prc);
+  var vmin = parseFloat(g.valoreMin);
+  if(isFinite(prc) && isFinite(vmin) && vmin > 0 && prc > 0 && prc < vmin){
+    return { motivo:'PREZZO INFERIORE', why:'prezzo €'+prc.toFixed(2)+' inferiore al minimo €'+vmin.toFixed(2)+' del fornitore '+forn };
+  }
+  // 2) FUORI TEMPISTICHE (richiede datAcqForn e giorni_reso)
+  var gg = (typeof parseGiorniReso==='function') ? parseGiorniReso(g.giorni) : null;
+  var dAcq = String(ctx.datAcqForn||'').trim();
+  if(gg && gg > 0 && dAcq){
+    var acq = new Date(dAcq+'T00:00:00');
+    if(!isNaN(acq.getTime())){
+      var now = new Date(); now.setHours(0,0,0,0);
+      var pas = Math.floor((now - acq)/86400000);
+      if(pas > gg){
+        return { motivo:'FUORI TEMPISTICHE', why:'acquisto del '+dAcq+' ('+pas+' gg fa) oltre i '+gg+' gg ammessi da '+forn };
+      }
+    }
+  }
+  return null;
+}
 var _nrCb = null;
 function askMotivoNR(current, cb){
   _nrCb = cb;
@@ -2776,6 +2825,19 @@ function advFase(key,fase){
   if(!requireDatAcqForn(r,fase)){
     try{ editRow(key); setTimeout(function(){ var el=document.getElementById('ei_datAcqForn'); if(el){ el.focus(); el.style.border='1.5px solid #E05555'; el.scrollIntoView({behavior:'smooth',block:'center'}); } },350); }catch(e){}
     return;
+  }
+  // v34e: blocco rendibilità sull'avanzamento (non si può portare avanti un reso NON RENDIBILE)
+  if(fase !== 'FINALE'){
+    var _fnr2 = (typeof checkForzaNonRendibile==='function') ? checkForzaNonRendibile(r) : null;
+    if(_fnr2){
+      if(confirm('⛔ Reso NON RENDIBILE ('+_fnr2.motivo+'):\n'+_fnr2.why+'\n\nNon si può portare a '+fase+'. Vuoi passarlo direttamente a FINALE / NON RENDIBILE?')){
+        var chNR = {fase:'FINALE', stato:'NON RENDIBILE', motivoNR:_fnr2.motivo, datSta:new Date().toISOString().slice(0,10), _lastEdit:deviceName, _role:ROLE};
+        sendMsg({type:'update',key:key,changes:chNR});
+        try{ if(typeof notifLog==='function') notifLog('mod', 'reso '+(r.cod||'')+' forzato NON RENDIBILE — '+_fnr2.why); }catch(e){}
+        toast('→ FINALE · NON RENDIBILE · '+_fnr2.motivo,'r');
+      }
+      return;
+    }
   }
   var auto=AUTO_STATO[fase]||'';
   // Fix esplicito: quando si passa a UFFICIO RESI da qualsiasi fase, lo stato iniziale
@@ -4667,6 +4729,19 @@ function svEdit(key){
     var _stEl=document.getElementById('ei_stato');
     if(_stEl){ try{ _stEl.focus(); _stEl.scrollIntoView({behavior:'smooth',block:'center'}); _stEl.style.border='1.5px solid #E05555'; }catch(e){} }
     return;
+  }
+  // v34e: blocco rendibilità - forza NON RENDIBILE se prezzo < min fornitore o fuori tempistiche
+  if(ch.stato !== 'NON RENDIBILE'){
+    var _fnr = (typeof checkForzaNonRendibile==='function') ? checkForzaNonRendibile({
+      forn:ch.forn, prc:ch.prc, datAcqForn:ch.datAcqForn
+    }) : null;
+    if(_fnr){
+      if(!confirm('⛔ Questo reso è NON RENDIBILE ('+_fnr.motivo+'):\n'+_fnr.why+'\n\nLo stato verrà forzato a "NON RENDIBILE" in fase FINALE. Confermi?')){ return; }
+      ch.fase = 'FINALE';
+      ch.stato = 'NON RENDIBILE';
+      ch.motivoNR = _fnr.motivo;
+      try{ if(typeof notifLog==='function') notifLog('mod', 'reso '+(ch.cod||'')+' forzato NON RENDIBILE — '+_fnr.why); }catch(e){}
+    }
   }
   // STORICO TRIMESTRE: override locale (non tocca DB_TRI e non passa da sendMsg → non è in rows)
   if(String(key).indexOf('tri_')===0){
