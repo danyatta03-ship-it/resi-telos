@@ -11859,7 +11859,12 @@ function _mfuLoadLocal(){ try{ MFU_LOCAL = JSON.parse(localStorage.getItem('mfu'
 function _mfuSaveLocal(){ try{ localStorage.setItem('mfu', JSON.stringify(MFU_LOCAL)); }catch(e){} }
 function mfuInit(){
   _mfuLoadLocal();
-  if(typeof FB_REF==='undefined' || !FB_REF || !FB_REF.root) return;
+  if(typeof FB_REF==='undefined' || !FB_REF || !FB_REF.root){
+    // v34f: FB non pronto, riprovo dopo
+    setTimeout(mfuInit, 1500);
+    return;
+  }
+  if(MFU_REF) return; // già inizializzato
   try{
     MFU_REF = FB_REF.root.child('mailFollowups');
     MFU_REF.on('value', function(snap){
@@ -12037,14 +12042,21 @@ function notifCheckScadenze(){
 }
 
 // ── F. Broadcast notifica cross-device via Firebase ─────────────────
+// v34f: se FB non è ready, accodo in buffer localStorage e flush al ready.
 function notifBroadcast(kind, msg){
-  if(typeof FB_REF==='undefined' || !FB_REF || !FB_REF.root) return;
+  var evt = { ts:Date.now(), kind:kind, msg:msg||'', by:deviceName||'', role:ROLE||'' };
+  if(typeof FB_REF==='undefined' || !FB_REF || !FB_REF.root){
+    try{ if(!Array.isArray(_notifBcastBuf)) _notifBcastBuf=[]; _notifBcastBuf.push(evt); _notifBufSave(); }catch(e){}
+    return;
+  }
   try{
-    FB_REF.root.child('notifEvents').push({
-      ts:Date.now(), kind:kind, msg:msg||'',
-      by:deviceName||'', role:ROLE||''
+    FB_REF.root.child('notifEvents').push(evt).catch(function(){
+      // Errore di scrittura (regole/quota): riprova più tardi via buffer
+      try{ _notifBcastBuf.push(evt); _notifBufSave(); }catch(e2){}
     });
-  }catch(e){}
+  }catch(e){
+    try{ _notifBcastBuf.push(evt); _notifBufSave(); }catch(e2){}
+  }
 }
 
 // ── G. Listener eventi cross-device + storico Centro Notifiche ──────
@@ -12187,10 +12199,29 @@ function notifLog(kind, msg, meta){
 }
 
 // ── H. Boot notifiche (chiamato da launchApp) ───────────────────────
+// v34f: FB_REF viene settato ASINCRONAMENTE dopo il login anonimo,
+// quindi al primo giro notifEventsInit/mfuInit potrebbero fallire.
+// Retry ogni 1s per max 60s finché FB non è pronto.
+var _notifFbReady = false;
+function _waitFbAndInit(){
+  if(_notifFbReady) return;
+  if(typeof FB_REF!=='undefined' && FB_REF && FB_REF.root){
+    _notifFbReady = true;
+    try{ mfuInit(); }catch(e){}
+    try{ notifEventsInit(); }catch(e){}
+    // Flush buffer eventi che erano stati scritti in locale prima che FB fosse ready
+    try{ _notifFlushBuffer(); }catch(e){}
+    return;
+  }
+  setTimeout(_waitFbAndInit, 1000);
+}
 function notifBoot(){
   try{ notifInit(); }catch(e){}
-  try{ mfuInit(); }catch(e){}
-  try{ notifEventsInit(); }catch(e){}
+  // Carica sempre lo storico locale subito (funziona anche offline)
+  try{ _notifLoadLocal(); if(typeof _mfuLoadLocal==='function') _mfuLoadLocal(); }catch(e){}
+  // Aspetta Firebase per registrare listener cross-device
+  _waitFbAndInit();
+  setTimeout(_waitFbAndInit, 3000); // safety kick in caso il primo giro sia partito troppo presto
   // Al login: chiedi il permesso (una sola volta per sessione)
   try{
     if(notifSupported() && Notification.permission==='default' && !sessionStorage.getItem('notifAsked')){
@@ -12208,6 +12239,23 @@ function notifBoot(){
     try{ notifCheckScadenze(); }catch(e){}
     try{ mfuCheckDue(true); }catch(e){}
   }, 30*60*1000);
+}
+
+// v34f: buffer eventi da scrivere su Firebase quando non è ancora ready
+var _notifBcastBuf = [];
+try{ _notifBcastBuf = JSON.parse(localStorage.getItem('notifBcastBuf')||'[]')||[]; }catch(e){ _notifBcastBuf = []; }
+function _notifBufSave(){ try{ localStorage.setItem('notifBcastBuf', JSON.stringify(_notifBcastBuf.slice(-100))); }catch(e){} }
+function _notifFlushBuffer(){
+  if(!_notifBcastBuf.length) return;
+  if(typeof FB_REF==='undefined' || !FB_REF || !FB_REF.root) return;
+  var cnt = 0;
+  for(var i=0;i<_notifBcastBuf.length;i++){
+    var evt = _notifBcastBuf[i];
+    try{ FB_REF.root.child('notifEvents').push(evt); cnt++; }catch(e){}
+  }
+  if(cnt) try{ console.log('[v34f] flushed', cnt, 'notif buffered'); }catch(e){}
+  _notifBcastBuf = [];
+  _notifBufSave();
 }
 </script>
 
