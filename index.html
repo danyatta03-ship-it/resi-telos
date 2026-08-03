@@ -115,11 +115,78 @@ html[data-theme="light"] .badd,
 html[data-theme="light"] .bnxt,
 html[data-theme="light"] .bcam,
 html[data-theme="light"] .bflt{background:#0F5F8A!important;color:#fff!important;border-color:#0F5F8A!important}
-/* Footer con AI / CHAT / stats */
+/* Footer con AI / CHAT / stats — SEMPRE bianco in light */
 html[data-theme="light"] .foot,
-html[data-theme="light"] #footBar{background:#ffffff!important;border-top-color:#000!important;color:#000!important}
+html[data-theme="light"] #footBar,
+html[data-theme="light"] .bot{background:#ffffff!important;border-top:1px solid #000!important;color:#000!important}
+html[data-theme="light"] .bfab{background:#ffffff!important;color:#0F5F8A!important;border:1.5px solid #000!important}
+html[data-theme="light"] .bfab .bfab-lbl{color:#0F5F8A!important;font-weight:800!important}
 /* Chat bubbles */
 html[data-theme="light"] #chatMsgsOv{background:#ffffff!important;color:#000!important}
+/* v34g2: forza light COMPLETO su tutte le pagine (DASH, TRIMESTRE, CONTATTI, ANOMALIE, LOGISTICA) */
+/* Stat cards (Dashboard) */
+html[data-theme="light"] .sc{background:#ffffff!important;color:#000!important;border:1.5px solid #000!important}
+html[data-theme="light"] .sc .sc-n,
+html[data-theme="light"] .sc .sc-l{color:#000!important}
+html[data-theme="light"] .cht,
+html[data-theme="light"] .bst{background:#ffffff!important;color:#000!important;border:1px solid #000!important}
+html[data-theme="light"] .cht .ct{color:#000!important;font-weight:800!important}
+html[data-theme="light"] .brow{color:#000!important}
+html[data-theme="light"] .brow .blbl,
+html[data-theme="light"] .brow .bval{color:#000!important}
+html[data-theme="light"] .brow .btrk{background:#eef1f5!important}
+/* Storico dashboard container */
+html[data-theme="light"] #turnoBox,
+html[data-theme="light"] #dashC,
+html[data-theme="light"] #dashExtra{background:#ffffff!important;color:#000!important}
+html[data-theme="light"] #turnoBox *,
+html[data-theme="light"] #dashExtra *{color:#000!important}
+/* Sotto-tabs dello STORICO (DASH / ARCHIVIO / TEMPI / GALLERIA / EXPORT) */
+html[data-theme="light"] .htab{background:#ffffff!important;border-bottom:1px solid #000!important}
+html[data-theme="light"] .htab-btn{background:#ffffff!important;color:#000!important;border-color:#000!important}
+html[data-theme="light"] .htab-btn.on{background:#e0edf7!important;color:#0F5F8A!important;border-color:#0F5F8A!important}
+/* Anomalie card */
+html[data-theme="light"] #anoList,
+html[data-theme="light"] .ano-card,
+html[data-theme="light"] .ac-ano,
+html[data-theme="light"] div[id="anoList"]>div{background:#ffffff!important;color:#000!important;border:1.5px solid #000!important}
+html[data-theme="light"] #anoList *{color:inherit!important}
+/* Logistica sub-tab e bottoni */
+html[data-theme="light"] .ubi-tab,
+html[data-theme="light"] .ubi-tab-btn,
+html[data-theme="light"] #pgUbi button[class*="sb"]{background:#ffffff!important;color:#000!important;border:1.5px solid #000!important}
+html[data-theme="light"] #pgUbi .ubi-tab-btn.on{background:#e0edf7!important;color:#0F5F8A!important;border-color:#0F5F8A!important}
+html[data-theme="light"] #pgUbi{background:#ffffff!important;color:#000!important}
+html[data-theme="light"] #pgUbi *{color:inherit}
+/* Contatti list */
+html[data-theme="light"] #contattiList,
+html[data-theme="light"] #contattiList>div,
+html[data-theme="light"] .contact-row{background:#ffffff!important;color:#000!important;border-bottom:1px solid #000!important}
+html[data-theme="light"] #contattiList *{color:inherit!important}
+html[data-theme="light"] #pgCon{background:#ffffff!important;color:#000!important}
+/* Trimestre / DB tabella header + righe */
+html[data-theme="light"] .db-table thead,
+html[data-theme="light"] .db-table thead th,
+html[data-theme="light"] .db-thead,
+html[data-theme="light"] #pgTri thead,
+html[data-theme="light"] #pgTri thead th,
+html[data-theme="light"] #pgTri table thead tr{background:#ffffff!important;color:#000!important;border-bottom:2px solid #000!important}
+html[data-theme="light"] #pgTri tbody td{color:#000!important;border-bottom:1px solid #d0d4dc!important}
+html[data-theme="light"] #pgTri{background:#ffffff!important;color:#000!important}
+/* Overlay chat / AI dark → light */
+html[data-theme="light"] #chatOverlay,
+html[data-theme="light"] #aiCopBox,
+html[data-theme="light"] #aiCopBox>div{background:#ffffff!important;color:#000!important;border:1.5px solid #000!important}
+html[data-theme="light"] #chatOverlay *,
+html[data-theme="light"] #aiCopBox *{color:inherit}
+/* Empty state / placeholder */
+html[data-theme="light"] .empty{background:#ffffff!important;color:#000!important}
+html[data-theme="light"] .empty .ei{color:#000!important}
+/* Colore generale per elementi span/div senza classe con background scuro inline */
+html[data-theme="light"] div[style*="background:#111"],
+html[data-theme="light"] div[style*="background:#1a1a1a"],
+html[data-theme="light"] div[style*="background:#161821"],
+html[data-theme="light"] div[style*="background:#0a0a0a"]{background:#ffffff!important;color:#000!important}
 /* Cursore sui due pallini header per indicare che sono cliccabili */
 .cdot, .sdot{cursor:pointer}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
