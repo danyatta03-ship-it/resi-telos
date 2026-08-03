@@ -1267,6 +1267,7 @@ var ROLE_PERMS = {
 var STATI = {
   'RICEVIMENTO':['DA GESTIRE \u23f3','OK PER UFFICIO','ANOMALIA RICEVIMENTO','STALLO RICEVIMENTO'],
   'UFFICIO RESI':[
+    'DA GESTIRE \u23f3',
     'OK PER UFFICIO',
     'RICHIESTA ATTESA APPROVAZIONE \u23f3',
     'RICHIESTA \u2705 - ACCUMULARE',
@@ -2281,9 +2282,9 @@ function addRow() {
   var flusso=gv('cFlu'),tipoDoc=gv('cDoc');
   // Auto-avanzamento a UFFICIO RESI: se il reso e' inserito in RICEVIMENTO con
   // stato "pulito" (nessuna anomalia, nessuno stallo, nessun flusso ANOMALIA),
-  // salta direttamente a UFFICIO RESI / OK PER UFFICIO cosi' l'ufficio lo
-  // vede subito pronto per la lavorazione. Le anomalie e gli stalli restano
-  // in RICEVIMENTO perche' hanno bisogno di verifica supplementare.
+  // salta direttamente a UFFICIO RESI / DA GESTIRE cosi' l'ufficio lo prende
+  // in carico e poi lo porta a "OK PER UFFICIO" o alle altre voci.
+  // Le anomalie e gli stalli restano in RICEVIMENTO per verifica supplementare.
   var _autoFase = fase, _autoStato = stato, _autoJumped = false, _forcedNR = null;
   var _fs = String(fase||'').trim().toUpperCase();
   var _ss = String(stato||'').trim().toUpperCase();
@@ -2305,7 +2306,9 @@ function addRow() {
     toast('⛔ Reso NON RENDIBILE ('+_forcedNR.motivo+'): '+_forcedNR.why,'r');
   } else if(_fs === 'RICEVIMENTO' && !_isProblematic){
     _autoFase = 'UFFICIO RESI';
-    _autoStato = 'OK PER UFFICIO';
+    // Se l'operatore ha esplicitamente scelto 'OK PER UFFICIO' rispetto il suo intento;
+    // altrimenti il default in UFFICIO RESI è 'DA GESTIRE' (l'ufficio deve prenderlo in carico).
+    _autoStato = (_ss === 'OK PER UFFICIO') ? 'OK PER UFFICIO' : 'DA GESTIRE ⏳';
     _autoJumped = true;
   }
   var row={
@@ -2350,7 +2353,7 @@ function addRow() {
     pendingMotivoNR='';
     var _tmsg;
     if(row.motivoNR) _tmsg = 'Aggiunto · NON RENDIBILE · '+row.motivoNR;
-    else if(_autoJumped) _tmsg = '✓ '+row.cod+' → UFFICIO RESI · OK PER UFFICIO';
+    else if(_autoJumped) _tmsg = '✓ '+row.cod+' → UFFICIO RESI · '+row.stato;
     else _tmsg = '✓ '+row.cod+' aggiunto — pronto per il prossimo';
     toast(_tmsg,'b');
     // Resta sul form per inserimenti a raffica (bolle multi-articolo);
@@ -2840,11 +2843,10 @@ function advFase(key,fase){
     }
   }
   var auto=AUTO_STATO[fase]||'';
-  // Fix esplicito: quando si passa a UFFICIO RESI da qualsiasi fase, lo stato iniziale
-  // deve essere sempre "OK PER UFFICIO" (segnala che l'ufficio deve prendere in carico).
-  // Difende dal caso in cui STATI['UFFICIO RESI'][0] sia stato riordinato o la cache
-  // del browser stia servendo una versione vecchia.
-  if(fase==='UFFICIO RESI') auto = 'OK PER UFFICIO';
+  // Quando un reso entra in UFFICIO RESI da qualsiasi fase, lo stato iniziale
+  // deve essere "DA GESTIRE" (l'ufficio lo prende in carico, poi lo passa a
+  // "OK PER UFFICIO" o alle altre voci di lavorazione).
+  if(fase==='UFFICIO RESI') auto = 'DA GESTIRE ⏳';
   var ch={fase:fase,stato:auto,datSta:new Date().toISOString().slice(0,10),_lastEdit:deviceName,_role:ROLE};
   // Firma operatore quando l'articolo entra in FINALE (per contestazioni interne)
   if(fase==='FINALE'&&!r._finalBy){ ch._finalBy=deviceName; ch._finalTs=Date.now(); ch._finalRole=ROLE; }
@@ -2867,7 +2869,7 @@ function sendBackFase(key){
   if(!(ROLE_PERMS[ROLE]&&ROLE_PERMS[ROLE].canSendBack)){ toast('Non autorizzato a rimandare indietro','r'); return; }
   if(!confirm('Rimandare il reso da '+r.fase+' a '+pf+' ?')) return;
   var st=AUTO_STATO[pf]||(STATI[pf]&&STATI[pf][0])||'';
-  if(pf==='UFFICIO RESI') st='OK PER UFFICIO';
+  if(pf==='UFFICIO RESI') st='DA GESTIRE ⏳';
   sendMsg({type:'update',key:key,changes:{fase:pf,stato:st,datSta:new Date().toISOString().slice(0,10),_lastEdit:deviceName,_role:ROLE}});
   toast('\u2190 rimandato a '+pf,'y');
 }
