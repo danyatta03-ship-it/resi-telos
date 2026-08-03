@@ -1728,7 +1728,8 @@ function showSettings() {
     '<div class="sh-section">NOTIFICHE</div>'+
     '<div style="font-size:10px;color:var(--txt2);margin-bottom:6px;line-height:1.5">Ricevi avvisi per scadenze fornitori, richieste di presa logistica e follow-up mail scadute.</div>'+
     '<button onclick="notifAsk()" style="width:100%;background:rgba(59,159,212,.12);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);padding:10px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">\ud83d\udd14 Attiva notifiche browser</button>'+
-    '<button onclick="mfuCheckDue(false)" style="width:100%;background:rgba(230,176,60,.12);color:#E6B03C;border:1px solid rgba(230,176,60,.4);padding:10px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:10px">\ud83d\udcec Mostra follow-up mail in attesa</button>'+
+    '<button onclick="mfuCheckDue(false)" style="width:100%;background:rgba(230,176,60,.12);color:#E6B03C;border:1px solid rgba(230,176,60,.4);padding:10px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">\ud83d\udcec Mostra follow-up mail in attesa</button>'+
+    '<button onclick="if(confirm(\'Cancellare cache e ricaricare l\\\'app? I dati resi non vengono toccati.\')) forceAppReload()" style="width:100%;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.4);padding:10px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:10px">\ud83d\udd04 Aggiorna app (svuota cache)</button>'+
     '<button onclick="saveSettings()" style="width:100%;background:linear-gradient(135deg,#002010,#004020);color:var(--grn);border:1px solid rgba(0,230,118,.3);padding:13px;font-size:15px;font-weight:700;border-radius:var(--rad);cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:8px">\u2713 SALVA</button>'+
     '<button onclick="csht()" style="width:100%;background:none;color:var(--txt3);border:none;padding:11px;font-size:13px;cursor:pointer;font-family:inherit">Annulla</button>';
   document.getElementById('ov').classList.add('on');
@@ -5288,7 +5289,61 @@ function delH(i){try{var h=JSON.parse(localStorage.getItem('th')||'[]');h.splice
 var tT=null;
 function toast(msg,t){clearTimeout(tT);var el=document.getElementById('toast');el.textContent=msg;el.className='toast t'+(t||'g');el.classList.add('on');tT=setTimeout(function(){el.classList.remove('on');},3500);}
 </script>
-<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){});});}
+<script>
+// v34g3: registrazione + auto-update aggressivo del service worker.
+// Su iOS PWA la cache tende a restare attaccata; forzo update() ad ogni load
+// e ricarico la pagina appena arriva un nuovo SW attivo.
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js', {updateViaCache:'none'}).then(function(reg){
+      // Update esplicito ad ogni load
+      try{ reg.update(); }catch(e){}
+      // Se c'è un nuovo SW in attesa, forza skipWaiting e reload
+      function _triggerReload(w){
+        if(!w) return;
+        try{ w.postMessage({type:'SKIP_WAITING'}); }catch(e){}
+      }
+      if(reg.waiting) _triggerReload(reg.waiting);
+      reg.addEventListener('updatefound', function(){
+        var nw = reg.installing;
+        if(!nw) return;
+        nw.addEventListener('statechange', function(){
+          if(nw.state==='installed' && navigator.serviceWorker.controller){
+            _triggerReload(nw);
+          }
+        });
+      });
+      // Update periodico ogni 5 min (per PWA aperta a lungo)
+      setInterval(function(){ try{ reg.update(); }catch(e){} }, 5*60*1000);
+    }).catch(function(){});
+    // Quando il nuovo SW prende controllo → reload automatico una volta
+    var _reloaded=false;
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(_reloaded) return; _reloaded=true;
+      try{ window.location.reload(); }catch(e){}
+    });
+  });
+}
+
+// v34g3: pulsante ricarica forzata (chiama da IMPOSTAZIONI → "Aggiorna app")
+window.forceAppReload = function(){
+  Promise.resolve()
+    .then(function(){
+      if('caches' in window) return caches.keys().then(function(keys){
+        return Promise.all(keys.map(function(k){ return caches.delete(k); }));
+      });
+    })
+    .then(function(){
+      if(navigator.serviceWorker) return navigator.serviceWorker.getRegistrations().then(function(rs){
+        return Promise.all(rs.map(function(r){ return r.unregister(); }));
+      });
+    })
+    .then(function(){
+      try{ localStorage.setItem('_forceReload', Date.now()); }catch(e){}
+      window.location.reload(true);
+    });
+};
+</script>
 
 // ══════════════════════════════════════════
 // FIREBASE SYNC
