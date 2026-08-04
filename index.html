@@ -867,7 +867,7 @@ select option {
         <div class="r2">
           <div class="f"><label><span>TIPO FLUSSO <span class="req">✱</span></span></label>
             <select id="cFlu" onchange="ce(this)">
-              <option value="">—</option><option>STANDARD</option><option>FILIALE IN</option><option>FILIALE OUT</option><option>ANOMALIA</option><option>ECCEZIONE</option><option>VETTORE PRIMA DI FLUSSO</option><option>AGENTE</option><option>COLLEGA</option>
+              <option value="">—</option><option>STANDARD</option><option>FILIALE IN</option><option>FILIALE OUT</option><option>ANOMALIA</option><option>ECCEZIONE</option>
             </select>
           </div>
           <div class="f"><label><span>TIPO DOC. <span class="req">✱</span></span></label>
@@ -4899,7 +4899,7 @@ function editRow(key){
   } else {
     html+=fld('ANOMALIA', '<input id="ei_anom" value="" disabled placeholder="— non impostata all\'inserimento —" style="width:100%;background:rgba(255,255,255,.02);color:var(--txt3);border:1px dashed var(--brd2);padding:9px 11px;font-size:12px;border-radius:var(--rad2);-webkit-appearance:none;outline:none;font-family:inherit;margin-bottom:7px;cursor:not-allowed">');
   }
-  html+=fld('TIPO FLUSSO',sl('flusso',['STANDARD','FILIALE IN','FILIALE OUT','ANOMALIA','ECCEZIONE','VETTORE PRIMA DI FLUSSO','AGENTE','COLLEGA'],r.flusso));
+  html+=fld('TIPO FLUSSO',sl('flusso',['STANDARD','FILIALE IN','FILIALE OUT','ANOMALIA','ECCEZIONE'],r.flusso));
   html+=fld('TIPO DOC.',sl('tipoDoc',['FLOTTA','SCONTRINO','FATTURA','VENDITA','ACQUISTO','VISIONE','RESO FILIALE','NOLEGGIO','BL/FIM','BL/TRA','NESSUNO'],r.tipoDoc));
   html+='<div class="sh-section">STATO E FASE</div>';
   if(canFull){
@@ -9454,7 +9454,7 @@ function showOCRPicker(items, rawText){
   // Sezione: CAMPI COMUNI (riflettono i valori attuali del form, modificabili qui)
   function _cur(id){var el=document.getElementById(id); return el?el.value||'':'';}
   function _opts(list, cur){ var h=''; for(var oi=0;oi<list.length;oi++){var v=list[oi]; h+='<option value="'+v.replace(/"/g,'&quot;')+'"'+(v===cur?' selected':'')+'>'+v+'</option>';} return h; }
-  var _fluL=['STANDARD','FILIALE IN','FILIALE OUT','ANOMALIA','ECCEZIONE','VETTORE PRIMA DI FLUSSO','AGENTE','COLLEGA'];
+  var _fluL=['STANDARD','FILIALE IN','FILIALE OUT','ANOMALIA','ECCEZIONE'];
   var _docL=['FLOTTA','SCONTRINO','FATTURA','VENDITA','ACQUISTO','VISIONE','RESO FILIALE','NOLEGGIO','BL/FIM','BL/TRA','NESSUNO'];
   var _fasL=['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'];
   var _cauL=(typeof CAULIST!=='undefined')?CAULIST:[];
@@ -10212,7 +10212,7 @@ function showOcrConfirm(res, photoUrl, source){
   var _curForn=(document.getElementById('cFor')||{}).value||res.fornitore||'';
   html+=lab('FORNITORE')+fInp('ocrForn',_curForn,'es. BOSCH');
   // Tipo flusso + Tipo doc + Fase + Stato (obbligatori per addRow)
-  var _fluL=['STANDARD','FILIALE IN','FILIALE OUT','ANOMALIA','ECCEZIONE','VETTORE PRIMA DI FLUSSO','AGENTE','COLLEGA'];
+  var _fluL=['STANDARD','FILIALE IN','FILIALE OUT','ANOMALIA','ECCEZIONE'];
   var _docL=['FLOTTA','SCONTRINO','FATTURA','VENDITA','ACQUISTO','VISIONE','RESO FILIALE','NOLEGGIO','BL/FIM','BL/TRA','NESSUNO'];
   var _fasL=['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'];
   function _cV(id){var e=document.getElementById(id); return e?e.value||'':'';}
