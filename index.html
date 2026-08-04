@@ -280,14 +280,26 @@ html[data-theme="light"] body .card .cb{background:#ffffff!important;color:#000!
 html[data-theme="light"] .ac{background:#ffffff!important;border:1.5px solid #3B9FD4!important;color:#000!important}
 html[data-theme="light"] .ac.locked{background:#f7f9fb!important;border-color:#3B9FD4!important}
 
-/* 8) CONTATTI: TUTTE le righe bianche, niente alternato juventino ✋ */
-html[data-theme="light"] #contattiList>div,
-html[data-theme="light"] #contattiList>div:nth-child(odd),
-html[data-theme="light"] #contattiList>div:nth-child(even),
-html[data-theme="light"] #contattiList>div[style]{background:#ffffff!important;color:#000!important;border-bottom:1px solid #e0e3e8!important}
-html[data-theme="light"] #contattiList *{color:#000!important;background:transparent!important}
-html[data-theme="light"] #contattiList a[href^="mailto:"]{color:#3B9FD4!important}
-html[data-theme="light"] #contattiList button{background:#ffffff!important;color:#3B9FD4!important;border:1px solid #3B9FD4!important}
+/* 8) CONTATTI: TUTTE le righe bianche, niente alternato juventino ✋
+   NOTA: il container reale è #conList (non #contattiList come pensavo prima).
+   renderContatti() usa inline "background:#111" per pari e "#0f0f0f" per dispari. */
+html[data-theme="light"] #conList,
+html[data-theme="light"] #conList *{background:transparent!important;color:#000!important}
+/* Container esterno wrapper: fondo bianco con bordo azzurro */
+html[data-theme="light"] #conList>div[style*="background:#111"]{background:#ffffff!important;border-color:#3B9FD4!important;color:#000!important}
+/* Righe interne alternate (pari #111, dispari #0f0f0f) → tutte bianche */
+html[data-theme="light"] #conList div[style*="background:#111"][data-cod],
+html[data-theme="light"] #conList div[style*="background:#0f0f0f"][data-cod],
+html[data-theme="light"] #conList div[data-cod]{background:#ffffff!important;border-bottom:1px solid #e0e3e8!important}
+/* Testi nomi: erano #fff → nero */
+html[data-theme="light"] #conList div[style*="color:#fff"]{color:#000!important;background:transparent!important}
+html[data-theme="light"] #conList div[style*="color:#555"]{color:#4a4f58!important;background:transparent!important}
+html[data-theme="light"] #conList div[style*="color:#3B9FD4"]{color:#3B9FD4!important;background:transparent!important}
+/* Pulsante mail (a) e edit (button) restano azzurri */
+html[data-theme="light"] #conList a[href^="mailto:"]{color:#3B9FD4!important;background:#ffffff!important;border-color:#3B9FD4!important}
+html[data-theme="light"] #conList button{background:#ffffff!important;color:#3B9FD4!important;border:1px solid #3B9FD4!important}
+/* "Carica altri" pulsante */
+html[data-theme="light"] #conList button[onclick*="CON_PAGE"]{background:#ffffff!important;color:#3B9FD4!important;border:1px solid #3B9FD4!important}
 
 /* 9) ANOMALIE list: bianco con bordo azzurro */
 html[data-theme="light"] #anoList>div{background:#ffffff!important;color:#000!important;border:1.5px solid #3B9FD4!important}

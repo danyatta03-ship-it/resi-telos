@@ -3,7 +3,7 @@
 // App shell: network-first (aggiornamenti subito, offline dal cache)
 // Dati anagrafica/storico: cache-first con refresh in background
 // ═══════════════════════════════════════════════════════
-var CACHE = 'resi-telos-v34i4';
+var CACHE = 'resi-telos-v34i5';
 
 // v34g3: rispondi a SKIP_WAITING dal client per attivare subito la nuova versione
 self.addEventListener('message', function(e){
