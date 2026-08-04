@@ -187,56 +187,139 @@ html[data-theme="light"] div[style*="background:#111"],
 html[data-theme="light"] div[style*="background:#1a1a1a"],
 html[data-theme="light"] div[style*="background:#161821"],
 html[data-theme="light"] div[style*="background:#0a0a0a"]{background:#ffffff!important;color:#000!important}
-/* ── v34h2: fix residui light mode (basato su feedback screenshot) ── */
-/* Centro Notifiche: nome utente non visibile in light. Forzo colore. */
-html[data-theme="light"] #notifList *{color:inherit!important}
-html[data-theme="light"] #notifList div[style*="color:#fff"]{color:#000!important}
-html[data-theme="light"] #notifList div{color:#000!important}
-html[data-theme="light"] #notifList div[style*="color:#E6B03C"]{color:#A16100!important}
-html[data-theme="light"] #notifList div[style*="color:var(--txt3)"]{color:#4a4f58!important}
-/* Storico Dash: chip con background hardcoded rgba dark → bianco con bordo azzurro */
-html[data-theme="light"] div[style*="rgba(59,159,212,.04)"],
-html[data-theme="light"] div[style*="rgba(59,159,212,.06)"],
-html[data-theme="light"] div[style*="rgba(59,159,212,.08)"],
-html[data-theme="light"] div[style*="rgba(59,159,212,.12)"],
-html[data-theme="light"] div[style*="rgba(91,184,224,.04)"],
-html[data-theme="light"] div[style*="rgba(91,184,224,.08)"],
-html[data-theme="light"] span[style*="background:#111"],
-html[data-theme="light"] span[style*="background:#1a1a1a"],
-html[data-theme="light"] span[style*="background:#0d0d0d"]{background:#ffffff!important;color:#000!important;border-color:#3B9FD4!important}
-html[data-theme="light"] .sc-n{color:#3B9FD4!important}
-/* Chip inline con background rgba tenui: mantieni fondo bianco, testo nero, bordo azzurro */
+/* ── v34h3: light mode "azzurro & nero" (feedback definitivo) ─────────
+   Regola d'oro:
+   - Testi: TUTTI NERI (tranne rossi/gialli semantici per errori/warning)
+   - Bordi: AZZURRO TELOS (#3B9FD4) su bianco
+   - Pulsanti: bordo azzurro + testo azzurro OR pieno azzurro con testo bianco
+   - Righe liste (contatti / anomalie / lista): tutte BIANCHE, no alternato
+──────────────────────────────────────────────────────────────────── */
+
+/* 1) TESTI: tutto nero — override globale in light (esclusi rosso/giallo semantici) */
+html[data-theme="light"] .pg,
+html[data-theme="light"] .pg *:not(.chip):not(.sb):not(.bfab):not(.tab.on):not(button):not(.role-badge):not(.online-b span):not(.sc-n):not([style*="color:#E05555"]):not([style*="color:#B23028"]):not([style*="color:#c0392b"]){color:#000!important}
+html[data-theme="light"] span[style*="color:#3B9FD4"]:not(.tab.on):not(.role-badge):not(button):not(.sc-n){color:#000!important}
+html[data-theme="light"] span[style*="color:var(--blu)"],
+html[data-theme="light"] span[style*="color:var(--grn)"],
+html[data-theme="light"] span[style*="color:var(--yel)"],
+html[data-theme="light"] span[style*="color:var(--ora)"]{color:#000!important}
+html[data-theme="light"] div[style*="color:#3B9FD4"]:not(.tab.on):not(.role-badge){color:#000!important}
+html[data-theme="light"] div[style*="color:#5BB8E0"]{color:#000!important}
+html[data-theme="light"] div[style*="color:#E6B03C"]{color:#000!important}
+html[data-theme="light"] .ac-sogg,
+html[data-theme="light"] .ac-cod,
+html[data-theme="light"] .ac-price,
+html[data-theme="light"] .ac-date,
+html[data-theme="light"] .ac-who{color:#000!important}
+/* PRE arancione (BOS) → nero */
+html[data-theme="light"] .ac-cod span[style*="color:var(--ora)"],
+html[data-theme="light"] .ac-cod span[style*="color:#3B9FD4"]{color:#000!important}
+/* Nome fornitore in card riga (era azzurro) → nero */
+html[data-theme="light"] .ac div[style*="color:#3B9FD4;font-weight:700"]{color:#000!important}
+/* Etichette form field */
+html[data-theme="light"] .f label,
+html[data-theme="light"] .f label span{color:#000!important}
+/* Titoli sezioni card (IDENTIFICAZIONE, CLASSIFICAZIONE, ecc) */
+html[data-theme="light"] .card .ch,
+html[data-theme="light"] .card .ch span{color:#000!important}
+
+/* 2) CHIP e mini-tag: fondo bianco, bordo azzurro, testo nero */
+html[data-theme="light"] .chip,
 html[data-theme="light"] span[class="chip"],
-html[data-theme="light"] .chip{background:#ffffff!important;color:#000!important;border:1px solid #3B9FD4!important}
-/* Contatti: righe alternate (nth-child dispari/pari) - forza TUTTE bianche */
+html[data-theme="light"] .chip.cb,
+html[data-theme="light"] .chip.cn,
+html[data-theme="light"] .chip.cr{background:#ffffff!important;color:#000!important;border:1px solid #3B9FD4!important}
+/* Chip rossa ANOMALIA: eccezione, resta rossa per allarme */
+html[data-theme="light"] .chip.cr[style*="rgba(224,85,85"]{background:#ffffff!important;color:#B23028!important;border:1px solid #B23028!important;font-weight:700!important}
+html[data-theme="light"] div[style*="background:rgba(224,85,85"]{background:#ffffff!important;color:#B23028!important;border:1px solid #B23028!important}
+
+/* 3) FASE COUNTERS in alto (1 RIC / 3 UFF / 0 MAG / 1 FIN): bordo azzurro, numero azzurro, label nera */
+html[data-theme="light"] div[style*="border:2px solid"][style*="rgba(59,159,212"],
+html[data-theme="light"] div[style*="border:1.5px solid"][style*="rgba(59,159,212"]{border:2px solid #3B9FD4!important;background:#ffffff!important}
+html[data-theme="light"] div[style*="border:2px solid"] div[style*="color:#3B9FD4"]{color:#3B9FD4!important}
+html[data-theme="light"] div[style*="border:2px solid"] div[style*="color:var(--txt3)"]{color:#000!important}
+
+/* 4) PULSANTI: uniformi azzurro Telos */
+html[data-theme="light"] .sb{background:#ffffff!important;color:#3B9FD4!important;border:1.5px solid #3B9FD4!important;font-weight:700!important}
+html[data-theme="light"] .sb.sg{background:#ffffff!important;color:#3B9FD4!important;border-color:#3B9FD4!important}
+html[data-theme="light"] .sb.sn,
+html[data-theme="light"] .sb.ssb,
+html[data-theme="light"] .sb.sp{background:#ffffff!important;color:#3B9FD4!important;border-color:#3B9FD4!important}
+/* Pulsante ✕ (delete): resta rosso per pericolo */
+html[data-theme="light"] .sb.sr{background:#ffffff!important;color:#B23028!important;border-color:#B23028!important}
+/* Pulsante giallo (warning/archive): resta giallo scurito */
+html[data-theme="light"] .sb.sy{background:#ffffff!important;color:#A16100!important;border-color:#A16100!important}
+/* Pulsante Mod. (verde storicamente) → bordo azzurro */
+html[data-theme="light"] .sb[style*="background:linear-gradient(135deg,#002010"]{background:#ffffff!important;color:#3B9FD4!important;border:1.5px solid #3B9FD4!important}
+/* Pulsante avanzamento fase (Ufficio Resi / Magazzino) */
+html[data-theme="light"] .auto-arrow,
+html[data-theme="light"] button[class*="auto-arrow"]{background:#3B9FD4!important;color:#ffffff!important;border:1.5px solid #3B9FD4!important;font-weight:700!important}
+/* Pulsanti toolbar (Grafici, Cicli, Scadenze, Follow-up, Fine Giornata, Svuota) */
+html[data-theme="light"] .pg .r2>button,
+html[data-theme="light"] .pg>div>button.sb{background:#ffffff!important;color:#3B9FD4!important;border:1.5px solid #3B9FD4!important}
+
+/* 5) INPUT / SELECT / TEXTAREA: bordo azzurro invece che nero */
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea{background:#ffffff!important;color:#000!important;border:1.5px solid #3B9FD4!important}
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder{color:#7a7f88!important}
+
+/* 6) CARD RICEVIMENTO: bordo azzurro invece che nero */
+html[data-theme="light"] body .card{background:#ffffff!important;border:1.5px solid #3B9FD4!important;color:#000!important}
+html[data-theme="light"] body .card .ch{border-bottom:1px solid #3B9FD4!important;color:#000!important}
+html[data-theme="light"] body .card .cb{background:#ffffff!important;color:#000!important}
+
+/* 7) RIGHE LISTA (.ac): bordo azzurro, tutte bianche */
+html[data-theme="light"] .ac{background:#ffffff!important;border:1.5px solid #3B9FD4!important;color:#000!important}
+html[data-theme="light"] .ac.locked{background:#f7f9fb!important;border-color:#3B9FD4!important}
+
+/* 8) CONTATTI: TUTTE le righe bianche, niente alternato juventino ✋ */
 html[data-theme="light"] #contattiList>div,
 html[data-theme="light"] #contattiList>div:nth-child(odd),
 html[data-theme="light"] #contattiList>div:nth-child(even),
-html[data-theme="light"] #contattiList div[style]{background:#ffffff!important;color:#000!important;border-bottom:1px solid #d0d4dc!important}
-html[data-theme="light"] #contattiList *{color:#000!important}
-/* Logistica: pulsanti tab (Ubicazioni/Fornitori/Foto pacco) devono essere tutti chiari */
+html[data-theme="light"] #contattiList>div[style]{background:#ffffff!important;color:#000!important;border-bottom:1px solid #e0e3e8!important}
+html[data-theme="light"] #contattiList *{color:#000!important;background:transparent!important}
+html[data-theme="light"] #contattiList a[href^="mailto:"]{color:#3B9FD4!important}
+html[data-theme="light"] #contattiList button{background:#ffffff!important;color:#3B9FD4!important;border:1px solid #3B9FD4!important}
+
+/* 9) ANOMALIE list: bianco con bordo azzurro */
+html[data-theme="light"] #anoList>div{background:#ffffff!important;color:#000!important;border:1.5px solid #3B9FD4!important}
+html[data-theme="light"] #anoList *{color:#000!important}
+html[data-theme="light"] #anoList div[style*="background:rgba(224,85,85"],
+html[data-theme="light"] #anoList span[style*="color:#E05555"]{color:#B23028!important}
+
+/* 10) LOGISTICA sub-tabs & buttons: azzurro pieno */
 html[data-theme="light"] #pgUbi>div>button,
-html[data-theme="light"] #pgUbi button[style*="background"],
 html[data-theme="light"] #pgUbi>div button{background:#ffffff!important;color:#3B9FD4!important;border:1.5px solid #3B9FD4!important}
 html[data-theme="light"] #pgUbi>div>button.on,
-html[data-theme="light"] #pgUbi>div>button[style*="background:#0a1e3a"],
-html[data-theme="light"] #pgUbi>div>button[style*="background:rgba(59,159,212"]{background:rgba(59,159,212,.12)!important;color:#3B9FD4!important;border:2px solid #3B9FD4!important}
-/* Bottone "+" e altri custom in Logistica */
-html[data-theme="light"] #pgUbi button[style*="background:#3B9FD4"],
-html[data-theme="light"] #pgUbi button[style*="background:linear-gradient"]{background:#3B9FD4!important;color:#ffffff!important;border:1px solid #3B9FD4!important}
-/* Colore accento nero+azzurro coerente: tutti i "titoli" blu Telos restino azzurri */
-html[data-theme="light"] .hdr-title span[style*="color:#3B9FD4"],
-html[data-theme="light"] .role-badge,
-html[data-theme="light"] .online-b,
-html[data-theme="light"] .tab.on{color:#3B9FD4!important}
-/* Footer pulsanti AI/CHAT e altri: bianco con testo azzurro */
+html[data-theme="light"] #pgUbi>div>button[style*="rgba(59,159,212"]{background:rgba(59,159,212,.10)!important;color:#3B9FD4!important;border:2px solid #3B9FD4!important;font-weight:800!important}
+
+/* 11) STORICO DASH stat cards */
+html[data-theme="light"] .sc{background:#ffffff!important;color:#000!important;border:1.5px solid #3B9FD4!important}
+html[data-theme="light"] .sc .sc-n{color:#3B9FD4!important;font-weight:800!important}
+html[data-theme="light"] .sc .sc-l{color:#000!important}
+
+/* 12) CENTRO NOTIFICHE: nomi utenti sempre neri, orari azzurri */
+html[data-theme="light"] #notifList *{color:#000!important}
+html[data-theme="light"] #notifList div[style*="color:#3B9FD4"]{color:#3B9FD4!important}
+html[data-theme="light"] #notifList div[style*="color:#8859E5"],
+html[data-theme="light"] #notifList div[style*="color:#5BB8E0"]{color:#3B9FD4!important}
+
+/* 13) FOOTER pulsanti (AI / CHAT / checkbox) */
+html[data-theme="light"] .bot,
+html[data-theme="light"] #footBar{background:#ffffff!important;border-top:1px solid #3B9FD4!important;color:#000!important}
 html[data-theme="light"] .bfab,
 html[data-theme="light"] .bfab-ai,
 html[data-theme="light"] .bfab-chat{background:#ffffff!important;color:#3B9FD4!important;border:1.5px solid #3B9FD4!important}
 html[data-theme="light"] .bfab .bfab-lbl{color:#3B9FD4!important}
-/* Ultimo pulsante footer (checkbox spuntato / _foot ultimo btn): bianco con azzurro */
 html[data-theme="light"] .bot>button:last-child,
 html[data-theme="light"] #footBar>button:last-child{background:#ffffff!important;color:#3B9FD4!important;border:1.5px solid #3B9FD4!important}
+
+/* 14) HEADER: role-badge e online-b sul fondo nero mantengono azzurro */
+html[data-theme="light"] .role-badge{color:#3B9FD4!important}
+html[data-theme="light"] .online-b{color:#3B9FD4!important}
+html[data-theme="light"] .tab.on{color:#3B9FD4!important;border-bottom-color:#3B9FD4!important}
 /* Cursore sui due pallini header per indicare che sono cliccabili */
 .cdot, .sdot{cursor:pointer}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
