@@ -338,6 +338,40 @@ html[data-theme="light"] #footBar>button:last-child{background:#ffffff!important
 html[data-theme="light"] .role-badge{color:#3B9FD4!important}
 html[data-theme="light"] .online-b{color:#3B9FD4!important}
 html[data-theme="light"] .tab.on{color:#3B9FD4!important;border-bottom-color:#3B9FD4!important}
+/* v34i6: fix popup suggerimenti cliente + OCR verifica in light mode */
+/* #cliTip: risultati ricerca cliente sotto SOGGETTO/COD.CLIENTE. Ogni card
+   ha inline background:#0f1a24 e testo color:#e8e8e8. */
+html[data-theme="light"] .cli-tip,
+html[data-theme="light"] #cliTip{background:transparent!important;color:#000!important}
+html[data-theme="light"] #cliTip div[style*="background:#0f1a24"]{background:#ffffff!important;color:#000!important;border-color:#3B9FD4!important}
+html[data-theme="light"] #cliTip div[style*="color:#e8e8e8"]{color:#000!important;background:transparent!important}
+html[data-theme="light"] #cliTip div[style*="color:#777"]{color:#4a4f58!important;background:transparent!important}
+html[data-theme="light"] #cliTip div[style*="color:#3B9FD4"]{color:#3B9FD4!important;background:transparent!important}
+/* OCR Picker Box + OCR Confirmation Box: le popup con la lista dei risultati OCR */
+html[data-theme="light"] #ocrPickerBox,
+html[data-theme="light"] #ocrConfBox{background:rgba(20,20,25,.55)!important}
+html[data-theme="light"] #ocrPickerBox>div,
+html[data-theme="light"] #ocrConfBox>div,
+html[data-theme="light"] #ocrPickerBox div[style*="background:#111"],
+html[data-theme="light"] #ocrConfBox div[style*="background:#111"],
+html[data-theme="light"] #ocrPickerBox div[style*="background:#1a1a1a"],
+html[data-theme="light"] #ocrConfBox div[style*="background:#1a1a1a"]{background:#ffffff!important;color:#000!important;border-color:#3B9FD4!important}
+html[data-theme="light"] #ocrPickerBox *,
+html[data-theme="light"] #ocrConfBox *{color:#000!important}
+html[data-theme="light"] #ocrPickerBox div[style*="color:#3B9FD4"],
+html[data-theme="light"] #ocrConfBox div[style*="color:#3B9FD4"]{color:#3B9FD4!important}
+html[data-theme="light"] #ocrPickerBox input,
+html[data-theme="light"] #ocrPickerBox select,
+html[data-theme="light"] #ocrPickerBox textarea,
+html[data-theme="light"] #ocrConfBox input,
+html[data-theme="light"] #ocrConfBox select,
+html[data-theme="light"] #ocrConfBox textarea{background:#ffffff!important;color:#000!important;border:1.5px solid #3B9FD4!important}
+html[data-theme="light"] #ocrPickerBox button,
+html[data-theme="light"] #ocrConfBox button{background:#ffffff!important;color:#3B9FD4!important;border:1.5px solid #3B9FD4!important}
+/* Sistema popup generico: qualunque div con inline background scuro (#0f1a24 stile blu profondo) → bianco */
+html[data-theme="light"] div[style*="background:#0f1a24"]{background:#ffffff!important;color:#000!important;border-color:#3B9FD4!important}
+html[data-theme="light"] div[style*="border:1px solid #1f2f3f"],
+html[data-theme="light"] div[style*="border:1px solid #2a2a2a"]{border-color:#3B9FD4!important}
 /* Cursore sui due pallini header per indicare che sono cliccabili */
 .cdot, .sdot{cursor:pointer}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
