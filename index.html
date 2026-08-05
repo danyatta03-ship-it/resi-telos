@@ -679,6 +679,327 @@ select option {
 .stato-fin{background:rgba(59,159,212,.12);color:#3B9FD4;border:1px solid rgba(59,159,212,.35)}
 .stato-stallo{background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35)}
 .stato-anomalia{background:rgba(224,85,85,.18);color:#E05555;border:2px solid rgba(224,85,85,.5)}
+
+/* ═══ SPUNTA BANCALE — CSS BEGIN ═══ */
+/* js/ui/spunta/spunta.css — stile SPUNTA BANCALE.
+ *
+ * Usa le variabili tema (var(--bg1), var(--txt), var(--blu), ...) già
+ * presenti in index.html. In caso di uso con js/ui/theme.css (Fase 6)
+ * mappa automaticamente sui nuovi custom-properties.
+ *
+ * Fallback: se la variabile non esiste, degrada su un valore sensato.
+ */
+
+/* ═══════════════════════════════════════════════════════════════════
+   TOKEN LOCALI (usano le var esistenti + fallback)
+   ═══════════════════════════════════════════════════════════════════ */
+.pg#pgSpunta {
+  --sp-ok:      var(--grn, #4CAF50);
+  --sp-warn:    var(--yel, #E6B03C);
+  --sp-err:     var(--red, #E05555);
+  --sp-info:    var(--blu, #3B9FD4);
+  --sp-bg:      var(--bg1, #0a0a0a);
+  --sp-bg-row:  var(--bg2, #111);
+  --sp-txt:     var(--txt, #e6e6e6);
+  --sp-txt2:    var(--txt2, #b8b8b8);
+  --sp-txt3:    var(--txt3, #7a7a7a);
+  --sp-brd:     rgba(255,255,255,.08);
+}
+html[data-theme="light"] .pg#pgSpunta {
+  --sp-brd: rgba(0,0,0,.08);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   HEADER CARD (badges + sticky)
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-sticky {
+  position: sticky; top: 0; z-index: 40;
+  backdrop-filter: blur(8px);
+}
+.sp-sticky-2 {
+  position: sticky; top: 88px; z-index: 39;
+  backdrop-filter: blur(8px);
+}
+.sp-badges { display:flex; gap:6px; flex-wrap:wrap; }
+.sp-badges .chip { font-weight:700; font-size:11px; padding:3px 8px; }
+.sp-b-ok   { background:rgba(76,175,80,.15); color:var(--sp-ok);   border:1px solid rgba(76,175,80,.45); }
+.sp-b-warn { background:rgba(230,176,60,.15); color:var(--sp-warn); border:1px solid rgba(230,176,60,.45); }
+.sp-b-err  { background:rgba(224,85,85,.15); color:var(--sp-err);  border:1px solid rgba(224,85,85,.45); }
+.sp-b-extra{ background:rgba(59,159,212,.15); color:var(--sp-info); border:1px solid rgba(59,159,212,.45); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   AZIONI PRINCIPALI (bottoni grandi)
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-actions {
+  display:grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap:8px;
+  margin-top:10px;
+}
+.sp-btn {
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--sp-brd);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-appearance: none;
+  font-family: inherit;
+  transition: transform .06s, opacity .1s;
+}
+.sp-btn:active { transform: scale(.97); }
+.sp-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+.sp-btn-primary  { background:var(--sp-info); color:#fff; border-color:transparent; }
+.sp-btn-secondary{ background:rgba(59,159,212,.14); color:var(--sp-info); }
+.sp-btn-danger   { background:rgba(224,85,85,.12); color:var(--sp-err); }
+.sp-btn-scan     { background:rgba(76,175,80,.14); color:var(--sp-ok); min-height:44px; padding:8px 14px; }
+.sp-btn-close    { background:var(--sp-ok); color:#fff; border-color:transparent; flex:1; }
+.sp-btn-report   { background:rgba(230,176,60,.14); color:var(--sp-warn); flex:1; }
+.sp-btn-mini     { background:transparent; color:var(--sp-info); border:1px solid rgba(59,159,212,.4); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; -webkit-appearance:none; font-family:inherit; }
+
+@media (max-width: 640px){
+  .sp-actions { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LOADING (OCR in corso)
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-loading {
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(59,159,212,.08);
+  border: 1px solid rgba(59,159,212,.3);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--sp-info);
+  font-weight: 600;
+  font-size: 13px;
+}
+.sp-spinner {
+  width:16px; height:16px;
+  border:2px solid rgba(59,159,212,.3);
+  border-top-color: var(--sp-info);
+  border-radius:50%;
+  animation: sp-spin .8s linear infinite;
+  display:inline-block;
+}
+@keyframes sp-spin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════════════════════════════════
+   INPUT SPUNTA
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-search-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: stretch;
+}
+.sp-search {
+  padding: 14px 14px;
+  font-size: 16px;   /* >= 16px per non far zoomare iOS */
+  font-weight: 600;
+  border-radius: 10px;
+  border: 2px solid var(--sp-info);
+  background: var(--sp-bg-row);
+  color: var(--sp-txt);
+  outline: none;
+  width: 100%;
+}
+.sp-search:focus { box-shadow: 0 0 0 3px rgba(59,159,212,.25); }
+.sp-hint {
+  margin-top: 6px;
+  color: var(--sp-txt3);
+  font-size: 11px;
+  font-style: italic;
+}
+
+/* Popup match multiplo inline */
+.sp-matches {
+  margin-top: 10px;
+  border: 1px solid rgba(230,176,60,.4);
+  background: rgba(230,176,60,.06);
+  border-radius: 10px;
+  padding: 8px;
+}
+.sp-match-opt {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px;
+  border-bottom: 1px dashed var(--sp-brd);
+  cursor: pointer;
+}
+.sp-match-opt:last-child { border-bottom: none; }
+.sp-match-opt:hover, .sp-match-opt:active { background: rgba(230,176,60,.12); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   LISTA RIGHE SPUNTA
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sp-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--sp-txt3);
+  font-style: italic;
+  font-size: 13px;
+}
+.sp-total {
+  color: var(--sp-txt3);
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.sp-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--sp-brd);
+  background: var(--sp-bg-row);
+  transition: background .15s;
+}
+.sp-row.st-ok      { background: rgba(76,175,80,.10);  border-color: rgba(76,175,80,.4); }
+.sp-row.st-partial { background: rgba(230,176,60,.10); border-color: rgba(230,176,60,.4); }
+.sp-row.st-miss    { background: rgba(224,85,85,.10);  border-color: rgba(224,85,85,.45); }
+.sp-row.st-extra   { background: rgba(59,159,212,.10); border-color: rgba(59,159,212,.4); }
+
+.sp-row-icon {
+  font-size: 20px;
+  line-height: 1;
+  min-width: 24px;
+  text-align: center;
+}
+
+.sp-row-info { min-width: 0; }
+.sp-row-name {
+  font-weight: 700;
+  color: var(--sp-txt);
+  font-size: 14px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sp-row-meta {
+  color: var(--sp-txt2);
+  font-size: 11px;
+  margin-top: 2px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sp-row-meta .k { color: var(--sp-txt3); }
+.sp-row-cod {
+  color: var(--sp-info);
+  font-weight: 700;
+  font-size: 10px;
+  background: rgba(59,159,212,.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.sp-count {
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--sp-txt);
+  min-width: 46px;
+  text-align: center;
+}
+.sp-count .letti { color: var(--sp-ok); }
+.sp-count .attesi { color: var(--sp-txt3); }
+.sp-row.st-miss .sp-count .letti { color: var(--sp-err); }
+
+.sp-row-actions {
+  display: flex;
+  gap: 4px;
+}
+.sp-row-actions button {
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 6px;
+  border: 1px solid var(--sp-brd);
+  background: transparent;
+  color: var(--sp-txt2);
+  cursor: pointer;
+  -webkit-appearance: none;
+  font-size: 14px;
+}
+.sp-row-actions button:active { transform: scale(.94); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHIUSURA
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-close-row {
+  display: flex;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   POPUP MODALI (match multipli + report)
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.85);
+  z-index: 1600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+.sp-popup-box {
+  background: var(--sp-bg, #0a0a0a);
+  border: 1px solid var(--sp-brd);
+  border-radius: 14px;
+  padding: 16px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: var(--sp-txt);
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+}
+.sp-popup-report { max-width: 640px; }
+.sp-popup-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: var(--sp-info);
+}
+.sp-popup-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  justify-content: flex-end;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LIGHT MODE — override espliciti (segue lo stile v34h3)
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="light"] .sp-search {
+  background: #fff;
+  color: #000;
+}
+html[data-theme="light"] .sp-popup-box {
+  background: #fff;
+  color: #000;
+  border-color: rgba(0,0,0,.15);
+}
+html[data-theme="light"] .sp-row {
+  background: #fff;
+}
+
+/* ═══ SPUNTA BANCALE — CSS END ═══ */
 </style>
 <!-- defer, non async: i moduli "compat" si registrano sull'oggetto creato da
      firebase-app, quindi vanno eseguiti in quest'ordine. Con async l'ordine è
@@ -798,6 +1119,7 @@ select option {
   <button class="tab"    id="tabList" onclick="gTab('pgList')">LISTA <span class="nbadge" id="nbadge" style="display:none">0</span></button>
   <button class="tab"    id="tabAno"  onclick="gTab('pgAno')">ANOMALIE</button>
   <button class="tab"    id="tabUbi"  onclick="gTab('pgUbi')">LOGISTICA</button>
+  <button class="tab"    id="tabSpunta" onclick="gTab('pgSpunta')">📦 SPUNTA</button>
   <button class="tab"    id="tabTri"  onclick="gTab('pgTri')">TRIMESTRE</button>
   <button class="tab"    id="tabHist" onclick="gTab('pgHist')">STORICO</button>
   <button class="tab"    id="tabNotif" onclick="gTab('pgNotif')">🔔 NOTIFICHE <span class="nbadge" id="notifBadge" style="display:none">0</span></button>
@@ -1391,6 +1713,176 @@ select option {
 
 </div>
 
+<!-- ═══ SPUNTA BANCALE — HTML BEGIN ═══ -->
+<!--
+  js/ui/spunta/spunta.html — struttura HTML della funzione SPUNTA BANCALE.
+  Da includere in index.html come nuovo blocco <div class="pg" id="pgSpunta">
+  affianco agli altri pg* (RICEVIMENTO, LISTA, ecc).
+  Naming id/classi coerente con lo stile esistente (pg, card, ch, cb, r2, f, req, chip).
+-->
+
+<div class="pg" id="pgSpunta" style="display:none">
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CARD 1 — STATO SPUNTA + AZIONI PRINCIPALI (sticky in alto)
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="card sp-sticky">
+    <div class="ch">
+      <span>📦 SPUNTA BANCALE</span>
+      <div class="sp-badges">
+        <span class="chip sp-b-ok"   id="spCntOk">✅ 0</span>
+        <span class="chip sp-b-warn" id="spCntPart">⚠ 0</span>
+        <span class="chip sp-b-err"  id="spCntMiss">❌ 0</span>
+        <span class="chip sp-b-extra" id="spCntExtra">➕ 0</span>
+      </div>
+    </div>
+    <div class="cb">
+
+      <!-- Riga di intestazione: nome bancale + data + operatore -->
+      <div class="r2">
+        <div class="f">
+          <label><span>VETTORE / MITTENTE BANCALE</span></label>
+          <select id="spVet">
+            <option value="">— Seleziona —</option>
+            <option>CIPI</option><option>PIEMME</option><option>AD</option>
+            <option>DIEMME</option><option>GLS</option><option>BRT</option>
+            <option>UPS</option><option>DHL</option><option>TNT</option>
+          </select>
+        </div>
+        <div class="f">
+          <label><span>DATA ARRIVO</span></label>
+          <input type="date" id="spDate">
+        </div>
+      </div>
+
+      <!-- Bottoni principali -->
+      <div class="sp-actions">
+        <button class="sp-btn sp-btn-primary" id="spBtnFoto"
+                onclick="spuntaHandleFotoBordero()">
+          📷 Foto Borderò
+        </button>
+        <button class="sp-btn sp-btn-secondary" id="spBtnManuale"
+                onclick="spuntaAggiungiRigaManuale()">
+          ✍️ Aggiungi manuale
+        </button>
+        <button class="sp-btn sp-btn-danger" id="spBtnReset"
+                onclick="spuntaReset()">
+          🗑 Reset
+        </button>
+      </div>
+
+      <!-- Input nascosto per la foto -->
+      <input type="file" id="spFotoInput" accept="image/*" capture="environment"
+             style="display:none" onchange="spuntaOnFotoSelected(this)">
+
+      <!-- Loading OCR -->
+      <div class="sp-loading" id="spLoading" style="display:none">
+        <span class="sp-spinner"></span>
+        <span id="spLoadingMsg">Sto leggendo il borderò con AI…</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CARD 2 — INPUT SPUNTA (sticky sotto)
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="card sp-sticky-2" id="spCardInput" style="display:none">
+    <div class="cb">
+      <div class="sp-search-row">
+        <input id="spSearch" class="sp-search"
+               placeholder="🔍 Cerca mittente o città…  (o scan etichetta)"
+               autocomplete="off" oninput="spuntaOnSearchInput(this.value)"
+               onkeydown="if(event.key==='Enter')spuntaConfermaMatch()">
+        <button class="sp-btn sp-btn-scan" onclick="spuntaScanEtichetta()">
+          📷 Scan
+        </button>
+      </div>
+      <div class="sp-hint" id="spHint">
+        Digita almeno 3 caratteri o scansiona l'etichetta del collo.
+      </div>
+      <!-- Popup match multipli -->
+      <div class="sp-matches" id="spMatches" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CARD 3 — LISTA ATTESA (in spunta)
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="card">
+    <div class="ch">
+      <span>LISTA ATTESA <span class="sp-total" id="spTotAttesi">(0 colli)</span></span>
+      <button class="sp-btn-mini" onclick="spuntaToggleFilter()" id="spFilterBtn">
+        Tutti
+      </button>
+    </div>
+    <div class="cb">
+      <div id="spLista" class="sp-list">
+        <!-- generato da renderSpuntaList() -->
+        <div class="sp-empty">
+          Nessuna riga. Fotografa il borderò o aggiungi una riga manuale per iniziare.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CARD 4 — EXTRA (colli non previsti)
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="card" id="spCardExtra" style="display:none">
+    <div class="ch">
+      <span>➕ COLLI EXTRA (non nel borderò)</span>
+    </div>
+    <div class="cb">
+      <div id="spExtra" class="sp-list"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CARD 5 — CHIUSURA
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="card" id="spCardClose" style="display:none">
+    <div class="cb sp-close-row">
+      <button class="sp-btn sp-btn-close" onclick="spuntaChiudi()">
+        ✅ Chiudi Spunta
+      </button>
+      <button class="sp-btn sp-btn-report" onclick="spuntaMostraReport()">
+        📄 Anteprima Report
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!--
+  Popup CONFERMA MATCH MULTIPLO — flotta sopra tutto, mostrato da JS.
+-->
+<div id="spPopupMulti" class="sp-popup" style="display:none">
+  <div class="sp-popup-box">
+    <div class="sp-popup-title">Match multipli — scegli la riga corretta</div>
+    <div id="spPopupList"></div>
+    <div class="sp-popup-actions">
+      <button class="sp-btn sp-btn-danger" onclick="spuntaChiudiPopup()">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<!--
+  Popup CHIUSURA SPUNTA — report finale.
+-->
+<div id="spPopupReport" class="sp-popup" style="display:none">
+  <div class="sp-popup-box sp-popup-report">
+    <div class="sp-popup-title">Report Spunta</div>
+    <div id="spReportBody"></div>
+    <div class="sp-popup-actions">
+      <button class="sp-btn sp-btn-secondary" onclick="spuntaChiudiPopup()">Torna</button>
+      <button class="sp-btn sp-btn-primary" onclick="spuntaSalvaSuFirebase()">💾 Salva e nuovo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SPUNTA BANCALE — HTML END ═══ -->
+
 <div id="hPanRie" style="display:none">
     <div style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap">
       <select id="riePeriod" onchange="renderRiepilogo()" style="background:#1a1a1a;color:#fff;border:1px solid #333;padding:7px 10px;font-size:12px;border-radius:7px;-webkit-appearance:none;outline:none;font-family:inherit;flex:1">
@@ -1510,7 +2002,7 @@ var ROLE_PERMS = {
   // canViewPhases: fasi VISIBILI (fuori dalle quali i record vengono nascosti in lista).
   // canViewOwnOnly: se true, l'utente vede solo i record che ha inserito lui.
   // canSeeTabs:     tab principali (in alto) mostrati; '*' = tutti; altrimenti sono gli id (pgIns/pgList/pgAno/pgUbi/pgTri/pgHist/pgCon).
-  RIC: { canAdd:true, canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'], canViewAll:false, canViewPhases:['*'], canViewOwnOnly:true,  canBulk:false, canAdvanceTo:['UFFICIO RESI'], canSendBack:false, canSeeTabs:['pgIns','pgList'] },
+  RIC: { canAdd:true, canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'], canViewAll:false, canViewPhases:['*'], canViewOwnOnly:true,  canBulk:false, canAdvanceTo:['UFFICIO RESI'], canSendBack:false, canSeeTabs:['pgIns','pgList','pgSpunta'] },
   UFF: { canAdd:true, canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:false, canViewPhases:['UFFICIO RESI'], canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true,  canSeeTabs:['*'] },
   MAG: { canAdd:true, canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO'],         canViewAll:false, canViewPhases:['MAGAZZINO'],    canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true, canSeeTabs:['*'] },
   ADM: { canAdd:true, canDelete:true,  canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:true,  canViewPhases:['*'],            canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true, canSeeTabs:['*'] }
@@ -2435,8 +2927,8 @@ function setDataContatto() {
 // NAVIGATION
 // ══════════════════════════════════════════════════
 function gTab(pg) {
-  var all=['pgIns','pgList','pgAno','pgUbi','pgTri','pgHist','pgNotif','pgCon'];
-  var tabs=['tabIns','tabList','tabAno','tabUbi','tabTri','tabHist','tabNotif','tabCon'];
+  var all=['pgIns','pgList','pgAno','pgUbi','pgSpunta','pgTri','pgHist','pgNotif','pgCon'];
+  var tabs=['tabIns','tabList','tabAno','tabUbi','tabSpunta','tabTri','tabHist','tabNotif','tabCon'];
   // Blocco accesso a tab non permessi al ruolo corrente
   var perms = (typeof ROLE_PERMS!=='undefined' && ROLE_PERMS[ROLE]) || {};
   var allowedTabs = perms.canSeeTabs || ['*'];
@@ -2464,6 +2956,7 @@ function gTab(pg) {
   if(pg==='pgAno'){syncListToAnomalie();renderAnoList();}
   if(pg==='pgCon')renderContatti();
   if(pg==='pgNotif'){ try{ renderNotifCenter(); if(typeof notifClearBadge==='function')notifClearBadge(); }catch(e){} }
+  if(pg==='pgSpunta'){ try{ if(typeof spuntaInit==='function') spuntaInit(); else if(typeof renderSpuntaList==='function') renderSpuntaList(); }catch(e){} }
 }
 
 function setMode(m) {
@@ -12566,6 +13059,909 @@ function _notifFlushBuffer(){
   _notifBufSave();
 }
 </script>
+
+<!-- ═══ SPUNTA BANCALE — JS BEGIN ═══ -->
+<script>
+// ── normalize.js ──
+// js/ui/spunta/normalize.js — normalizzazione stringhe per matching.
+//
+// Cruciale: "CASADEI S.R.L." e "casadei srl" devono matchare "CASADEI".
+// Funzioni pure, testabili.
+'use strict';
+
+// Suffissi giuridici da rimuovere (già normalizzati: nessun punto)
+var COMPANY_SUFFIXES = [
+  'SRL', 'SPA', 'SNC', 'SAS', 'SS',
+  'S R L', 'S P A', 'S N C', 'S A S',
+  'S.R.L.', 'S.P.A.', 'S.N.C.', 'S.A.S.',   // per la fase pre-punteggiatura
+  'SOCIETA COOPERATIVA', 'COOP',
+  'DI', 'E C', '& C'
+];
+
+// Rimuove accenti (è → e, ù → u, ecc.)
+function stripAccents(s){
+  if(!s) return '';
+  return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function normalizeString(s){
+  if(s == null) return '';
+  var out = String(s);
+  out = stripAccents(out);
+  out = out.toUpperCase();
+  // Rimuovi punteggiatura (mantenendo lettere/numeri/spazi)
+  out = out.replace(/[.,;:!?"'()\/\\|_\-+*=@#%^~`\[\]{}]/g, ' ');
+  out = out.replace(/[&]/g, ' ');
+  // Rimuovi suffissi giuridici (ordine: prima quelli con spazi, poi corti)
+  COMPANY_SUFFIXES
+    .slice()
+    .sort(function(a, b){ return b.length - a.length; })
+    .forEach(function(sfx){
+      // Sostituisci solo se preceduto da spazio o inizio-stringa
+      var pattern = new RegExp('(^|\\s)' + sfx.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\s|$)', 'g');
+      out = out.replace(pattern, ' ');
+    });
+  // Collassa spazi multipli e trim
+  out = out.replace(/\s+/g, ' ').trim();
+  return out;
+}
+
+// Similarity 0..1 tra due stringhe normalizzate.
+// Algoritmo: Dice coefficient sui bigrammi (buon compromesso velocità/qualità).
+function similarity(a, b){
+  a = normalizeString(a);
+  b = normalizeString(b);
+  if(!a || !b) return 0;
+  if(a === b) return 1;
+  // Match "contains" per stringhe corte
+  if(a.length < 4 || b.length < 4){
+    if(a.indexOf(b) >= 0 || b.indexOf(a) >= 0) return 0.9;
+    return 0;
+  }
+  var ba = _bigrams(a);
+  var bb = _bigrams(b);
+  var common = 0;
+  var bbCopy = bb.slice();
+  for(var i = 0; i < ba.length; i++){
+    var idx = bbCopy.indexOf(ba[i]);
+    if(idx >= 0){ common++; bbCopy.splice(idx, 1); }
+  }
+  return (2 * common) / (ba.length + bb.length);
+}
+
+function _bigrams(s){
+  var out = [];
+  for(var i = 0; i < s.length - 1; i++) out.push(s.slice(i, i + 2));
+  return out;
+}
+
+// Check se una query è contenuta (as prefix o substring) nella stringa normalizzata
+function contains(haystack, needle){
+  var h = normalizeString(haystack);
+  var n = normalizeString(needle);
+  if(!n) return false;
+  return h.indexOf(n) >= 0;
+}
+
+if(typeof module !== 'undefined' && module.exports){
+  module.exports = { normalizeString, similarity, contains, stripAccents };
+}
+if(typeof window !== 'undefined'){
+  window._spuntaNorm = { normalizeString, similarity, contains, stripAccents };
+}
+
+// ── matcher.js ──
+// js/ui/spunta/matcher.js — trova la riga della lista attesa che matcha
+// un input operatore (digitato o letto da OCR etichetta).
+//
+// Ritorna:
+//   { match: 'none'|'single'|'multi', rows: [...], scores: [...] }
+//
+// Regole:
+//   - Match minimo su similarity(mittente) >= 0.55
+//   - Bonus se anche la città matcha (>= 0.6)
+//   - Se score max > secondo * 1.35 → considerato "single"
+//   - Altrimenti restituisce tutti quelli in cima e chiede all'operatore
+//
+// Funzione pura: nessun DOM, nessun IO. Testabile.
+'use strict';
+
+var norm = (typeof require === 'function')
+  ? require('./normalize.js')
+  : (typeof window !== 'undefined' ? window._spuntaNorm : null);
+
+function findMatch(input, lista, opts){
+  opts = opts || {};
+  var THRESHOLD = opts.threshold != null ? opts.threshold : 0.55;
+  var CITY_BONUS = opts.cityBonus != null ? opts.cityBonus : 0.15;
+  var GAP = opts.gap != null ? opts.gap : 1.35;
+
+  if(!input || !Array.isArray(lista) || lista.length === 0){
+    return { match: 'none', rows: [], scores: [] };
+  }
+
+  // Estraiamo mittente + città dall'input.
+  // Convenzione: se contiene "-" o "," la parte dopo è la città.
+  var inputParts = _splitMittenteCitta(input);
+
+  var hasCity = !!inputParts.citta;
+
+  var scored = lista.map(function(row, i){
+    var sMitt = norm.similarity(inputParts.mittente, row.mittente || '');
+    var sCity = hasCity ? norm.similarity(inputParts.citta, row.citta || '') : 0;
+    var score;
+    if(hasCity){
+      // Quando l'operatore ha fornito la città, la usiamo come tie-break FORTE.
+      // score = sMitt * (0.5 + 0.5 * sCity):
+      //   perfect mittente + zero città  → 0.50 (perde vs partial+city)
+      //   partial mittente + perfect città → cresce del 100%
+      score = sMitt * (0.5 + 0.5 * sCity);
+    } else {
+      // Solo mittente: score = sMitt + eventuale bonus "contains" full-word
+      score = sMitt;
+      if(norm.contains(row.mittente || '', input)) score += 0.10;
+    }
+    return { row: row, score: score, sMitt: sMitt, sCity: sCity, idx: i };
+  }).filter(function(x){ return x.sMitt >= THRESHOLD; });
+
+  scored.sort(function(a, b){ return b.score - a.score; });
+
+  if(scored.length === 0) return { match: 'none', rows: [], scores: [] };
+
+  // Single quando:
+  //  - solo un candidato, OPPURE
+  //  - distacco netto (score1 >= score2 * GAP), OPPURE
+  //  - la città del top matcha praticamente esatta E l'altro no
+  var top = scored[0];
+  var second = scored[1];
+  var singleByGap = !second || top.score >= second.score * GAP;
+  var singleByCity = hasCity && second &&
+                      top.sCity >= 0.9 && second.sCity < 0.5;
+  if(singleByGap || singleByCity){
+    return {
+      match: 'single',
+      rows: [top.row],
+      scores: [top.score]
+    };
+  }
+
+  // Multi: prendi i top-N (max 5)
+  var top = scored.slice(0, 5);
+  return {
+    match: 'multi',
+    rows: top.map(function(x){ return x.row; }),
+    scores: top.map(function(x){ return x.score; })
+  };
+}
+
+// Divide "CASADEI SRL - VERRES" o "CASADEI, VERRES" in mittente/citta.
+function _splitMittenteCitta(s){
+  var m = String(s || '').split(/\s*[-,;]\s*/);
+  if(m.length >= 2){
+    return { mittente: m[0], citta: m.slice(1).join(' ') };
+  }
+  return { mittente: s || '', citta: '' };
+}
+
+// Lookup codice cliente Telos in CLI_DATA (mappa nome→codice o array oggetti).
+// Non usato nel matcher principale, esposto per la UI (mostra il codice
+// se disponibile).
+function lookupCliData(nome, cliData){
+  if(!nome || !cliData) return null;
+  var target = norm.normalizeString(nome);
+  if(!target) return null;
+  // cliData è tipicamente { "CODICE": {nome:..., citta:...} }
+  var best = null;
+  var bestScore = 0;
+  for(var cod in cliData){
+    if(!Object.prototype.hasOwnProperty.call(cliData, cod)) continue;
+    var rec = cliData[cod];
+    var nomeRec = rec && (rec.nome || rec.ragione || rec.rs);
+    if(!nomeRec) continue;
+    var s = norm.similarity(target, nomeRec);
+    if(s > bestScore && s >= 0.75){
+      bestScore = s;
+      best = { codice: cod, nome: nomeRec, citta: rec.citta || rec.city || '', score: s };
+    }
+  }
+  return best;
+}
+
+if(typeof module !== 'undefined' && module.exports){
+  module.exports = { findMatch, lookupCliData };
+}
+if(typeof window !== 'undefined'){
+  window._spuntaMatcher = { findMatch, lookupCliData };
+}
+
+// ── spunta.js ──
+// js/ui/spunta/spunta.js — orchestrazione SPUNTA BANCALE.
+//
+// Dipende da:
+//   window._spuntaNorm      (normalize.js)  — normalizeString, similarity
+//   window._spuntaMatcher   (matcher.js)    — findMatch, lookupCliData
+//
+// Opzionale (se presenti nell'app):
+//   window.toast(msg,t)                — feedback UI
+//   window.CLI_DATA                    — anagrafica clienti Telos
+//   window.FB_REF.root                 — Firebase Database root
+//   window.idbSet / idbGet             — persistenza IndexedDB dell'app
+//   window.deviceName                  — nome operatore corrente
+'use strict';
+
+// ══════════════════════════════════════════════════════════════════
+// STATO
+// ══════════════════════════════════════════════════════════════════
+window.spuntaState = window.spuntaState || {
+  attiva: false,
+  vettore: '',
+  data: '',
+  bordero: null,          // dataURL della foto (se presente)
+  lista: [],              // righe attesa: {id, mittente, citta, colliAttesi, colliLetti, ddt, cod, stato}
+  extra: [],              // colli non previsti: {id, mittente, citta, colliLetti, cod}
+  filter: 'all',          // 'all' | 'todo' | 'done' | 'issue'
+  pendingMulti: null      // { input, options: [rows...] }
+};
+
+var LS_KEY = 'spuntaCorrente';
+
+// ── Persistenza locale ────────────────────────────────────────────
+function spuntaSaveLocal(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(window.spuntaState)); }catch(e){}
+}
+function spuntaLoadLocal(){
+  try{
+    var raw = localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    var s = JSON.parse(raw);
+    if(s && Array.isArray(s.lista)){
+      window.spuntaState = s;
+    }
+  }catch(e){}
+}
+
+// ── Genera ID progressivo per riga ────────────────────────────────
+var _spuntaSeq = 1;
+function _newId(){ return 'sp' + Date.now() + '_' + (_spuntaSeq++); }
+
+// ══════════════════════════════════════════════════════════════════
+// AZIONI PRINCIPALI
+// ══════════════════════════════════════════════════════════════════
+
+// A) Foto Borderò → OCR con Gemini
+function spuntaHandleFotoBordero(){
+  var el = document.getElementById('spFotoInput');
+  if(el) el.click();
+}
+function spuntaOnFotoSelected(input){
+  var file = input && input.files && input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    var dataUrl = reader.result;
+    window.spuntaState.bordero = dataUrl;
+    spuntaShowLoading('Sto leggendo il borderò con AI…');
+    _spuntaCallGemini(dataUrl)
+      .then(function(righe){
+        spuntaHideLoading();
+        if(!righe || !righe.length){
+          _spuntaMsg('L\'AI non ha estratto righe. Aggiungi manualmente.', 'y');
+          return;
+        }
+        _spuntaImportaLista(righe);
+        _spuntaMsg('Importate ' + righe.length + ' righe dal borderò', 'g');
+      })
+      .catch(function(err){
+        spuntaHideLoading();
+        _spuntaMsg('Errore AI: ' + (err && err.message || err) + '. Aggiungi manualmente.', 'r');
+      });
+  };
+  reader.readAsDataURL(file);
+  input.value = ''; // reset per poter riscannerizzare stessa immagine
+}
+
+// Chiamata a Gemini via il proxy Netlify esistente
+function _spuntaCallGemini(dataUrl){
+  var b64 = String(dataUrl).split(',')[1];
+  if(!b64) return Promise.reject(new Error('Immagine non valida'));
+
+  var prompt =
+    'Analizza questa immagine di un borderò di trasporto/consegna. ' +
+    'Estrai una lista JSON di oggetti con queste chiavi: ' +
+    'mittente (string, ragione sociale), ' +
+    'citta (string, città/CAP), ' +
+    'colli (number, numero colli — 1 se non specificato), ' +
+    'ddt (string, numero DDT/riferimento se presente, altrimenti stringa vuota). ' +
+    'Ignora intestazioni, totali, note, firme. Rispondi SOLO con un array JSON valido, ' +
+    'nessun testo aggiuntivo. Esempio: [{"mittente":"CASADEI","citta":"VERRES","colli":1,"ddt":"4592"}]';
+
+  return fetch('/.netlify/functions/gemini', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: 'image/jpeg', data: b64 } }
+        ]
+      }]
+    })
+  })
+  .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then(function(json){
+    // La risposta Gemini è annidata; estraggo il testo
+    var text = _spuntaExtractText(json);
+    if(!text) throw new Error('Risposta AI vuota');
+    // Provo a estrarre l'array JSON dal testo (rimuove code fences)
+    text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+    var start = text.indexOf('['), end = text.lastIndexOf(']');
+    if(start < 0 || end < 0) throw new Error('JSON non trovato');
+    var arr = JSON.parse(text.slice(start, end + 1));
+    if(!Array.isArray(arr)) throw new Error('Non è un array');
+    return arr.map(function(x){
+      return {
+        mittente: String(x.mittente || '').trim(),
+        citta:    String(x.citta || '').trim(),
+        colli:    Math.max(1, parseInt(x.colli || 1, 10) || 1),
+        ddt:      String(x.ddt || '').trim()
+      };
+    }).filter(function(x){ return x.mittente; });
+  });
+}
+function _spuntaExtractText(json){
+  try{
+    return json.candidates[0].content.parts[0].text;
+  }catch(e){ return ''; }
+}
+
+// Popola lista attesa dalle righe AI
+function _spuntaImportaLista(righe){
+  var s = window.spuntaState;
+  righe.forEach(function(r){
+    // arricchisco con codice cliente Telos se trovato
+    var cli = _spuntaLookupCli(r.mittente);
+    s.lista.push({
+      id: _newId(),
+      mittente: r.mittente,
+      citta: r.citta,
+      colliAttesi: r.colli || 1,
+      colliLetti: 0,
+      ddt: r.ddt || '',
+      cod: cli ? cli.codice : '',
+      stato: 'pending'
+    });
+  });
+  s.attiva = true;
+  spuntaSaveLocal();
+  renderSpuntaList();
+}
+function _spuntaLookupCli(nome){
+  if(!window._spuntaMatcher || !window.CLI_DATA) return null;
+  try{ return window._spuntaMatcher.lookupCliData(nome, window.CLI_DATA); }
+  catch(e){ return null; }
+}
+
+// B) Aggiungi riga manuale (senza foto)
+function spuntaAggiungiRigaManuale(){
+  var mitt = prompt('Mittente:');
+  if(!mitt || !mitt.trim()) return;
+  var citta = prompt('Città (opzionale):', '') || '';
+  var colli = parseInt(prompt('Colli attesi:', '1'), 10) || 1;
+  var cli = _spuntaLookupCli(mitt);
+  window.spuntaState.lista.push({
+    id: _newId(),
+    mittente: mitt.trim(),
+    citta: citta.trim(),
+    colliAttesi: colli,
+    colliLetti: 0,
+    ddt: '',
+    cod: cli ? cli.codice : '',
+    stato: 'pending'
+  });
+  window.spuntaState.attiva = true;
+  spuntaSaveLocal();
+  renderSpuntaList();
+}
+
+// C) Reset totale
+function spuntaReset(){
+  if(!confirm('Cancellare tutta la spunta corrente?')) return;
+  window.spuntaState = {
+    attiva:false, vettore:'', data:'', bordero:null,
+    lista:[], extra:[], filter:'all', pendingMulti:null
+  };
+  spuntaSaveLocal();
+  renderSpuntaList();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SPUNTA (input + match)
+// ══════════════════════════════════════════════════════════════════
+function spuntaOnSearchInput(v){
+  var hint = document.getElementById('spHint');
+  if(!hint) return;
+  var s = String(v || '').trim();
+  if(s.length < 3){
+    hint.textContent = 'Digita almeno 3 caratteri o scansiona l\'etichetta.';
+    _spuntaClearMatches();
+    return;
+  }
+  // Suggerimento live (non conferma ancora)
+  var out = _spuntaFind(s);
+  if(out.match === 'none'){
+    hint.innerHTML = '<span style="color:var(--red,#E05555)">Nessun match. Enter per aggiungere come EXTRA.</span>';
+  } else if(out.match === 'single'){
+    var r = out.rows[0];
+    hint.innerHTML = 'Trovato: <b>' + _esc(r.mittente) + '</b> - ' + _esc(r.citta) +
+                     ' (' + r.colliLetti + '/' + r.colliAttesi + '). Enter per confermare.';
+  } else {
+    hint.textContent = out.rows.length + ' possibili match. Enter per aprire la scelta.';
+  }
+}
+
+function _spuntaFind(input){
+  if(!window._spuntaMatcher) return { match:'none', rows:[] };
+  return window._spuntaMatcher.findMatch(input, window.spuntaState.lista);
+}
+
+function spuntaConfermaMatch(){
+  var el = document.getElementById('spSearch');
+  var input = el ? el.value.trim() : '';
+  if(!input) return;
+  var out = _spuntaFind(input);
+  if(out.match === 'none'){
+    _spuntaAddExtra(input);
+    _feedback('err');
+    el.value = '';
+    return;
+  }
+  if(out.match === 'single'){
+    _spuntaSpuntaRiga(out.rows[0]);
+    _feedback('ok');
+    el.value = '';
+    return;
+  }
+  // multi: apri popup
+  _spuntaShowPopupMulti(input, out.rows);
+}
+
+function _spuntaSpuntaRiga(riga){
+  riga.colliLetti++;
+  if(riga.colliLetti >= riga.colliAttesi){
+    riga.stato = 'ok';
+  } else {
+    riga.stato = 'partial';
+  }
+  spuntaSaveLocal();
+  renderSpuntaList();
+}
+
+function _spuntaAddExtra(input){
+  var parts = String(input || '').split(/\s*[-,;]\s*/);
+  var mitt = (parts[0] || input).trim();
+  var citta = (parts[1] || '').trim();
+  var cli = _spuntaLookupCli(mitt);
+  window.spuntaState.extra.push({
+    id: _newId(),
+    mittente: mitt,
+    citta: citta,
+    colliLetti: 1,
+    cod: cli ? cli.codice : ''
+  });
+  spuntaSaveLocal();
+  renderSpuntaList();
+}
+
+// Popup match multiplo (riusa il div #spPopupMulti)
+function _spuntaShowPopupMulti(input, options){
+  var pop = document.getElementById('spPopupMulti');
+  var list = document.getElementById('spPopupList');
+  if(!pop || !list) return;
+  window.spuntaState.pendingMulti = { input: input, options: options };
+  list.innerHTML = options.map(function(r, i){
+    return '<div class="sp-match-opt" onclick="spuntaSelezionaMulti(' + i + ')">'+
+      '<div><b>' + _esc(r.mittente) + '</b><br><small>' + _esc(r.citta) + '</small></div>'+
+      '<div class="sp-count"><span class="letti">' + r.colliLetti + '</span><span class="attesi">/' + r.colliAttesi + '</span></div>'+
+      '</div>';
+  }).join('');
+  pop.style.display = 'flex';
+}
+window.spuntaSelezionaMulti = function(i){
+  var pm = window.spuntaState.pendingMulti;
+  if(!pm || !pm.options || !pm.options[i]) return;
+  var riga = pm.options[i];
+  _spuntaSpuntaRiga(riga);
+  _feedback('ok');
+  window.spuntaState.pendingMulti = null;
+  var pop = document.getElementById('spPopupMulti');
+  if(pop) pop.style.display = 'none';
+  var el = document.getElementById('spSearch');
+  if(el){ el.value = ''; el.focus(); }
+};
+function spuntaChiudiPopup(){
+  var p1 = document.getElementById('spPopupMulti');
+  var p2 = document.getElementById('spPopupReport');
+  if(p1) p1.style.display = 'none';
+  if(p2) p2.style.display = 'none';
+}
+function _spuntaClearMatches(){
+  var m = document.getElementById('spMatches');
+  if(m) m.style.display = 'none';
+}
+
+// D) Scan etichetta con Gemini (foto → OCR → estrai mittente+città)
+function spuntaScanEtichetta(){
+  // Trigger fileInput on-the-fly per la scan
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.capture = 'environment';
+  inp.style.display = 'none';
+  inp.onchange = function(){
+    var f = inp.files && inp.files[0];
+    if(!f){ return; }
+    var rd = new FileReader();
+    rd.onload = function(){
+      spuntaShowLoading('Leggo etichetta…');
+      _spuntaCallGeminiEtichetta(rd.result)
+        .then(function(txt){
+          spuntaHideLoading();
+          if(!txt){ _spuntaMsg('AI non ha letto testo dall\'etichetta', 'y'); return; }
+          var el = document.getElementById('spSearch');
+          if(el){ el.value = txt; spuntaOnSearchInput(txt); }
+        })
+        .catch(function(err){
+          spuntaHideLoading();
+          _spuntaMsg('Errore AI: ' + (err && err.message || err), 'r');
+        });
+    };
+    rd.readAsDataURL(f);
+  };
+  document.body.appendChild(inp);
+  inp.click();
+  setTimeout(function(){ inp.remove(); }, 60000);
+}
+function _spuntaCallGeminiEtichetta(dataUrl){
+  var b64 = String(dataUrl).split(',')[1];
+  var prompt =
+    'Analizza questa foto di un\'etichetta di spedizione. ' +
+    'Estrai il MITTENTE (ragione sociale) e la CITTÀ di partenza. ' +
+    'Rispondi SOLO nel formato: "MITTENTE - CITTA" (in maiuscolo, senza altro testo). ' +
+    'Se non trovi la città, rispondi solo con il mittente.';
+  return fetch('/.netlify/functions/gemini', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      contents:[{ parts:[
+        { text: prompt },
+        { inline_data:{ mime_type:'image/jpeg', data:b64 } }
+      ]}]
+    })
+  })
+  .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+  .then(function(json){
+    var t = _spuntaExtractText(json);
+    return String(t || '').replace(/[`\n\r]/g, ' ').trim();
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════════════
+function renderSpuntaList(){
+  var s = window.spuntaState;
+  var cntOk=0, cntPart=0, cntMiss=0, cntExtra=s.extra.length;
+  var totAttesi=0;
+  s.lista.forEach(function(r){
+    totAttesi += r.colliAttesi;
+    if(r.stato === 'ok') cntOk++;
+    else if(r.colliLetti > 0 && r.colliLetti < r.colliAttesi) cntPart++;
+    else if(r.stato === 'miss' || (r.colliLetti === 0 && r.stato !== 'pending')) cntMiss++;
+    else if(r.stato === 'pending') cntMiss++;  // "da spuntare" trattato come miss finché non parte
+  });
+  _setText('spCntOk', '✅ ' + cntOk);
+  _setText('spCntPart', '⚠ ' + cntPart);
+  _setText('spCntMiss', '❌ ' + cntMiss);
+  _setText('spCntExtra', '➕ ' + cntExtra);
+  _setText('spTotAttesi', '(' + totAttesi + ' colli)');
+
+  var el = document.getElementById('spLista');
+  if(el){
+    if(!s.lista.length){
+      el.innerHTML = '<div class="sp-empty">Nessuna riga. Fotografa il borderò o aggiungi una riga manuale per iniziare.</div>';
+    } else {
+      el.innerHTML = s.lista
+        .filter(_filterFn(s.filter))
+        .map(_renderRow)
+        .join('');
+    }
+  }
+
+  // Card extra visibile solo se ci sono
+  var cx = document.getElementById('spCardExtra');
+  var xEl = document.getElementById('spExtra');
+  if(cx) cx.style.display = s.extra.length ? '' : 'none';
+  if(xEl && s.extra.length){
+    xEl.innerHTML = s.extra.map(_renderExtra).join('');
+  }
+
+  // Card chiusura visibile se c'è una spunta attiva
+  var cc = document.getElementById('spCardClose');
+  if(cc) cc.style.display = (s.attiva && (s.lista.length || s.extra.length)) ? '' : 'none';
+
+  // Card input visibile solo se c'è una lista
+  var ci = document.getElementById('spCardInput');
+  if(ci) ci.style.display = s.lista.length ? '' : 'none';
+}
+function _filterFn(kind){
+  return function(r){
+    if(kind === 'todo') return r.stato !== 'ok';
+    if(kind === 'done') return r.stato === 'ok';
+    if(kind === 'issue') return r.stato === 'miss' || (r.colliLetti > 0 && r.colliLetti < r.colliAttesi);
+    return true;
+  };
+}
+function _renderRow(r){
+  var cls = _rowClass(r);
+  var ico = _rowIcon(r);
+  var codHtml = r.cod ? ('<span class="sp-row-cod">'+_esc(r.cod)+'</span>') : '';
+  var ddtHtml = r.ddt ? ('<span><span class="k">DDT:</span> '+_esc(r.ddt)+'</span>') : '';
+  return ''+
+    '<div class="sp-row '+cls+'">'+
+      '<div class="sp-row-icon">'+ico+'</div>'+
+      '<div class="sp-row-info">'+
+        '<div class="sp-row-name">'+_esc(r.mittente)+'</div>'+
+        '<div class="sp-row-meta">'+
+          '<span><span class="k">Città:</span> '+_esc(r.citta||'—')+'</span>'+
+          ddtHtml + codHtml +
+        '</div>'+
+      '</div>'+
+      '<div class="sp-count"><span class="letti">'+r.colliLetti+'</span><span class="attesi">/'+r.colliAttesi+'</span></div>'+
+      '<div class="sp-row-actions">'+
+        '<button onclick="spuntaDecRiga(\''+r.id+'\')" title="Rimuovi lettura">−</button>'+
+        '<button onclick="spuntaMarkMiss(\''+r.id+'\')" title="Segna mancante">✖</button>'+
+      '</div>'+
+    '</div>';
+}
+function _renderExtra(r){
+  return ''+
+    '<div class="sp-row st-extra">'+
+      '<div class="sp-row-icon">➕</div>'+
+      '<div class="sp-row-info">'+
+        '<div class="sp-row-name">'+_esc(r.mittente)+'</div>'+
+        '<div class="sp-row-meta">'+
+          '<span><span class="k">Città:</span> '+_esc(r.citta||'—')+'</span>'+
+          (r.cod ? '<span class="sp-row-cod">'+_esc(r.cod)+'</span>' : '')+
+        '</div>'+
+      '</div>'+
+      '<div class="sp-count"><span class="letti">'+r.colliLetti+'</span><span class="attesi">/'+r.colliLetti+'</span></div>'+
+      '<div class="sp-row-actions">'+
+        '<button onclick="spuntaRimuoviExtra(\''+r.id+'\')" title="Rimuovi">🗑</button>'+
+      '</div>'+
+    '</div>';
+}
+function _rowClass(r){
+  if(r.stato === 'ok') return 'st-ok';
+  if(r.stato === 'miss') return 'st-miss';
+  if(r.colliLetti > 0 && r.colliLetti < r.colliAttesi) return 'st-partial';
+  return '';
+}
+function _rowIcon(r){
+  if(r.stato === 'ok') return '✅';
+  if(r.stato === 'miss') return '❌';
+  if(r.colliLetti > 0 && r.colliLetti < r.colliAttesi) return '⚠';
+  return '⬜';
+}
+
+// Azioni riga
+window.spuntaDecRiga = function(id){
+  var r = _findRiga(id); if(!r) return;
+  if(r.colliLetti > 0) r.colliLetti--;
+  r.stato = r.colliLetti === 0 ? 'pending' :
+            (r.colliLetti < r.colliAttesi ? 'partial' : 'ok');
+  spuntaSaveLocal(); renderSpuntaList();
+};
+window.spuntaMarkMiss = function(id){
+  var r = _findRiga(id); if(!r) return;
+  r.stato = 'miss'; r.colliLetti = 0;
+  spuntaSaveLocal(); renderSpuntaList();
+};
+window.spuntaRimuoviExtra = function(id){
+  window.spuntaState.extra = window.spuntaState.extra.filter(function(x){ return x.id !== id; });
+  spuntaSaveLocal(); renderSpuntaList();
+};
+function _findRiga(id){
+  for(var i=0; i<window.spuntaState.lista.length; i++){
+    if(window.spuntaState.lista[i].id === id) return window.spuntaState.lista[i];
+  }
+  return null;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FILTRO
+// ══════════════════════════════════════════════════════════════════
+function spuntaToggleFilter(){
+  var order = ['all','todo','issue','done'];
+  var lbl = {all:'Tutti', todo:'Da fare', issue:'Problemi', done:'Fatti'};
+  var i = order.indexOf(window.spuntaState.filter);
+  var next = order[(i+1) % order.length];
+  window.spuntaState.filter = next;
+  var b = document.getElementById('spFilterBtn');
+  if(b) b.textContent = lbl[next];
+  renderSpuntaList();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CHIUSURA
+// ══════════════════════════════════════════════════════════════════
+function spuntaMostraReport(){
+  var s = window.spuntaState;
+  var body = document.getElementById('spReportBody');
+  if(!body) return;
+  var stats = _spuntaStats();
+  var html =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'+
+    '<div><b>Vettore:</b> '+_esc(s.vettore||'—')+'</div>'+
+    '<div><b>Data:</b> '+_esc(s.data||new Date().toISOString().slice(0,10))+'</div>'+
+    '<div><b>Righe attese:</b> '+s.lista.length+'</div>'+
+    '<div><b>Colli attesi:</b> '+stats.attesi+'</div>'+
+    '<div><b>Colli letti:</b> '+stats.letti+'</div>'+
+    '<div><b>Colli extra:</b> '+stats.extra+'</div>'+
+    '</div>';
+  html += '<div style="margin-top:10px"><b>Mancanti/Parziali:</b></div>';
+  var probl = s.lista.filter(function(r){ return r.stato !== 'ok'; });
+  if(probl.length){
+    html += '<ul style="margin:6px 0 0 20px;font-size:12px">' +
+      probl.map(function(r){
+        return '<li>'+_esc(r.mittente)+' — '+_esc(r.citta||'—')+' ('+r.colliLetti+'/'+r.colliAttesi+') '+_rowIcon(r)+'</li>';
+      }).join('') +
+    '</ul>';
+  } else {
+    html += '<div style="color:var(--grn,#4CAF50);margin-top:4px">Nessun problema.</div>';
+  }
+  if(s.extra.length){
+    html += '<div style="margin-top:10px"><b>Colli extra:</b></div>' +
+      '<ul style="margin:6px 0 0 20px;font-size:12px">' +
+      s.extra.map(function(r){ return '<li>'+_esc(r.mittente)+' — '+_esc(r.citta||'—')+'</li>'; }).join('') +
+      '</ul>';
+  }
+  body.innerHTML = html;
+  var pop = document.getElementById('spPopupReport');
+  if(pop) pop.style.display = 'flex';
+}
+function _spuntaStats(){
+  var s = window.spuntaState;
+  var attesi=0, letti=0;
+  s.lista.forEach(function(r){ attesi += r.colliAttesi; letti += r.colliLetti; });
+  return { attesi:attesi, letti:letti, extra:s.extra.length };
+}
+
+function spuntaChiudi(){
+  if(!window.spuntaState.attiva){ _spuntaMsg('Nessuna spunta attiva', 'y'); return; }
+  if(!confirm('Chiudere la spunta corrente? Un riepilogo sarà salvato.')) return;
+  spuntaMostraReport();
+}
+
+function spuntaSalvaSuFirebase(){
+  var s = window.spuntaState;
+  var vSel = document.getElementById('spVet');
+  var dSel = document.getElementById('spDate');
+  s.vettore = s.vettore || (vSel ? vSel.value : '');
+  s.data    = s.data    || (dSel ? dSel.value : new Date().toISOString().slice(0,10));
+
+  var payload = {
+    vettore: s.vettore,
+    data: s.data,
+    operatore: (window.deviceName || '') + '',
+    ts: Date.now(),
+    stats: _spuntaStats(),
+    lista: s.lista,
+    extra: s.extra,
+    bordero: s.bordero || null
+  };
+  var done = function(){
+    spuntaChiudiPopup();
+    // reset per nuovo giro
+    window.spuntaState = {
+      attiva:false, vettore:s.vettore, data:s.data, bordero:null,
+      lista:[], extra:[], filter:'all', pendingMulti:null
+    };
+    spuntaSaveLocal();
+    renderSpuntaList();
+    _spuntaMsg('Spunta salvata', 'g');
+  };
+  try{
+    if(window.FB_REF && window.FB_REF.root){
+      window.FB_REF.root.child('arrivi_bancale').push(payload)
+        .then(done)
+        .catch(function(err){
+          console.error('FB save error', err);
+          _spuntaMsg('Firebase offline — spunta rimasta in locale', 'y');
+        });
+    } else {
+      _spuntaMsg('Firebase non pronto — spunta rimasta in locale', 'y');
+    }
+  }catch(e){
+    console.error(e);
+    _spuntaMsg('Errore salvataggio', 'r');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// UTILITY
+// ══════════════════════════════════════════════════════════════════
+function spuntaShowLoading(msg){
+  var el = document.getElementById('spLoading');
+  var m  = document.getElementById('spLoadingMsg');
+  if(m) m.textContent = msg || 'Caricamento…';
+  if(el) el.style.display = '';
+}
+function spuntaHideLoading(){
+  var el = document.getElementById('spLoading');
+  if(el) el.style.display = 'none';
+}
+function _spuntaMsg(msg, t){
+  if(typeof window.toast === 'function'){ window.toast(msg, t); return; }
+  console.log('[spunta] ' + msg);
+}
+function _feedback(kind){
+  try{
+    if(navigator.vibrate){
+      navigator.vibrate(kind === 'ok' ? 50 : [100, 50, 100]);
+    }
+  }catch(e){}
+}
+function _setText(id, txt){ var el = document.getElementById(id); if(el) el.textContent = txt; }
+function _esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+function spuntaInit(){
+  spuntaLoadLocal();
+  // Popola vettore/data se presenti
+  var v = document.getElementById('spVet');
+  var d = document.getElementById('spDate');
+  if(v && window.spuntaState.vettore) v.value = window.spuntaState.vettore;
+  if(d) d.value = window.spuntaState.data || new Date().toISOString().slice(0,10);
+  if(v) v.onchange = function(){ window.spuntaState.vettore = v.value; spuntaSaveLocal(); };
+  if(d) d.onchange = function(){ window.spuntaState.data = d.value; spuntaSaveLocal(); };
+  renderSpuntaList();
+}
+if(typeof document !== 'undefined'){
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', spuntaInit);
+  } else {
+    setTimeout(spuntaInit, 0);
+  }
+}
+
+// Export utili anche in CommonJS (per test futuri)
+if(typeof module !== 'undefined' && module.exports){
+  module.exports = { spuntaInit, renderSpuntaList };
+}
+// Espongo le funzioni onclick sul global
+if(typeof window !== 'undefined'){
+  window.spuntaHandleFotoBordero = spuntaHandleFotoBordero;
+  window.spuntaOnFotoSelected = spuntaOnFotoSelected;
+  window.spuntaAggiungiRigaManuale = spuntaAggiungiRigaManuale;
+  window.spuntaReset = spuntaReset;
+  window.spuntaOnSearchInput = spuntaOnSearchInput;
+  window.spuntaConfermaMatch = spuntaConfermaMatch;
+  window.spuntaScanEtichetta = spuntaScanEtichetta;
+  window.spuntaToggleFilter = spuntaToggleFilter;
+  window.spuntaMostraReport = spuntaMostraReport;
+  window.spuntaChiudi = spuntaChiudi;
+  window.spuntaSalvaSuFirebase = spuntaSalvaSuFirebase;
+  window.spuntaChiudiPopup = spuntaChiudiPopup;
+  window.renderSpuntaList = renderSpuntaList;
+  window.spuntaInit = spuntaInit;
+}
+
+</script>
+<!-- ═══ SPUNTA BANCALE — JS END ═══ -->
 
 </body>
 </html>
