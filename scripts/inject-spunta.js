@@ -54,12 +54,15 @@ html = replaceOrInject(html, MARK.cssStart, MARK.cssEnd, cssBlock, function(src,
 });
 
 // ── 2) HTML: subito dopo la chiusura di pgHist ─────────────────────
-// pgHist è l'ultimo pg-block, seguito da hPanRie. Uso come ancoraggio
-// la stringa esatta '<div id="hPanRie"' preceduta da '</div>'.
+// pgHist è l'ultimo pg-block, e chiude PRIMA di '<div id="memEditorBox"'.
+// (Nota storica: hPanRie NON è sibling — è annidato dentro pgHist.
+//  Iniettare prima di hPanRie mette pgSpunta dentro pgHist → contenuti
+//  invisibili perché pgHist è display:none. Uso memEditorBox che è a
+//  livello body sicuro.)
 html = replaceOrInject(html, MARK.htmlStart, MARK.htmlEnd, htmlBlock, function(src, wrapped){
-  const anchor = '<div id="hPanRie"';
+  const anchor = '<div id="memEditorBox"';
   const idx = src.indexOf(anchor);
-  if(idx < 0) throw new Error("Ancora HTML '<div id=\"hPanRie\"' non trovata");
+  if(idx < 0) throw new Error("Ancora HTML '<div id=\"memEditorBox\"' non trovata");
   return src.slice(0, idx) + wrapped + '\n\n' + src.slice(idx);
 });
 
