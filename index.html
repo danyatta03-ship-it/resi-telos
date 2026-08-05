@@ -680,30 +680,56 @@ select option {
 .stato-stallo{background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35)}
 .stato-anomalia{background:rgba(224,85,85,.18);color:#E05555;border:2px solid rgba(224,85,85,.5)}
 
-/* v34r — RPC (RICEVIMENTO PC): nasconde TUTTO in pgIns tranne il panel scansioni
-   Include: card, fC (fatture), fR (righe), div dei pulsanti AGGIUNGI/VAI, tutto */
+/* v34r — RPC (RICEVIMENTO PC): nasconde TUTTO in pgIns tranne il panel scansioni */
 html[data-role="RPC"] #pgIns > *:not(#ocrLivePanel){
   display:none !important;
 }
-/* v34r — SCA (SCANNER BOLLE MOBILE): nasconde tutto in pgIns tranne un maxi pulsante OCR */
+/* v34r — SCA (SCANNER BOLLE MOBILE): nasconde tutto in pgIns tranne il pulsante OCR */
 html[data-role="SCA"] #pgIns > *:not(#scaOnlyPanel){
   display:none !important;
 }
-#scaOnlyPanel{ text-align:center; padding:20px 12px; }
-#scaOnlyPanel .sca-title{ font-size:14px; font-weight:800; color:#3B9FD4; margin-bottom:8px; letter-spacing:.5px; }
-#scaOnlyPanel .sca-sub{ font-size:11px; color:#888; margin-bottom:22px; line-height:1.5; padding:0 8px; }
-#scaOnlyPanel .sca-big{
-  display:block; width:100%; max-width:380px; margin:0 auto;
-  background:linear-gradient(135deg,#0a2f4a,#0e3f60);
-  color:#3B9FD4; border:3px solid #3B9FD4; border-radius:20px;
-  padding:30px 20px; font-size:24px; font-weight:800; letter-spacing:.5px;
-  cursor:pointer; -webkit-appearance:none; font-family:inherit;
-  box-shadow:0 8px 32px rgba(59,159,212,.35);
-  transition:transform .1s;
+/* v34t — ADM/RIC ecc.: mostra picker in cima ma tiene visibile il form manuale sotto */
+html:not([data-role="SCA"]):not([data-role="RPC"]) #pgIns > *:not(#modePickerPanel){
+  /* visibile - default */
 }
-#scaOnlyPanel .sca-big:active{ transform:scale(.97); }
-#scaOnlyPanel .sca-big .ico{ display:block; font-size:48px; margin-bottom:8px; }
+
+#scaOnlyPanel{ text-align:center; padding:24px 14px; }
+#scaOnlyPanel .sca-title{ font-size:13px; font-weight:700; color:#3B9FD4; margin-bottom:6px; letter-spacing:.6px; }
+#scaOnlyPanel .sca-sub{ font-size:11px; color:#888; margin-bottom:20px; line-height:1.5; padding:0 8px; }
+/* v34t — pulsante camera più compatto e pulito (icona SVG, non emoji) */
+#scaOnlyPanel .sca-big{
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  width:100%; max-width:320px; margin:0 auto;
+  background:linear-gradient(135deg,#0e3f60,#3B9FD4);
+  color:#fff; border:none; border-radius:14px;
+  padding:16px 22px; font-size:15px; font-weight:700; letter-spacing:.5px;
+  cursor:pointer; -webkit-appearance:none; font-family:inherit;
+  box-shadow:0 6px 20px rgba(59,159,212,.30);
+  transition:transform .08s, box-shadow .15s;
+}
+#scaOnlyPanel .sca-big:active{ transform:scale(.97); box-shadow:0 3px 10px rgba(59,159,212,.25); }
+#scaOnlyPanel .sca-big svg{ width:22px; height:22px; flex-shrink:0; }
 #scaOnlyPanel .sca-hint{ font-size:10px; color:#666; margin-top:14px; }
+
+/* v34t — MODE PICKER: due pulsanti Scanner / RPC in cima al RICEVIMENTO */
+#modePickerPanel{
+  background:linear-gradient(135deg,rgba(59,159,212,.06),rgba(59,159,212,.02));
+  border:1px solid rgba(59,159,212,.25); border-radius:12px;
+  padding:12px 12px; margin-bottom:14px;
+}
+#modePickerPanel .mp-title{ font-size:10px; letter-spacing:1px; font-weight:800; color:#3B9FD4; margin-bottom:8px; text-align:center; }
+#modePickerPanel .mp-btns{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+#modePickerPanel .mp-btn{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:#0a1e3a; color:#3B9FD4; border:1.5px solid #3B9FD4;
+  border-radius:10px; padding:14px 8px; font-family:inherit;
+  font-size:13px; font-weight:800; letter-spacing:.5px; cursor:pointer;
+  -webkit-appearance:none; transition:transform .08s, background .15s;
+}
+#modePickerPanel .mp-btn:hover{ background:rgba(59,159,212,.15); }
+#modePickerPanel .mp-btn:active{ transform:scale(.97); }
+#modePickerPanel .mp-btn .ico{ font-size:22px; margin-bottom:4px; }
+#modePickerPanel .mp-btn small{ display:block; color:#888; font-weight:500; font-size:10px; margin-top:3px; letter-spacing:0; }
 
 
 /* v34l — RIEPILOGO (STORICO → DASH): card, barra, chip themed */
@@ -2571,7 +2597,10 @@ function gTab(pg) {
   if(pg==='pgAno'){syncListToAnomalie();renderAnoList();}
   if(pg==='pgCon')renderContatti();
   if(pg==='pgNotif'){ try{ renderNotifCenter(); if(typeof notifClearBadge==='function')notifClearBadge(); }catch(e){} }
-  if(pg==='pgIns'){ try{ if(typeof renderOcrLivePanel==='function') renderOcrLivePanel(); }catch(e){} }
+  if(pg==='pgIns'){
+    try{ if(typeof renderOcrLivePanel==='function') renderOcrLivePanel(); }catch(e){}
+    try{ if(typeof renderModePickerPanel==='function') renderModePickerPanel(); }catch(e){}
+  }
 }
 
 function setMode(m) {
@@ -3330,8 +3359,9 @@ function renderList(){
     if(canE) html+='<button class="sb sg" style="flex:1" onclick="editRow(\''+xe(r._key||'')+'\')">✎ Mod.</button>';
     else html+='<button class="sb sn" style="flex:1" disabled>🔒 Bloccato</button>';
     html+='<button class="sb ssb" onclick="showLog(\''+xe(r._key||'')+'\')" title="Log modifiche">📋</button>';
-    // Pulsante ECOMMERCE: solo in fase UFFICIO RESI e se il fornitore è mappato a un portale
-    if(r.fase==='UFFICIO RESI' && typeof portalForForn==='function'){
+    // Pulsante ECOMMERCE: solo in fase UFFICIO RESI, con fornitore mappato a portale,
+    // e SOLO per UFF/ADM (v34t: non deve apparire per RPC/RIC/MAG/SCA — è una funzione ufficio)
+    if(r.fase==='UFFICIO RESI' && typeof portalForForn==='function' && (ROLE==='UFF' || ROLE==='ADM')){
       var _pf=portalForForn(r.forn);
       if(_pf) html+='<button class="sb" style="background:rgba(76,175,80,.14);color:#5ce080;border:1px solid rgba(76,175,80,.45);font-weight:800;letter-spacing:.3px" onclick="event.stopPropagation();openPortal(\''+xe(_pf.url)+'\')" title="Apri il portale '+xe(_pf.name)+'">🛒 ECOMMERCE</button>';
     }
@@ -13184,7 +13214,7 @@ function ocrLiveListen(){
   }catch(e){}
 }
 
-// v34r — Panel SCA (solo pulsante OCR grosso al centro)
+// v34t — Panel SCA con icona camera SVG pulita (più professionale del 📷 grosso)
 function renderScaPanel(){
   if(typeof ROLE==='undefined' || ROLE!=='SCA') return;
   var pg = document.getElementById('pgIns'); if(!pg) return;
@@ -13194,14 +13224,61 @@ function renderScaPanel(){
     host.id = 'scaOnlyPanel';
     pg.insertBefore(host, pg.firstChild);
   }
+  // Icona camera SVG (inline, monocromatica bianca, ~22×22)
+  var camSvg = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'+
+    '<path d="M9 3.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 3.5V5h3.5A2.5 2.5 0 0 1 21 7.5v11A2.5 2.5 0 0 1 18.5 21h-13A2.5 2.5 0 0 1 3 18.5v-11A2.5 2.5 0 0 1 5.5 5H9V3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>'+
+    '<circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2"/>'+
+    '</svg>';
   host.innerHTML =
-    '<div class="sca-title">📱 SCANNER BOLLE</div>'+
-    '<div class="sca-sub">Fotografa la bolla o il DDT. L\'AI legge tutti i codici e li invia in tempo reale al PC di ricevimento.</div>'+
-    '<button class="sca-big" onclick="document.getElementById(\'ocrInput\').click()">'+
-      '<span class="ico">📷</span>'+
-      'FOTO BOLLA'+
+    '<div class="sca-title">SCANNER BOLLE</div>'+
+    '<div class="sca-sub">Fotografa la bolla o il DDT.<br>L\'AI legge i codici e li invia in tempo reale al ricevimento PC.</div>'+
+    '<button class="sca-big" onclick="document.getElementById(\'ocrInput\').click()" title="Foto bolla / DDT">'+
+      camSvg + '<span>Foto bolla</span>'+
     '</button>'+
-    '<div class="sca-hint">📶 Serve connessione internet — sync via Firebase</div>';
+    '<div class="sca-hint">📶 Serve connessione — sync via Firebase</div>';
+}
+
+// v34t — Mode picker in cima al pgIns (per ADM/RIC/UFF/MAG che vogliono passare rapidamente
+// alla modalità SCA o RPC senza andare in Impostazioni)
+function renderModePickerPanel(){
+  if(typeof ROLE==='undefined') return;
+  // Solo per ruoli che NON sono già SCA/RPC
+  if(ROLE==='SCA' || ROLE==='RPC') return;
+  var pg = document.getElementById('pgIns'); if(!pg) return;
+  var host = document.getElementById('modePickerPanel');
+  if(!host){
+    host = document.createElement('div');
+    host.id = 'modePickerPanel';
+    pg.insertBefore(host, pg.firstChild);
+  }
+  host.innerHTML =
+    '<div class="mp-title">MODALITÀ RICEVIMENTO</div>'+
+    '<div class="mp-btns">'+
+      '<button class="mp-btn" onclick="switchToMode(\'SCA\')">'+
+        '<span class="ico">📱</span>Scanner bolle'+
+        '<small>fotografo bolle → invio al PC</small>'+
+      '</button>'+
+      '<button class="mp-btn" onclick="switchToMode(\'RPC\')">'+
+        '<span class="ico">💻</span>Ricevimento PC'+
+        '<small>ricevo scans dal mobile → compilo</small>'+
+      '</button>'+
+    '</div>';
+}
+// Passa a un ruolo (SCA o RPC) al volo, senza logout
+function switchToMode(role){
+  if(role !== 'SCA' && role !== 'RPC') return;
+  window.ROLE = role;
+  try{ sessionStorage.setItem('devrole', role); }catch(e){}
+  try{
+    var rn={RIC:'📥 RIC',UFF:'🏢 UFF',MAG:'📦 MAG',ADM:'🔑 ADM',SCA:'📱 SCA',RPC:'💻 RPC'};
+    var rp=document.getElementById('rolePill'); if(rp) rp.textContent = rn[role]||role;
+  }catch(e){}
+  if(typeof applyRoleUI==='function') applyRoleUI();
+  if(typeof gTab==='function') gTab('pgIns');
+  // Rimuovo il picker per evitare che resti visibile sopra il panel SCA/RPC
+  var mp = document.getElementById('modePickerPanel'); if(mp) mp.remove();
+  if(typeof initOcrLiveAuto==='function') initOcrLiveAuto();
+  try{ if(typeof toast==='function') toast('Modalità: '+(role==='SCA'?'SCANNER BOLLE':'RICEVIMENTO PC'),'b'); }catch(e){}
 }
 
 // Pannello card scans (in cima a pgIns quando ROLE='RPC')
