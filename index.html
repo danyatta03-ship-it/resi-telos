@@ -10648,8 +10648,13 @@ function showOcrConfirm(res, photoUrl, source){
 
   if(photoUrl) html+='<img src="'+photoUrl+'" style="width:100%;max-height:150px;object-fit:contain;border-radius:8px;background:#0a0a0a;margin-bottom:12px">';
 
-  html+='<button onclick="applyOcrConfirm(true)" style="width:100%;background:#3B9FD4;color:#fff;border:none;padding:13px;font-size:15px;font-weight:800;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">\u2713 Aggiungi tutti alla lista</button>';
-  html+='<button onclick="applyOcrConfirm(false)" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1.5px solid #3B9FD4;padding:10px;font-size:12px;font-weight:700;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">Precompila solo il form (senza inserire)</button>';
+  // v34s: SCA vede "Invia al PC" (che skippa validazioni), gli altri "Aggiungi tutti alla lista"
+  var _btnMainTxt = (typeof ROLE!=='undefined' && ROLE==='SCA') ? '\u2713 Invia al PC (senza compilare campi)' : '\u2713 Aggiungi tutti alla lista';
+  html+='<button onclick="applyOcrConfirm(true)" style="width:100%;background:#3B9FD4;color:#fff;border:none;padding:13px;font-size:15px;font-weight:800;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">'+_btnMainTxt+'</button>';
+  // "Precompila solo il form" non ha senso per SCA (non ha il form principale)
+  if(typeof ROLE==='undefined' || ROLE!=='SCA'){
+    html+='<button onclick="applyOcrConfirm(false)" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1.5px solid #3B9FD4;padding:10px;font-size:12px;font-weight:700;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">Precompila solo il form (senza inserire)</button>';
+  }
   html+='<button onclick="document.getElementById(\'ocrConfBox\').remove()" style="width:100%;background:none;color:#555;border:none;padding:9px;font-size:13px;cursor:pointer;font-family:inherit;-webkit-appearance:none">Annulla</button>';
 
   inner.innerHTML=html; box.appendChild(inner); document.body.appendChild(box);
@@ -10887,6 +10892,25 @@ function applyOcrConfirm(allArticles){
   var articoli = (typeof ocrCollectRows==='function') ? ocrCollectRows() : [];
   if(allArticles){
     if(!articoli.length){ toast('\u26a0 Nessun articolo con codice: correggi la lista prima di inserire','y'); return; }
+
+    // v34s: SCA (scanner mobile) invia SEMPRE all'RPC, anche con campi vuoti.
+    // Sara' l'RPC (PC) a compilare tutto prima di aggiungere in lista.
+    // Skip di TUTTE le validazioni. Solo requisito: almeno 1 articolo con codice.
+    if(typeof ROLE!=='undefined' && ROLE==='SCA'){
+      if(typeof ocrLiveSend==='function'){
+        ocrLiveSend({
+          articoli: articoli, sogg: g('ocrSogg'),
+          vetRic: g('ocrVet'), data: g('ocrData'),
+          rma: g('ocrRma'), note: g('ocrNote'),
+          anomaliaRilevata: !!(window._ocrRes && window._ocrRes.anomaliaRilevata),
+          motivoAnomalia: (window._ocrRes && window._ocrRes.motivoAnomalia) || ''
+        });
+      }
+      try{ document.getElementById('ocrConfBox').remove(); }catch(e){}
+      try{ window._ocrRes = null; }catch(e){}
+      return;
+    }
+
     // v34q: validazione semplificata — SOLO comuni: VETTORE + DATA LISTATO
     var _need=[
       {id:'ocrData', lbl:'DATA LISTATO'},
@@ -10933,21 +10957,6 @@ function applyOcrConfirm(allArticles){
     if(_rowMiss.length){
       toast('⚠ Manca su riga: '+_rowMiss.slice(0,6).join(' | ')+(_rowMiss.length>6?' (+'+(_rowMiss.length-6)+')':''),'r');
       if(_firstEl) try{ _firstEl.scrollIntoView({behavior:'smooth',block:'center'}); _firstEl.focus(); }catch(e){}
-      return;
-    }
-
-    // v34q: se ruolo SCA, spedisci a Firebase e chiudi (l'utente RPC finira' di compilare)
-    if(typeof ROLE!=='undefined' && ROLE==='SCA'){
-      if(typeof ocrLiveSend==='function'){
-        ocrLiveSend({
-          articoli: articoli, sogg: g('ocrSogg'),
-          vetRic: g('ocrVet'), data: g('ocrData'),
-          rma: g('ocrRma'), note: g('ocrNote'),
-          anomaliaRilevata: !!(window._ocrRes && window._ocrRes.anomaliaRilevata),
-          motivoAnomalia: (window._ocrRes && window._ocrRes.motivoAnomalia) || ''
-        });
-      }
-      try{ document.getElementById('ocrConfBox').remove(); }catch(e){}
       return;
     }
 
