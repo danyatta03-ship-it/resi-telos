@@ -1,0 +1,24 @@
+# CI — Resi Telos
+# Gira ad ogni push / PR verso main.
+# Fallisce se: index.html è rotto (script sbilanciati / sintassi errata),
+# o se i test unit sulle regole di dominio non passano.
+name: CI
+
+on:
+  push:
+    branches: [ main, 'refactor/**', 'feat/**', 'fix/**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check HTML structure (script tags, syntax, id refs)
+        run: node scripts/check-html.js
+      - name: Run domain rules unit tests
+        run: node --test tests/

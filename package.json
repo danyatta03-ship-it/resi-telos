@@ -4,7 +4,11 @@
   "description": "Reparto Resi Telos SPA - App statica + api/gemini proxy",
   "private": true,
   "scripts": {
-    "dev": "node dev-server.js"
+    "dev": "node dev-server.js",
+    "check": "node scripts/check-html.js",
+    "test": "node --test tests/",
+    "bump-cache": "node scripts/bump-cache.js",
+    "precommit": "npm run check && npm test"
   },
   "devDependencies": {
     "express": "^4.18.2",
