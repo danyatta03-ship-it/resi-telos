@@ -680,6 +680,22 @@ select option {
 .stato-stallo{background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35)}
 .stato-anomalia{background:rgba(224,85,85,.18);color:#E05555;border:2px solid rgba(224,85,85,.5)}
 
+/* v34l — RIEPILOGO (STORICO → DASH): card, barra, chip themed */
+.riep-card{background:#111;border:1px solid #2a2a2a;border-left:3px solid #3B9FD4;color:#fff}
+.riep-card .riep-key{color:#fff}
+.riep-card .riep-pct{color:#666}
+.riep-bar{background:#1a1a1a}
+.riep-chip{background:#1a1a1a;color:#aaa;border:1px solid #333}
+.riep-head{color:#777}
+.riep-head-strong{color:#fff}
+html[data-theme="light"] .riep-card{background:#ffffff !important;border:1px solid #d5dbe5 !important;border-left-width:3px !important;color:#000 !important}
+html[data-theme="light"] .riep-card .riep-key{color:#000 !important}
+html[data-theme="light"] .riep-card .riep-pct{color:#666 !important}
+html[data-theme="light"] .riep-bar{background:#e7ecf3 !important}
+html[data-theme="light"] .riep-chip{background:#f2f5fa !important;color:#333 !important;border:1px solid #cfd6e0 !important}
+html[data-theme="light"] .riep-head{color:#444 !important}
+html[data-theme="light"] .riep-head-strong{color:#000 !important}
+
 /* v34k — LIGHT MODE: forza tutti i menu a tendina, input, textarea BIANCHI.
    Deve stare in coda al blocco style per vincere ogni override precedente
    (in particolare il blocco "DARK MODE FORCE OVERRIDE" alla riga ~629 che
@@ -6149,8 +6165,8 @@ function renderRiepilogo() {
     vetRic: 'Vettore Ricevimento', fase: 'Fase', flusso: 'Tipo Flusso'
   };
 
-  var html = '<div style="font-size:10px;color:#777;margin-bottom:10px;line-height:1.6">';
-  html += '<strong style="color:#fff">' + filt.length + '</strong> articoli &nbsp;·&nbsp; ';
+  var html = '<div class="riep-head" style="font-size:10px;margin-bottom:10px;line-height:1.6">';
+  html += '<strong class="riep-head-strong">' + filt.length + '</strong> articoli &nbsp;·&nbsp; ';
   html += '<strong style="color:#5BB8E0">€' + (totVal >= 1000 ? (totVal/1000).toFixed(1)+'k' : totVal.toFixed(2)) + '</strong> totale &nbsp;·&nbsp; ';
   html += '<strong style="color:#3B9FD4">' + Object.keys(map).length + '</strong> ' + (labels[type]||type).toLowerCase() + ' distinti';
   html += '</div>';
@@ -6171,24 +6187,24 @@ function renderRiepilogo() {
     var topCross = '', topCrossN = 0;
     for (var cc in crossMap) { if (crossMap[cc] > topCrossN) { topCrossN = crossMap[cc]; topCross = cc; } }
 
-    html += '<div style="background:#111;border:1px solid #2a2a2a;border-left:3px solid '+col+';border-radius:9px;padding:10px 12px;margin-bottom:8px">';
+    html += '<div class="riep-card" style="border-left-color:'+col+';border-radius:9px;padding:10px 12px;margin-bottom:8px">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
-    html += '<div style="font-size:13px;font-weight:700;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px">' + xe(k) + '</div>';
+    html += '<div class="riep-key" style="font-size:13px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px">' + xe(k) + '</div>';
     html += '<div style="text-align:right;flex-shrink:0">';
     html += '<span style="font-size:15px;font-weight:800;color:'+col+';font-family:monospace">' + d.n + '</span>';
-    html += '<span style="font-size:9px;color:#666;margin-left:4px">(' + valPct + '% val.)</span>';
+    html += '<span class="riep-pct" style="font-size:9px;margin-left:4px">(' + valPct + '% val.)</span>';
     html += '</div></div>';
 
     // Bar
-    html += '<div style="background:#1a1a1a;border-radius:3px;height:8px;margin-bottom:8px;overflow:hidden">';
+    html += '<div class="riep-bar" style="border-radius:3px;height:8px;margin-bottom:8px;overflow:hidden">';
     html += '<div style="width:'+pct+'%;background:'+col+';height:100%;border-radius:3px;transition:width .4s"></div>';
     html += '</div>';
 
     // Info chips
     html += '<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">';
-    html += '<span style="font-size:9px;background:#1a1a1a;color:#aaa;border:1px solid #333;border-radius:4px;padding:2px 6px">€' + (d.val >= 1000 ? (d.val/1000).toFixed(1)+'k' : d.val.toFixed(0)) + '</span>';
-    if (topDay) html += '<span style="font-size:9px;background:#1a1a1a;color:#aaa;border:1px solid #333;border-radius:4px;padding:2px 6px">📅 picco ' + fd(topDay) + ' (' + topDayN + ')</span>';
-    if (topCross) html += '<span style="font-size:9px;background:#1a1a1a;color:#aaa;border:1px solid #333;border-radius:4px;padding:2px 6px">' + xe(topCross.slice(0,20)) + '</span>';
+    html += '<span class="riep-chip" style="font-size:9px;border-radius:4px;padding:2px 6px">€' + (d.val >= 1000 ? (d.val/1000).toFixed(1)+'k' : d.val.toFixed(0)) + '</span>';
+    if (topDay) html += '<span class="riep-chip" style="font-size:9px;border-radius:4px;padding:2px 6px">📅 picco ' + fd(topDay) + ' (' + topDayN + ')</span>';
+    if (topCross) html += '<span class="riep-chip" style="font-size:9px;border-radius:4px;padding:2px 6px">' + xe(topCross.slice(0,20)) + '</span>';
     html += '<div style="flex:1"></div>';
     html += '<button data-k="'+xe(k)+'" onclick="exportRieKey(this.dataset.k)" style="background:rgba(59,159,212,.1);color:#3B9FD4;border:1px solid rgba(59,159,212,.3);border-radius:6px;padding:4px 9px;font-size:10px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit;flex-shrink:0">&#128229; XLS</button>';
     html += '</div>';
