@@ -1,0 +1,109 @@
+/* js/ui/theme.css — palette Resi Telos pulita, basata su custom properties.
+ *
+ * Sostituisce (proposta futura) il pattern attuale di ~80 override
+ * "html[data-theme='light'] .cls { background:#fff !important; }" in
+ * index.html.
+ *
+ * Uso:
+ *   1) includere questo file nel <head> di index.html
+ *   2) impostare data-theme="light" o "dark" su <html>
+ *   3) i componenti usano var(--bg), var(--fg), var(--accent), ecc.
+ *
+ * Palette allineata a v34h3/v34i (azzurro Telos + nero + bianco).
+ *
+ * ATTENZIONE: file NON ancora incluso da index.html. È una proposta.
+ * Fase 6 del refactor: sostituire progressivamente i colori hardcoded
+ * con le var(--*) qui sotto.
+ */
+
+:root, :root[data-theme="dark"] {
+  /* Background layer */
+  --bg-0:      #000;      /* pagina */
+  --bg-1:      #0a0a0a;   /* superfici primarie (card) */
+  --bg-2:      #111;      /* riga pari */
+  --bg-3:      #0f0f0f;   /* riga dispari */
+  --bg-elev:   #161616;   /* modal / popup */
+
+  /* Testo */
+  --fg-0:      #fff;      /* titoli */
+  --fg-1:      #e6e6e6;   /* body */
+  --fg-2:      #b8b8b8;   /* secondario */
+  --fg-3:      #7a7a7a;   /* placeholder / muted */
+
+  /* Bordi / separatori */
+  --border-1:  rgba(255,255,255,.08);
+  --border-2:  rgba(255,255,255,.16);
+
+  /* Accent Telos */
+  --accent:       #3B9FD4;  /* azzurro Telos */
+  --accent-fg:    #fff;
+  --accent-soft:  rgba(59,159,212,.16);
+  --accent-strong:#2a86b8;
+
+  /* Stato */
+  --ok:      #4CAF50;
+  --warn:    #E6B03C;
+  --err:     #E05555;
+  --info:    #6EC1E4;
+
+  /* Chip */
+  --chip-bg:   rgba(255,255,255,.06);
+  --chip-fg:   var(--fg-1);
+  --chip-brd:  var(--border-1);
+
+  /* Ombre */
+  --shadow-1:  0 2px 8px rgba(0,0,0,.35);
+  --shadow-2:  0 6px 24px rgba(0,0,0,.55);
+
+  /* Radius / spacing (per componenti nuovi) */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+}
+
+:root[data-theme="light"] {
+  --bg-0:      #f5f7fa;
+  --bg-1:      #ffffff;
+  --bg-2:      #ffffff;
+  --bg-3:      #f0f4f8;
+  --bg-elev:   #ffffff;
+
+  --fg-0:      #000;
+  --fg-1:      #111;
+  --fg-2:      #444;
+  --fg-3:      #888;
+
+  --border-1:  rgba(0,0,0,.08);
+  --border-2:  rgba(0,0,0,.16);
+
+  --accent:       #3B9FD4;
+  --accent-fg:    #fff;
+  --accent-soft:  rgba(59,159,212,.12);
+  --accent-strong:#1e78ad;
+
+  --ok:      #2E7D32;
+  --warn:    #C77800;
+  --err:     #C62828;
+  --info:    #1565C0;
+
+  --chip-bg:   rgba(59,159,212,.10);
+  --chip-fg:   var(--fg-1);
+  --chip-brd:  var(--border-1);
+
+  --shadow-1:  0 2px 8px rgba(0,0,0,.06);
+  --shadow-2:  0 6px 24px rgba(0,0,0,.12);
+}
+
+/* System preference fallback (per browser che non salvano data-theme) */
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    /* stesse regole della sezione [data-theme="light"] */
+    --bg-0:#f5f7fa; --bg-1:#fff; --bg-2:#fff; --bg-3:#f0f4f8; --bg-elev:#fff;
+    --fg-0:#000; --fg-1:#111; --fg-2:#444; --fg-3:#888;
+    --border-1:rgba(0,0,0,.08); --border-2:rgba(0,0,0,.16);
+    --accent-soft:rgba(59,159,212,.12); --accent-strong:#1e78ad;
+    --ok:#2E7D32; --warn:#C77800; --err:#C62828; --info:#1565C0;
+    --chip-bg:rgba(59,159,212,.10);
+    --shadow-1:0 2px 8px rgba(0,0,0,.06); --shadow-2:0 6px 24px rgba(0,0,0,.12);
+  }
+}

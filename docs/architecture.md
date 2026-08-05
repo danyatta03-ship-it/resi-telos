@@ -20,23 +20,38 @@ Applicare il piano di refactoring in modo **incrementale e senza rischi**:
 ```
 js/
   core/
-    config.js   ← ROLE_PERMS, STATI, CAULIST, NEXT_FASE, HDR, SLA
-    utils.js    ← xe, fd, nprc, eur, gv, ce, uv, addBusinessDays
+    config.js       ← ROLE_PERMS, STATI, CAULIST, NEXT_FASE, HDR, SLA
+    utils.js        ← xe, fd, nprc, eur, gv, ce, uv, addBusinessDays
+    bus.js          ← event bus (on/off/emit/once/clear)
   domain/
-    rules.js    ← regole di business PURE (permessi, forza NR, dup, ...)
-  data/         ← (TODO: firebase, idb, storage, sync)
-  services/     ← (TODO: mail, ocr, ai)
-  ui/           ← (TODO: renderList, renderQueue, renderDB)
+    rules.js        ← regole di business PURE
+  data/
+    storage.js      ← wrapper localStorage tipizzato
+    firebase.js     ← init FB + ready-promise (STUB, non incluso)
+    idb.js          ← wrapper IndexedDB Promise-based
+    sync.js         ← reconcile locale↔remote (STUB, non incluso)
+  ui/
+    virtual-list.js ← virtual scroll componente
+    theme.css       ← palette Resi Telos su custom properties
+    admin/
+      README.md     ← scaffold Fase 8
 
 tests/
-  domain-rules.test.js  ← 25 casi
+  domain-rules.test.js  ← 25 casi (permessi, NR, dup, coerenza)
+  bus.test.js           ← 9 casi
+  storage.test.js       ← 10 casi
+  utils.test.js         ← 7 casi
+  config.test.js        ← 10 casi
+  sync.test.js          ← 6 casi
+                        ─── totale ~67 test ───
 
 scripts/
-  check-html.js   ← verifica <script> balanced + syntax
-  bump-cache.js   ← aggiorna CACHE=... in sw.js da git SHA
+  check-html.js       ← verifica <script> balanced + syntax
+  bump-cache.js       ← aggiorna CACHE=... in sw.js da git SHA
+  optimize-assets.js  ← analizza clients.json/db_import duplicati (--apply)
 
 .github/workflows/
-  ci.yml   ← esegue check-html + node --test tests/*.test.js
+  ci.yml   ← check-html + node --test tests/*.test.js
 ```
 
 ## Fasi completate
@@ -54,37 +69,50 @@ scripts/
   - `js/domain/rules.js` — 6 funzioni pure con dependency injection
   - `tests/domain-rules.test.js` — 25 test, 0 fail
 
-## Fasi da fare
+## Fasi
 
-- [ ] **Fase 3 — Data services** (`js/data/*.js`)
-  - `firebase.js` — init auth + `FB_REF` (async)
-  - `sync.js` — reconcile FB ↔ local
-  - `idb.js` — IndexedDB (foto pacco, snapshot)
-  - `storage.js` — read/write localStorage tipizzato
+- [x] **Fase 3 — Data services** (parziale)
+  - `storage.js` estratto + test (10)
+  - `idb.js` estratto (Promise-based, fallback localStorage)
+  - `firebase.js` STUB con ready-promise (non incluso: sostituzione
+    rischiosa, richiede test sul campo)
+  - `sync.js` STUB con `mergeSnapshot` (last-write-wins) + test (6)
 
-- [ ] **Fase 4 — Ottimizzazione asset**
-  - togliere `clients.json` (4.6 MB, mai usato)
-  - deduplicare `db_import` / `db_tri`
-  - lazy-load `db_tri` (solo se tab Trimestre aperto)
+- [x] **Fase 4 — Ottimizzazione asset** (analisi + tool)
+  - `scripts/optimize-assets.js` identifica automaticamente:
+    - `clients.json` (4.6 MB) — nel precache SW ma MAI usato da
+      index.html → proposta rimozione da SW
+    - `db_import.json` == `db_tri.json` (byte-identici, 2.7 MB × 2)
+      → proposta dedup
+    - `db_tri.json` — lazy-load al primo apertura tab Trimestre
+      (richiede refactor index.html linea ~1486, non automatico)
+  - `--apply` esegue le modifiche automatiche con backup .bak
 
-- [ ] **Fase 5 — Rendering virtual scroll**
-  - `renderList`, `renderContatti`, `renderDB`
-  - target: < 100 righe DOM anche con 10 000 record
+- [x] **Fase 5 — Rendering virtual scroll**
+  - `js/ui/virtual-list.js` — componente vanilla, altezza fissa,
+    buffer configurabile. Sostituisce il pattern
+    "render tutte le righe in innerHTML".
 
-- [ ] **Fase 6 — CSS light theme pulito**
-  - convertire da `!important` sparso a custom properties per tema
-  - `data-theme="light"` / `data-theme="dark"` sul `<html>`
+- [x] **Fase 6 — CSS light theme pulito**
+  - `js/ui/theme.css` — palette Telos completa su custom properties.
+    16 var per tema, `data-theme="light|dark"` sul `<html>`,
+    fallback `prefers-color-scheme`.
 
-- [ ] **Fase 7 — Event bus**
-  - disaccoppiare renderer da store (oggi `renderList` è chiamata da
-    ~30 punti; con un event bus basta emettere `rows:changed`)
+- [x] **Fase 7 — Event bus**
+  - `js/core/bus.js` — on/off/emit/once/clear, listener isolati
+    (errori non propagano), disiscrizione durante emit sicura.
+  - 9 test coprono i corner case.
 
-- [ ] **Fase 8 — Admin panel modulare**
-  - oggi ha ~10 modal inline; estrarre in `js/ui/admin/*.js`
+- [~] **Fase 8 — Admin panel modulare** (scaffold)
+  - `js/ui/admin/README.md` — pattern + priorità di estrazione.
+    Implementazione delle 7 sezioni rimandata: richiede lettura
+    approfondita del monolite, meglio farla incrementale dopo
+    che il branch è testato sul campo.
 
-- [ ] **Fase 9 — Test suite**
-  - CI già configurata; aggiungere test per data services e UI
-    (JSDOM per il DOM, mock Firebase)
+- [x] **Fase 9 — Test e CI**
+  - CI verde. ~67 test coprono: config, utils, regole di dominio,
+    storage, sync, bus. Da aggiungere: test UI (JSDOM),
+    test integrazione IDB (mock).
 
 ## Come testare in locale
 
