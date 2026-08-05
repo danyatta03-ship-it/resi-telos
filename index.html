@@ -802,6 +802,16 @@ html[data-theme="light"] select{
         <div class="rn">MAGAZZINO</div>
         <div class="rd">Smistamento, logistica e spedizioni</div>
       </div>
+      <div class="role-card" data-role="SCA" onclick="selRole('SCA')">
+        <div class="ri">📱</div>
+        <div class="rn">SCANNER BOLLE</div>
+        <div class="rd">Solo fotografa bolle e invia al PC in tempo reale</div>
+      </div>
+      <div class="role-card" data-role="RPC" onclick="selRole('RPC')">
+        <div class="ri">💻</div>
+        <div class="rn">RICEVIMENTO PC</div>
+        <div class="rd">Vede scans in arrivo dal mobile e inserisce dati</div>
+      </div>
       <div class="role-card" data-role="ADM" onclick="selRole('ADM')">
         <div class="ri">🔑</div>
         <div class="rn">AMMINISTRATORE</div>
@@ -1576,6 +1586,9 @@ var ROLE_PERMS = {
   // canViewPhases: fasi VISIBILI (fuori dalle quali i record vengono nascosti in lista).
   // canViewOwnOnly: se true, l'utente vede solo i record che ha inserito lui.
   // canSeeTabs:     tab principali (in alto) mostrati; '*' = tutti; altrimenti sono gli id (pgIns/pgList/pgAno/pgUbi/pgTri/pgHist/pgCon).
+  // v34o: SCA (Scanner solo bolle - spedisce a RPC via FB) + RPC (Ricevimento PC - vede scans realtime)
+  SCA: { canAdd:false, canDelete:false, canArchive:false, canEditFasi:[],               canViewAll:false, canViewPhases:['*'], canViewOwnOnly:true,  canBulk:false, canAdvanceTo:[],                    canSendBack:false, canSeeTabs:['pgIns'] },
+  RPC: { canAdd:true,  canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'],  canViewAll:false, canViewPhases:['*'], canViewOwnOnly:false, canBulk:false, canAdvanceTo:['UFFICIO RESI'],       canSendBack:false, canSeeTabs:['pgIns','pgList'] },
   RIC: { canAdd:true, canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'], canViewAll:false, canViewPhases:['*'], canViewOwnOnly:true,  canBulk:false, canAdvanceTo:['UFFICIO RESI'], canSendBack:false, canSeeTabs:['pgIns','pgList'] },
   UFF: { canAdd:true, canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:false, canViewPhases:['UFFICIO RESI'], canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true,  canSeeTabs:['*'] },
   MAG: { canAdd:true, canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO'],         canViewAll:false, canViewPhases:['MAGAZZINO'],    canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true, canSeeTabs:['*'] },
@@ -1907,7 +1920,7 @@ function launchApp() {
   setupAfterLogin();
   // Set role badge
   try {
-    var rn={'RIC':'RIC','UFF':'UFF','MAG':'MAG','ADM':'ADM'};
+    var rn={'RIC':'RIC','UFF':'UFF','MAG':'MAG','ADM':'ADM','SCA':'📱 SCA','RPC':'💻 RPC'};
     var rp=document.getElementById('rolePill');
     if(rp)rp.textContent=rn[ROLE]||ROLE;
     applyRoleUI();
@@ -1972,7 +1985,7 @@ function showSettings() {
     '<div class="sh-section">OPERATORE</div>'+
     '<input id="set_name" value="'+xe(deviceName)+'" placeholder="Nome operatore" style="margin-bottom:10px">'+
     '<div class="sh-section">RUOLO</div>'+
-    '<div class="r2" style="margin-bottom:10px">'+rc('RIC','\ud83d\udce5','RICEZIONE')+rc('UFF','\ud83c\udfe2','UFFICIO')+rc('MAG','\ud83d\udce6','MAGAZZINO')+rc('ADM','\ud83d\udd11','ADMIN')+'</div>'+
+    '<div class="r2" style="margin-bottom:10px">'+rc('RIC','\ud83d\udce5','RICEZIONE')+rc('UFF','\ud83c\udfe2','UFFICIO')+rc('MAG','\ud83d\udce6','MAGAZZINO')+rc('ADM','\ud83d\udd11','ADMIN')+rc('SCA','\ud83d\udcf1','SCANNER')+rc('RPC','\ud83d\udcbb','RIC. PC')+'</div>'+
     '<div class="sh-section">PROMEMORIA FINE GIORNATA</div>'+
     '<div style="font-size:10px;color:var(--txt2);margin-bottom:6px;line-height:1.5">A quest\'ora l\'app propone di esportare e svuotare (vuoto = disattivato).</div>'+
     '<input id="set_rem" type="time" value="'+xe(rem)+'" style="margin-bottom:10px">'+
@@ -1989,7 +2002,7 @@ function showSettings() {
 
 function selSetRole(r){
   setRoleSel=r;
-  var all=['RIC','UFF','MAG','ADM'];
+  var all=['RIC','UFF','MAG','ADM','SCA','RPC'];
   for(var i=0;i<all.length;i++){var b=document.getElementById('setr_'+all[i]);if(b)b.className='sb '+(all[i]===r?'sg':'sn');}
 }
 
@@ -2000,7 +2013,7 @@ function saveSettings(){
     ROLE=setRoleSel;
     try{sessionStorage.setItem('devrole',ROLE);}catch(e){}
     var el=document.getElementById('rolePill');
-    var rn2={RIC:'\ud83d\udce5 RIC',UFF:'\ud83c\udfe2 UFF',MAG:'\ud83d\udce6 MAG',ADM:'\ud83d\udd11 ADM'};
+    var rn2={RIC:'\ud83d\udce5 RIC',UFF:'\ud83c\udfe2 UFF',MAG:'\ud83d\udce6 MAG',ADM:'\ud83d\udd11 ADM',SCA:'\ud83d\udcf1 SCA',RPC:'\ud83d\udcbb RPC'};
     if(el)el.textContent=rn2[ROLE]||ROLE;
     applyRoleUI();
   }
@@ -2530,6 +2543,7 @@ function gTab(pg) {
   if(pg==='pgAno'){syncListToAnomalie();renderAnoList();}
   if(pg==='pgCon')renderContatti();
   if(pg==='pgNotif'){ try{ renderNotifCenter(); if(typeof notifClearBadge==='function')notifClearBadge(); }catch(e){} }
+  if(pg==='pgIns'){ try{ if(typeof renderOcrLivePanel==='function') renderOcrLivePanel(); }catch(e){} }
 }
 
 function setMode(m) {
@@ -10573,6 +10587,9 @@ function showOcrConfirm(res, photoUrl, source){
   html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('TIPO FLUSSO')+'<select id="ocrFlu" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_fluL,_curFlu)+'</select></div><div style="flex:1">'+lab('TIPO DOC')+'<select id="ocrDoc" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_docL,_cV('cDoc'))+'</select></div></div>';
   html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('FASE')+'<select id="ocrFas" onchange="ocrRefreshStato()" style="'+_selCss+'">'+_oOpts(_fasL,_curFas)+'</select></div><div style="flex:1">'+lab('STATO')+'<select id="ocrSta" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_staL,_curSta||_staL[0]||'')+'</select></div></div>';
   html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('RMA / N\u00b0 BOLLA')+fInp('ocrRma',res.rma,'BL/TRA/...')+'</div><div style="flex:1">'+lab('DATA LISTATO')+'<input id="ocrData" type="date" value="'+xe(res.data||'')+'" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block"></div></div>';
+  // v34o: DATA ACQUISTO FORNITORE (richiesta utente \u2014 nel form OCR post-scan)
+  var _curDatAcq=(document.getElementById('cDatAcq')||{}).value||'';
+  html+=lab('DATA ACQUISTO DAL FORNITORE')+'<input id="ocrDatAcq" type="date" value="'+xe(_curDatAcq)+'" placeholder="gg/mm/aaaa" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">';
   html+=lab('NOTE')+'<input id="ocrNote" value="'+xe(res.note||(a0.desc||''))+'" placeholder="annotazioni" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:10px;display:block">';
 
   if(photoUrl) html+='<img src="'+photoUrl+'" style="width:100%;max-height:150px;object-fit:contain;border-radius:8px;background:#0a0a0a;margin-bottom:12px">';
@@ -10654,15 +10671,38 @@ function ocrRowHtml(i, a){
   var cod=(a.cod||'').toString().toUpperCase();
   var qty=parseInt(a.qty)||1;
   var prc=(a.prc==='' || a.prc==null) ? '' : (parseFloat(a.prc)||0);
+  var cau=(a.causale||'').toString();
+  var forn=(a.fornitore||'').toString().toUpperCase();
   function xe2(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  return '<div class="ocrRow" data-i="'+i+'" style="display:flex;gap:5px;align-items:center;margin-bottom:5px">'+
-    '<div style="width:22px;color:#666;font-size:11px;font-weight:700;text-align:right">'+(i+1)+'.</div>'+
-    '<input class="ocrRowPre" value="'+xe2(pre)+'" placeholder="PRE" oninput="this.value=this.value.toUpperCase()" style="width:56px;background:#111;color:#3B9FD4;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;font-weight:700;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:center">'+
-    '<input class="ocrRowCod" value="'+xe2(cod)+'" placeholder="codice" oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 8px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;min-width:0">'+
-    '<input class="ocrRowQty" type="number" min="1" value="'+qty+'" style="width:44px;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 4px;font-size:12px;border-radius:7px;outline:none;font-family:inherit;-webkit-appearance:none;text-align:center">'+
-    '<input class="ocrRowPrc" type="number" step="0.01" value="'+(prc===''?'':prc)+'" placeholder="\u20ac" style="width:64px;background:#111;color:#5BB8E0;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:right">'+
-    '<button type="button" onclick="ocrDelRow(this)" title="Elimina questa riga" style="width:26px;height:32px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;padding:0">\u00d7</button>'+
+  // v34o: opzioni causali per il select per-riga
+  var _cauL=(typeof CAULIST!=='undefined')?CAULIST:[];
+  var _cauOpts='<option value="">\u2014 usa comune \u2014</option>';
+  if(cau && _cauL.indexOf(cau)<0) _cauOpts += '<option value="'+xe2(cau)+'" selected>'+xe2(cau)+'</option>';
+  for(var oi=0;oi<_cauL.length;oi++){ var v=_cauL[oi]; _cauOpts += '<option value="'+xe2(v)+'"'+(v===cau?' selected':'')+'>'+xe2(v)+'</option>'; }
+  return '<div class="ocrRow" data-i="'+i+'" style="border-bottom:1px dashed #1e1e1e;padding-bottom:5px;margin-bottom:5px">'+
+    '<div style="display:flex;gap:5px;align-items:center">'+
+      '<div style="width:22px;color:#666;font-size:11px;font-weight:700;text-align:right">'+(i+1)+'.</div>'+
+      '<input class="ocrRowPre" value="'+xe2(pre)+'" placeholder="PRE" oninput="this.value=this.value.toUpperCase()" style="width:56px;background:#111;color:#3B9FD4;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;font-weight:700;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:center">'+
+      '<input class="ocrRowCod" value="'+xe2(cod)+'" placeholder="codice" oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 8px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;min-width:0">'+
+      '<input class="ocrRowQty" type="number" min="1" value="'+qty+'" style="width:44px;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 4px;font-size:12px;border-radius:7px;outline:none;font-family:inherit;-webkit-appearance:none;text-align:center">'+
+      '<input class="ocrRowPrc" type="number" step="0.01" value="'+(prc===''?'':prc)+'" placeholder="\u20ac" style="width:64px;background:#111;color:#5BB8E0;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:right">'+
+      '<button type="button" onclick="ocrToggleExtra(this)" title="Cambia causale/fornitore per questa riga" style="width:26px;height:32px;background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;padding:0">\u25be</button>'+
+      '<button type="button" onclick="ocrDelRow(this)" title="Elimina" style="width:26px;height:32px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;padding:0">\u00d7</button>'+
+    '</div>'+
+    // Extra fields per-riga (nascosti, apribili col \u25be)
+    '<div class="ocrRowExtra" style="display:'+((cau||forn)?'block':'none')+';margin:5px 0 0 27px;padding:6px 8px;background:rgba(59,159,212,.06);border:1px dashed rgba(59,159,212,.28);border-radius:6px">'+
+      '<div style="font-size:9px;color:#888;margin-bottom:3px;letter-spacing:.5px">CAUSALE (per questa riga)</div>'+
+      '<select class="ocrRowCau" style="width:100%;background:#111;color:#fff;border:1px solid #2a2a2a;padding:6px 8px;font-size:11px;border-radius:6px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:4px">'+_cauOpts+'</select>'+
+      '<div style="font-size:9px;color:#888;margin-bottom:3px;letter-spacing:.5px">FORNITORE (per questa riga)</div>'+
+      '<input class="ocrRowForn" value="'+xe2(forn)+'" placeholder="lascia vuoto = usa comune" oninput="this.value=this.value.toUpperCase()" style="width:100%;background:#111;color:#fff;border:1px solid #2a2a2a;padding:6px 8px;font-size:11px;border-radius:6px;outline:none;font-family:inherit;-webkit-appearance:none">'+
+    '</div>'+
     '</div>';
+}
+// Toggle accordion extra fields per-riga
+function ocrToggleExtra(btn){
+  var row = btn.closest('.ocrRow'); if(!row) return;
+  var ex = row.querySelector('.ocrRowExtra'); if(!ex) return;
+  ex.style.display = (ex.style.display === 'none') ? 'block' : 'none';
 }
 function ocrAddRow(){
   var list=document.getElementById('ocrArtList'); if(!list) return;
@@ -10695,9 +10735,13 @@ function ocrCollectRows(){
     var cod=(rows[i].querySelector('.ocrRowCod')||{}).value||'';
     var qty=(rows[i].querySelector('.ocrRowQty')||{}).value||'1';
     var prc=(rows[i].querySelector('.ocrRowPrc')||{}).value||'';
+    // v34o: campi extra per-riga (causale + fornitore custom)
+    var cau=(rows[i].querySelector('.ocrRowCau')||{}).value||'';
+    var forn=(rows[i].querySelector('.ocrRowForn')||{}).value||'';
     pre=pre.toUpperCase().trim(); cod=cod.toUpperCase().trim();
+    forn=forn.toUpperCase().trim();
     if(!pre && !cod) continue;
-    out.push({pre:pre, cod:cod, qty:parseInt(qty)||1, prc:prc, desc:''});
+    out.push({pre:pre, cod:cod, qty:parseInt(qty)||1, prc:prc, desc:'', causale:cau, fornitore:forn});
   }
   return out;
 }
@@ -10772,16 +10816,41 @@ function applyOcrConfirm(allArticles){
       if(_firstEl) try{ _firstEl.scrollIntoView({behavior:'smooth',block:'center'}); _firstEl.focus(); }catch(e){}
       return;
     }
+    // v34o: propago DATA ACQUISTO FORNITORE al form principale (se compilato nel modulo OCR)
+    var _datAcq=g('ocrDatAcq'); if(_datAcq){ var _daEl=document.getElementById('cDatAcq'); if(_daEl){ _daEl.value=_datAcq; if(typeof ce==='function')ce(_daEl); } }
+
+    // v34o: se ruolo SCA, non inserire in lista locale \u2014 spedisci direttamente al PC via Firebase
+    if(typeof ROLE!=='undefined' && ROLE==='SCA'){
+      if(typeof ocrLiveSend==='function'){
+        ocrLiveSend({
+          articoli: articoli, sogg: g('ocrSogg'), forn: g('ocrForn'),
+          causale: g('ocrCau'), vetRic: g('ocrVet'), flusso: g('ocrFlu'),
+          tipoDoc: g('ocrDoc'), fase: g('ocrFas'), stato: g('ocrSta'),
+          data: g('ocrData'), datAcqForn: g('ocrDatAcq'),
+          rma: g('ocrRma'), note: g('ocrNote'),
+          anomaliaRilevata: !!(window._ocrRes && window._ocrRes.anomaliaRilevata),
+          motivoAnomalia: (window._ocrRes && window._ocrRes.motivoAnomalia) || ''
+        });
+      }
+      try{ document.getElementById('ocrConfBox').remove(); }catch(e){}
+      return;
+    }
+
     document.getElementById('ocrConfBox').remove();
     gTab('pgIns');
     var cForVal=(document.getElementById('cFor')||{}).value||'';
+    var cCauVal=(document.getElementById('cCau')||{}).value||'';
     var cRmaVal=(document.getElementById('cRma')||{}).value||'';
     var added=0;
     if(typeof loadCodeMem==='function')loadCodeMem();
     for(var i=0;i<articoli.length;i++){
       var a=articoli[i];
       try{ if(a.cod){ CODE_MEM[a.cod]={pre:a.pre, qty:a.qty}; } }catch(e){}
-      var fEl=document.getElementById('cFor'); if(fEl){ fEl.value=cForVal; if(typeof ce==='function')ce(fEl); }
+      // v34o: preferisco causale/fornitore PER-RIGA se compilati (accordion \u25be), altrimenti fallback comune
+      var _rForn = (a.fornitore && a.fornitore.trim()) ? a.fornitore.trim() : cForVal;
+      var _rCau  = (a.causale   && a.causale.trim())   ? a.causale.trim()   : cCauVal;
+      var fEl=document.getElementById('cFor'); if(fEl){ fEl.value=_rForn; if(typeof ce==='function')ce(fEl); }
+      var cauEl=document.getElementById('cCau'); if(cauEl){ cauEl.value=_rCau; if(typeof onCauChange==='function')onCauChange(cauEl); }
       var rEl=document.getElementById('cRma'); if(rEl) rEl.value=cRmaVal;
       var pEl0=document.getElementById('cPre'); if(pEl0) pEl0.value=a.pre;
       var cEl=document.getElementById('cCod'); if(cEl){cEl.value=a.cod; if(typeof ce==='function')ce(cEl);}
@@ -12908,6 +12977,159 @@ function _notifFlushBuffer(){
   _notifBcastBuf = [];
   _notifBufSave();
 }
+
+// ══════════════════════════════════════════════════════════════════
+// v34o — SYNC OCR REALTIME (SCANNER MOBILE → RICEVIMENTO PC)
+// ══════════════════════════════════════════════════════════════════
+// SCA (mobile) chiama ocrLiveSend(res) dopo la conferma dell'OCR.
+// RPC (PC) chiama ocrLiveListen() al login: mostra le scans in arrivo
+// come card nel form pgIns; click → riapre showOcrConfirm() pre-popolato.
+// I record vengono auto-cancellati da Firebase quando RPC li elabora
+// (o dopo 24h via TTL client-side).
+
+var OCR_LIVE_REF = null;
+var OCR_LIVE_LOCAL = {};   // id -> {articoli, sogg, forn, ..., ts, sender}
+
+function _ocrLiveInit(){
+  if(OCR_LIVE_REF) return;
+  if(typeof FB_REF==='undefined' || !FB_REF || !FB_REF.root){ setTimeout(_ocrLiveInit, 1500); return; }
+  try{
+    OCR_LIVE_REF = FB_REF.root.child('ocrLive');
+  }catch(e){ return; }
+}
+
+// SCA: invia la scansione al PC
+function ocrLiveSend(payload){
+  _ocrLiveInit();
+  var full = Object.assign({}, payload||{}, {
+    ts: Date.now(),
+    sender: (typeof deviceName!=='undefined' && deviceName) || 'SCA',
+    _pending: true
+  });
+  if(!OCR_LIVE_REF){
+    // Buffer locale se FB non pronto (poi flush)
+    try{
+      var buf = JSON.parse(localStorage.getItem('_ocrLiveBuf')||'[]');
+      buf.push(full);
+      localStorage.setItem('_ocrLiveBuf', JSON.stringify(buf.slice(-20)));
+    }catch(e){}
+    if(typeof toast==='function') toast('📤 Salvato in coda: verrà inviato al PC quando torni online','y');
+    return;
+  }
+  try{
+    OCR_LIVE_REF.push(full)
+      .then(function(){
+        if(typeof toast==='function') toast('✅ Scansione inviata al PC','g');
+      })
+      .catch(function(err){
+        if(typeof toast==='function') toast('⚠ Invio scansione: '+((err&&err.message)||err),'r');
+      });
+  }catch(e){
+    if(typeof toast==='function') toast('⚠ Invio non riuscito, riprova','r');
+  }
+}
+
+// RPC: subscribe alle scans in arrivo
+function ocrLiveListen(){
+  _ocrLiveInit();
+  if(!OCR_LIVE_REF){ setTimeout(ocrLiveListen, 1500); return; }
+  try{
+    OCR_LIVE_REF.on('value', function(snap){
+      var v = snap.val() || {};
+      // Filtra scans vecchie (>24h) come pulizia opportunistica
+      var now = Date.now();
+      var out = {};
+      for(var k in v){
+        var r = v[k];
+        if(r && (now - (r.ts||0)) < 24*3600*1000) out[k] = r;
+      }
+      OCR_LIVE_LOCAL = out;
+      renderOcrLivePanel();
+    });
+  }catch(e){}
+}
+
+// Pannello card scans (in cima a pgIns quando ROLE='RPC')
+function renderOcrLivePanel(){
+  if(typeof ROLE==='undefined' || ROLE!=='RPC') return;
+  var pg = document.getElementById('pgIns'); if(!pg) return;
+  var host = document.getElementById('ocrLivePanel');
+  if(!host){
+    host = document.createElement('div');
+    host.id = 'ocrLivePanel';
+    host.className = 'card';
+    host.style.cssText = 'border:2px solid #3B9FD4;margin-bottom:12px';
+    pg.insertBefore(host, pg.firstChild);
+  }
+  var keys = Object.keys(OCR_LIVE_LOCAL).sort(function(a,b){ return (OCR_LIVE_LOCAL[b].ts||0) - (OCR_LIVE_LOCAL[a].ts||0); });
+  if(!keys.length){
+    host.innerHTML = '<div class="ch" style="background:rgba(59,159,212,.1)"><span>📨 SCANSIONI IN ARRIVO DAL MOBILE</span><span style="font-size:10px;color:#888;font-weight:400">0 in attesa</span></div>'+
+      '<div class="cb" style="text-align:center;padding:16px;color:#888;font-size:12px">Nessuna scansione. Quando uno SCANNER fotografa una bolla, comparirà qui.</div>';
+    return;
+  }
+  var html = '<div class="ch" style="background:rgba(59,159,212,.1)"><span>📨 SCANSIONI IN ARRIVO DAL MOBILE</span><span style="font-size:11px;color:#3B9FD4;font-weight:800">'+keys.length+' in attesa</span></div><div class="cb">';
+  keys.forEach(function(k){
+    var r = OCR_LIVE_LOCAL[k] || {};
+    var d = new Date(r.ts||Date.now());
+    var when = d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+    var nArt = (r.articoli||[]).length;
+    html += '<div style="background:#0a1e3a;border:1px solid rgba(59,159,212,.4);border-radius:9px;padding:10px 12px;margin-bottom:6px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+        '<div style="font-size:12px;font-weight:800;color:#3B9FD4">📱 '+xe(r.sender||'SCA')+' · '+when+'</div>'+
+        '<div style="font-size:11px;color:#888">'+nArt+' articoli</div>'+
+      '</div>'+
+      (r.sogg?'<div style="font-size:11px;color:#ccc;margin-bottom:3px">Sogg: '+xe(r.sogg)+'</div>':'')+
+      (r.forn?'<div style="font-size:11px;color:#ccc;margin-bottom:3px">Forn: '+xe(r.forn)+'</div>':'')+
+      '<div style="display:flex;gap:6px;margin-top:6px">'+
+        '<button onclick="ocrLiveElabora(\''+xe(k)+'\')" style="flex:1;background:#3B9FD4;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">▶ ELABORA</button>'+
+        '<button onclick="ocrLiveScarta(\''+xe(k)+'\')" title="Scarta" style="width:38px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">🗑</button>'+
+      '</div>'+
+    '</div>';
+  });
+  html += '</div>';
+  host.innerHTML = html;
+}
+
+// RPC: clicca "Elabora" su una scansione in arrivo → riapre showOcrConfirm
+function ocrLiveElabora(id){
+  var r = OCR_LIVE_LOCAL[id]; if(!r) return;
+  // Rimuovi da FB per non elaborarla due volte (locking soft)
+  try{ if(OCR_LIVE_REF) OCR_LIVE_REF.child(id).remove(); }catch(e){}
+  // Costruisci un oggetto compatibile con showOcrConfirm
+  var res = {
+    articoli: r.articoli||[],
+    sogg: r.sogg||'', fornitore: r.forn||'', causale: r.causale||'',
+    vetRic: r.vetRic||'', flussoSug: r.flusso||'',
+    tipoDoc: r.tipoDoc||'', fase: r.fase||'', stato: r.stato||'',
+    data: r.data||'', datAcqForn: r.datAcqForn||'',
+    rma: r.rma||'', note: r.note||'',
+    anomaliaRilevata: !!r.anomaliaRilevata, motivoAnomalia: r.motivoAnomalia||''
+  };
+  if(typeof showOcrConfirm==='function'){
+    showOcrConfirm(res, null, 'live');
+    // Post-render: forza i valori nei campi dedicati che showOcrConfirm non riempie
+    setTimeout(function(){
+      var m = { ocrForn: res.fornitore, ocrDatAcq: res.datAcqForn, ocrFlu: res.flussoSug, ocrDoc: res.tipoDoc, ocrFas: res.fase, ocrSta: res.stato };
+      for(var id2 in m){ var el=document.getElementById(id2); if(el && m[id2]) el.value=m[id2]; }
+    }, 60);
+  }
+}
+function ocrLiveScarta(id){
+  if(!confirm('Scartare questa scansione?')) return;
+  try{ if(OCR_LIVE_REF) OCR_LIVE_REF.child(id).remove(); }catch(e){}
+}
+
+// Bootstrap listener per RPC dopo il login
+function initOcrLiveAuto(){
+  if(typeof ROLE==='undefined' || ROLE!=='RPC') return;
+  ocrLiveListen();
+  // Se pgIns è già aperto, render subito
+  try{ renderOcrLivePanel(); }catch(e){}
+}
+// Aggancio al boot: aspetta FB pronto poi avvia listener se RPC
+setTimeout(initOcrLiveAuto, 2000);
+setInterval(initOcrLiveAuto, 5000);   // safety net per role change runtime
+
 </script>
 
 </body>
