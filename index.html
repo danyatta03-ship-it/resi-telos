@@ -679,6 +679,56 @@ select option {
 .stato-fin{background:rgba(59,159,212,.12);color:#3B9FD4;border:1px solid rgba(59,159,212,.35)}
 .stato-stallo{background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35)}
 .stato-anomalia{background:rgba(224,85,85,.18);color:#E05555;border:2px solid rgba(224,85,85,.5)}
+
+/* v34k — LIGHT MODE: forza tutti i menu a tendina, input, textarea BIANCHI.
+   Deve stare in coda al blocco style per vincere ogni override precedente
+   (in particolare il blocco "DARK MODE FORCE OVERRIDE" alla riga ~629 che
+   fissa background:#1a1a1a!important sui tag input/select/textarea nudi). */
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea,
+html[data-theme="light"] .cb input,
+html[data-theme="light"] .cb select,
+html[data-theme="light"] .cb textarea,
+html[data-theme="light"] .card input,
+html[data-theme="light"] .card select,
+html[data-theme="light"] .card textarea,
+html[data-theme="light"] .f input,
+html[data-theme="light"] .f select,
+html[data-theme="light"] .f textarea{
+  background:#ffffff !important;
+  background-color:#ffffff !important;
+  color:#000000 !important;
+  border:1.5px solid #000 !important;
+  -webkit-appearance:none !important;
+  appearance:none !important;
+  color-scheme:light !important;
+}
+html[data-theme="light"] select option,
+html[data-theme="light"] select optgroup{
+  background:#ffffff !important;
+  background-color:#ffffff !important;
+  color:#000000 !important;
+}
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder{
+  color:#6b6b6b !important;
+  opacity:1 !important;
+}
+html[data-theme="light"] input:disabled,
+html[data-theme="light"] select:disabled,
+html[data-theme="light"] textarea:disabled{
+  background:#f0f0f0 !important;
+  background-color:#f0f0f0 !important;
+  color:#555 !important;
+}
+/* Freccia dropdown personalizzata (perché forziamo appearance:none) */
+html[data-theme="light"] select{
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20'><path fill='%23000' d='M5 8l5 5 5-5z'/></svg>") !important;
+  background-repeat:no-repeat !important;
+  background-position:right 10px center !important;
+  padding-right:32px !important;
+}
 </style>
 <!-- defer, non async: i moduli "compat" si registrano sull'oggetto creato da
      firebase-app, quindi vanno eseguiti in quest'ordine. Con async l'ordine è
