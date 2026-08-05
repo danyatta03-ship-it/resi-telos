@@ -8294,7 +8294,7 @@ function showMailPreview(email, subj, bodyText, photos, ctx){
   h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:3px">TESTO</div>';
   h+='<textarea id="mpBody" style="width:100%;height:200px;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 11px;font-size:13px;border-radius:8px;outline:none;resize:vertical;font-family:inherit;margin-bottom:10px;display:block">'+xe(bodyText||'')+'</textarea>';
   if(photos&&photos.length){
-    h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:4px">FOTO ANOMALIA ('+photos.length+') — la mail non può allegarle: scaricale o copiale e mettile a mano</div>';
+    h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:4px">FOTO ANOMALIA ('+photos.length+') — verranno unite in un PDF e allegate automaticamente all\'invio 📄</div>';
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">';
     for(var pi=0;pi<photos.length;pi++){
       h+='<div style="width:88px"><img src="'+photos[pi]+'" style="width:88px;height:88px;object-fit:cover;border-radius:8px;border:1px solid #333;display:block">';
@@ -8317,26 +8317,262 @@ function showMailPreview(email, subj, bodyText, photos, ctx){
   h+='<div style="font-size:10px;color:#666;text-align:center">WhatsApp usa il numero salvato nella rubrica agente. "Outlook (PC)" apre il client email predefinito, "Web" nel browser.</div>';
   inner.innerHTML=h; box.appendChild(inner); document.body.appendChild(box);
 }
-function mpOpenOutlook(){
-  var to=((document.getElementById('mpTo')||{}).value||'').trim();
-  var subj=((document.getElementById('mpSubj')||{}).value||'').trim();
-  var body=((document.getElementById('mpBody')||{}).value||'').slice(0,1500);
-  var url='mailto:'+to+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
-  // apertura diretta nel gesto utente (non naviga: il browser passa il mailto all'app)
-  try{ window.location.href=url; }catch(e){ openMail(url); }
-  mpRegisterSend('Outlook');
-  // v34b: registra follow-up mail (agente/cliente in base al ctx)
+// ══════════════════════════════════════════════════════════════════
+// v34m — CONVERSIONE FOTO → PDF + AUTO-ALLEGATO NELLE MAIL
+// ══════════════════════════════════════════════════════════════════
+// mailto: non supporta allegati. Soluzione:
+//   - mobile (iOS/Android con Web Share API livello 2): apre il share
+//     sheet con il PDF come File → l'utente sceglie Mail e il PDF è
+//     già allegato con oggetto/testo prefill.
+//   - desktop / browser senza share files: scarica il PDF e apre
+//     mailto separatamente; l'utente trascina il PDF nella mail.
+
+// Estrae le dimensioni WxH da un JPEG (dataURL o Uint8Array) leggendo
+// il marker SOFn. Ritorna {w,h,bytes} o null se il file non è JPEG.
+function _jpegInfo(dataUrl){
+  try{
+    var b64 = String(dataUrl).split(',')[1];
+    if(!b64) return null;
+    var bin = atob(b64);
+    var len = bin.length;
+    var bytes = new Uint8Array(len);
+    for(var i=0;i<len;i++) bytes[i] = bin.charCodeAt(i);
+    if(bytes[0]!==0xFF || bytes[1]!==0xD8) return null;   // non JPEG
+    var p = 2;
+    while(p < len){
+      if(bytes[p] !== 0xFF){ p++; continue; }
+      var marker = bytes[p+1];
+      if(marker === 0xD9 || marker === 0xDA) break;   // fine
+      var seg = (bytes[p+2]<<8) | bytes[p+3];
+      // SOF0..SOF15 (esclusi DHT=0xC4, JPG=0xC8, DAC=0xCC)
+      if(marker >= 0xC0 && marker <= 0xCF && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC){
+        var h = (bytes[p+5]<<8) | bytes[p+6];
+        var w = (bytes[p+7]<<8) | bytes[p+8];
+        return { w:w, h:h, bytes:bytes };
+      }
+      p += 2 + seg;
+    }
+    return null;
+  }catch(e){ return null; }
+}
+
+// Costruisce un PDF minimale (1.4) con una pagina A4-portrait per ogni
+// foto JPEG (dataURL). Ritorna Blob. Se una foto non è JPEG (es. PNG),
+// la converte a JPEG via canvas.
+function photosToPdfBlob(dataUrls, meta){
+  return new Promise(function(resolve){
+    if(!dataUrls || !dataUrls.length){ resolve(null); return; }
+    // Assicura JPEG
+    function toJpeg(url){
+      return new Promise(function(res){
+        if(url.indexOf('data:image/jpeg')===0 || url.indexOf('data:image/jpg')===0){ res(url); return; }
+        var img = new Image();
+        img.onload = function(){
+          var c = document.createElement('canvas');
+          c.width = img.naturalWidth; c.height = img.naturalHeight;
+          c.getContext('2d').drawImage(img, 0, 0);
+          res(c.toDataURL('image/jpeg', 0.9));
+        };
+        img.onerror = function(){ res(null); };
+        img.src = url;
+      });
+    }
+    Promise.all(dataUrls.map(toJpeg)).then(function(urls){
+      urls = urls.filter(Boolean);
+      if(!urls.length){ resolve(null); return; }
+
+      // A4 = 595 x 842 pt
+      var PAGE_W = 595, PAGE_H = 842, MARGIN = 30;
+      var objects = [];   // ogni entry: { id, body:Uint8Array | string }
+      function addObj(body){
+        var id = objects.length + 1;
+        objects.push({ id:id, body:body });
+        return id;
+      }
+      // Placeholder: catalog + pages devono conoscere gli id figli.
+      // Strategia: creo prima gli image XObject + pages objects, poi il /Pages parent, poi il catalog.
+
+      var pageIds = [];
+      var imgIds = [];
+      urls.forEach(function(u){
+        var info = _jpegInfo(u);
+        if(!info) return;
+        var w = info.w, h = info.h, bytes = info.bytes;
+        // Image XObject
+        var imgHdr = '<< /Type /XObject /Subtype /Image /Width '+w+' /Height '+h+
+                     ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+bytes.length+' >>\nstream\n';
+        var imgFooter = '\nendstream';
+        // Concat come Uint8Array
+        var head = new Uint8Array(imgHdr.length);
+        for(var i=0;i<imgHdr.length;i++) head[i] = imgHdr.charCodeAt(i);
+        var foot = new Uint8Array(imgFooter.length);
+        for(var j=0;j<imgFooter.length;j++) foot[j] = imgFooter.charCodeAt(j);
+        var imgBody = new Uint8Array(head.length + bytes.length + foot.length);
+        imgBody.set(head, 0);
+        imgBody.set(bytes, head.length);
+        imgBody.set(foot, head.length + bytes.length);
+        var imgId = addObj(imgBody);
+        imgIds.push({ id: imgId, w:w, h:h });
+
+        // Content stream: disegna immagine scalata mantenendo aspect ratio
+        var maxW = PAGE_W - 2*MARGIN;
+        var maxH = PAGE_H - 2*MARGIN - 30;   // riservo 30pt per titolo
+        var s = Math.min(maxW/w, maxH/h);
+        var dw = w*s, dh = h*s;
+        var dx = (PAGE_W - dw) / 2;
+        var dy = MARGIN + (maxH - dh)/2;
+        var title = String((meta&&meta.subject)||'Foto').replace(/[()\\]/g,'');
+        var content = 'q\n' + dw.toFixed(2)+' 0 0 '+dh.toFixed(2)+' '+dx.toFixed(2)+' '+dy.toFixed(2)+' cm\n/Im'+imgId+' Do\nQ\n'+
+                      'BT /F1 10 Tf '+MARGIN+' '+(PAGE_H-MARGIN)+' Td ('+title+') Tj ET\n';
+        var contentId = addObj(content);
+        pageIds.push({ contentId: contentId, imgId: imgId });
+      });
+
+      if(!pageIds.length){ resolve(null); return; }
+
+      // Font Helvetica
+      var fontId = addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+
+      // Placeholder per Pages parent (id noto in anticipo)
+      var pagesId = objects.length + 1 + pageIds.length;   // dopo tutte le Page
+
+      // Ora aggiungiamo effettivamente le Page objects
+      var pageObjIds = pageIds.map(function(pg){
+        var pageBody = '<< /Type /Page /Parent '+pagesId+' 0 R /MediaBox [0 0 '+PAGE_W+' '+PAGE_H+']'+
+                       ' /Resources << /Font << /F1 '+fontId+' 0 R >> /XObject << /Im'+pg.imgId+' '+pg.imgId+' 0 R >> >>'+
+                       ' /Contents '+pg.contentId+' 0 R >>';
+        return addObj(pageBody);
+      });
+
+      // Pages parent
+      addObj('<< /Type /Pages /Count '+pageObjIds.length+' /Kids ['+pageObjIds.map(function(id){return id+' 0 R';}).join(' ')+'] >>');
+      // Catalog
+      var catalogId = addObj('<< /Type /Catalog /Pages '+pagesId+' 0 R >>');
+
+      // Serializza
+      var chunks = [];
+      var pos = 0;
+      var offsets = [0];   // offsets[i] = byte offset di object i (id = i)
+      function push(str){
+        if(typeof str === 'string'){
+          var arr = new Uint8Array(str.length);
+          for(var i=0;i<str.length;i++) arr[i] = str.charCodeAt(i);
+          chunks.push(arr); pos += arr.length;
+        } else {
+          chunks.push(str); pos += str.length;
+        }
+      }
+      push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+      objects.forEach(function(o){
+        offsets[o.id] = pos;
+        push(o.id+' 0 obj\n');
+        push(o.body);
+        push(o.body instanceof Uint8Array ? '\nendobj\n' : '\nendobj\n');
+      });
+      var xrefStart = pos;
+      push('xref\n0 '+(objects.length+1)+'\n');
+      push('0000000000 65535 f \n');
+      for(var k=1; k<=objects.length; k++){
+        var s = String(offsets[k]);
+        while(s.length < 10) s = '0'+s;
+        push(s+' 00000 n \n');
+      }
+      push('trailer\n<< /Size '+(objects.length+1)+' /Root '+catalogId+' 0 R >>\n');
+      push('startxref\n'+xrefStart+'\n%%EOF\n');
+
+      // Concat
+      var total = chunks.reduce(function(s,c){return s+c.length;}, 0);
+      var out = new Uint8Array(total);
+      var off = 0;
+      chunks.forEach(function(c){ out.set(c, off); off += c.length; });
+      resolve(new Blob([out], { type:'application/pdf' }));
+    });
+  });
+}
+
+// Nome file PDF safe basato sul contesto mail
+function _pdfFilename(){
+  var ctx = window._mpCtx || {};
+  var parts = ['telos'];
+  if(ctx.anoCod) parts.push(ctx.anoCod);
+  else if(ctx.cod) parts.push(ctx.cod);
+  var d = new Date();
+  parts.push(d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'));
+  return parts.join('_').replace(/[^\w-]/g,'_') + '.pdf';
+}
+
+// Tenta share via OS (con file), altrimenti download + apertura mailto.
+// Ritorna Promise<true> se ha eseguito una qualche azione utile.
+function _sharePdfOrMailto(pdfBlob, filename, to, subj, body){
+  return new Promise(function(resolve){
+    var file = null;
+    try{ file = new File([pdfBlob], filename, { type:'application/pdf' }); }catch(e){}
+    // Web Share API (livello 2 con files) — iOS 15+, Android Chrome
+    if(file && navigator.canShare && navigator.canShare({ files:[file] })){
+      navigator.share({ files:[file], title: subj || 'Telos', text: body || '' })
+        .then(function(){ resolve(true); })
+        .catch(function(){
+          // utente annullato: comunque proponi download+mailto
+          _downloadAndMailto(pdfBlob, filename, to, subj, body); resolve(true);
+        });
+      return;
+    }
+    _downloadAndMailto(pdfBlob, filename, to, subj, body); resolve(true);
+  });
+}
+
+// Registra il follow-up mail (5 gg lavorativi) — riusabile
+function _mpTrackFollowup(to, subj, body){
   try{
     var ctx = window._mpCtx||{};
     if(to && typeof mfuAdd==='function'){
       var kind = (ctx.who==='agente') ? 'agente' : (ctx.who==='cliente' ? 'cliente' : (ctx.who==='presa' ? 'presa' : 'mail'));
-      mfuAdd({
-        to:to, subject:subj, body:body,
-        cod:ctx.cod||'', forn:ctx.forn||'', sogg:ctx.sogg||'',
-        kind:kind
-      });
+      mfuAdd({ to:to, subject:subj, body:body,
+        cod:ctx.cod||'', forn:ctx.forn||'', sogg:ctx.sogg||'', kind:kind });
     }
   }catch(e){}
+}
+
+function _downloadAndMailto(pdfBlob, filename, to, subj, body){
+  try{
+    var u = URL.createObjectURL(pdfBlob);
+    var a = document.createElement('a');
+    a.href = u; a.download = filename; a.style.display='none';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ try{ a.remove(); URL.revokeObjectURL(u); }catch(e){} }, 3000);
+  }catch(e){}
+  try{ toast('📄 PDF scaricato: '+filename+' — allega alla mail','b'); }catch(e){}
+  // Apri il client mail
+  var url = 'mailto:'+to+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
+  setTimeout(function(){ try{ window.location.href = url; }catch(e){ openMail(url); } }, 400);
+}
+
+function mpOpenOutlook(){
+  var to=((document.getElementById('mpTo')||{}).value||'').trim();
+  var subj=((document.getElementById('mpSubj')||{}).value||'').trim();
+  var body=((document.getElementById('mpBody')||{}).value||'').slice(0,1500);
+  var photos = window._mpPhotos || [];
+  // v34m: se ci sono foto, converti in PDF e usa share/download → auto-allegato
+  if(photos.length){
+    try{ toast('📄 Sto creando il PDF con '+photos.length+' foto…','b'); }catch(e){}
+    photosToPdfBlob(photos, { subject: subj }).then(function(blob){
+      if(!blob){
+        // fallback: mailto plain
+        var url='mailto:'+to+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
+        try{ window.location.href=url; }catch(e){ openMail(url); }
+      } else {
+        _sharePdfOrMailto(blob, _pdfFilename(), to, subj, body);
+      }
+      mpRegisterSend('Outlook+PDF');
+      _mpTrackFollowup(to, subj, body);
+    });
+    return;
+  }
+  var url='mailto:'+to+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
+  // apertura diretta nel gesto utente (non naviga: il browser passa il mailto all'app)
+  try{ window.location.href=url; }catch(e){ openMail(url); }
+  mpRegisterSend('Outlook');
+  _mpTrackFollowup(to, subj, body);
   toast('📧 Se Outlook è installato come app predefinita si apre. Altrimenti usa "Outlook Web".','b');
 }
 
@@ -8528,6 +8764,20 @@ function mpOpenWeb(){
   var to=((document.getElementById('mpTo')||{}).value||'').trim();
   var subj=((document.getElementById('mpSubj')||{}).value||'').trim();
   var body=((document.getElementById('mpBody')||{}).value||'').slice(0,1800);
+  var photos = window._mpPhotos || [];
+  // v34m: se ci sono foto, scarico il PDF così l'utente lo trascina nella
+  // finestra Outlook Web (Outlook Web non accetta allegati via URL).
+  if(photos.length){
+    try{ toast('📄 Sto creando il PDF con '+photos.length+' foto…','b'); }catch(e){}
+    photosToPdfBlob(photos, { subject: subj }).then(function(blob){
+      if(blob) _downloadAndMailto(blob, _pdfFilename(), to, subj, body);
+    });
+    var url='https://outlook.office.com/mail/deeplink/compose?to='+encodeURIComponent(to)+'&subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
+    setTimeout(function(){ window.open(url,'_blank'); }, 800);
+    mpRegisterSend('Outlook Web+PDF');
+    _mpTrackFollowup(to, subj, body);
+    return;
+  }
   var url='https://outlook.office.com/mail/deeplink/compose?to='+encodeURIComponent(to)+'&subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
   window.open(url,'_blank');   // https → apre la composizione di Outlook nel browser
   mpRegisterSend('Outlook Web');
