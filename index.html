@@ -680,17 +680,24 @@ select option {
 .stato-stallo{background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35)}
 .stato-anomalia{background:rgba(224,85,85,.18);color:#E05555;border:2px solid rgba(224,85,85,.5)}
 
-/* v34r — RPC (RICEVIMENTO PC): nasconde TUTTO in pgIns tranne il panel scansioni */
-html[data-role="RPC"] #pgIns > *:not(#ocrLivePanel){
+/* v34u — RICEVIMENTO: schermata di SCELTA MODALITÀ dopo login.
+   Ogni utente sceglie tra Scanner Bolle (mobile) o Ricevimento PC.
+   Il vecchio form manuale (data listato, codice, prezzo…) NON viene mai mostrato.
+   La modalità è tracciata da html[data-mode="SCA"|"RPC"|""]. */
+
+/* Default (nessuna modalità scelta): SOLO il picker in pgIns */
+html:not([data-mode="SCA"]):not([data-mode="RPC"]):not([data-role="SCA"]):not([data-role="RPC"]) #pgIns > *:not(#modePickerPanel){
   display:none !important;
 }
-/* v34r — SCA (SCANNER BOLLE MOBILE): nasconde tutto in pgIns tranne il pulsante OCR */
+/* Modalità SCA: SOLO il panel scanner */
+html[data-mode="SCA"] #pgIns > *:not(#scaOnlyPanel),
 html[data-role="SCA"] #pgIns > *:not(#scaOnlyPanel){
   display:none !important;
 }
-/* v34t — ADM/RIC ecc.: mostra picker in cima ma tiene visibile il form manuale sotto */
-html:not([data-role="SCA"]):not([data-role="RPC"]) #pgIns > *:not(#modePickerPanel){
-  /* visibile - default */
+/* Modalità RPC: SOLO il panel scans in arrivo */
+html[data-mode="RPC"] #pgIns > *:not(#ocrLivePanel),
+html[data-role="RPC"] #pgIns > *:not(#ocrLivePanel){
+  display:none !important;
 }
 
 #scaOnlyPanel{ text-align:center; padding:24px 14px; }
@@ -730,6 +737,17 @@ html:not([data-role="SCA"]):not([data-role="RPC"]) #pgIns > *:not(#modePickerPan
 #modePickerPanel .mp-btn:active{ transform:scale(.97); }
 #modePickerPanel .mp-btn .ico{ font-size:22px; margin-bottom:4px; }
 #modePickerPanel .mp-btn small{ display:block; color:#888; font-weight:500; font-size:10px; margin-top:3px; letter-spacing:0; }
+/* v34u — pulsante 'Cambia modalità' in cima ai panel SCA e RPC */
+.mp-back{
+  display:inline-flex; align-items:center; gap:5px;
+  background:transparent; border:1px solid rgba(59,159,212,.4); color:#3B9FD4;
+  border-radius:8px; padding:6px 12px; font-size:11px; font-weight:700;
+  cursor:pointer; -webkit-appearance:none; font-family:inherit; margin-bottom:14px;
+}
+.mp-back:hover, .mp-back:active{ background:rgba(59,159,212,.12); }
+#ocrLivePanel .mp-back{ margin:8px 0 4px 8px; }
+html[data-theme="light"] .mp-back{ color:#0e3f60; border-color:#0e3f60; }
+html[data-theme="light"] .mp-back:hover{ background:rgba(14,63,96,.08); }
 
 
 /* v34l — RIEPILOGO (STORICO → DASH): card, barra, chip themed */
@@ -853,16 +871,6 @@ html[data-theme="light"] select{
         <div class="ri">📦</div>
         <div class="rn">MAGAZZINO</div>
         <div class="rd">Smistamento, logistica e spedizioni</div>
-      </div>
-      <div class="role-card" data-role="SCA" onclick="selRole('SCA')">
-        <div class="ri">📱</div>
-        <div class="rn">SCANNER BOLLE</div>
-        <div class="rd">Solo fotografa bolle e invia al PC in tempo reale</div>
-      </div>
-      <div class="role-card" data-role="RPC" onclick="selRole('RPC')">
-        <div class="ri">💻</div>
-        <div class="rn">RICEVIMENTO PC</div>
-        <div class="rd">Vede scans in arrivo dal mobile e inserisce dati</div>
       </div>
       <div class="role-card" data-role="ADM" onclick="selRole('ADM')">
         <div class="ri">🔑</div>
@@ -2039,7 +2047,7 @@ function showSettings() {
     '<div class="sh-section">OPERATORE</div>'+
     '<input id="set_name" value="'+xe(deviceName)+'" placeholder="Nome operatore" style="margin-bottom:10px">'+
     '<div class="sh-section">RUOLO</div>'+
-    '<div class="r2" style="margin-bottom:10px">'+rc('RIC','\ud83d\udce5','RICEZIONE')+rc('UFF','\ud83c\udfe2','UFFICIO')+rc('MAG','\ud83d\udce6','MAGAZZINO')+rc('ADM','\ud83d\udd11','ADMIN')+rc('SCA','\ud83d\udcf1','SCANNER')+rc('RPC','\ud83d\udcbb','RIC. PC')+'</div>'+
+    '<div class="r2" style="margin-bottom:10px">'+rc('RIC','\ud83d\udce5','RICEZIONE')+rc('UFF','\ud83c\udfe2','UFFICIO')+rc('MAG','\ud83d\udce6','MAGAZZINO')+rc('ADM','\ud83d\udd11','ADMIN')+'</div>'+
     '<div class="sh-section">PROMEMORIA FINE GIORNATA</div>'+
     '<div style="font-size:10px;color:var(--txt2);margin-bottom:6px;line-height:1.5">A quest\'ora l\'app propone di esportare e svuotare (vuoto = disattivato).</div>'+
     '<input id="set_rem" type="time" value="'+xe(rem)+'" style="margin-bottom:10px">'+
@@ -13214,9 +13222,9 @@ function ocrLiveListen(){
   }catch(e){}
 }
 
-// v34t — Panel SCA con icona camera SVG pulita (più professionale del 📷 grosso)
+// v34u — Panel SCA con icona camera SVG + pulsante "Cambia modalità"
 function renderScaPanel(){
-  if(typeof ROLE==='undefined' || ROLE!=='SCA') return;
+  if(typeof _isMode !== 'function' || !_isMode('SCA')) return;
   var pg = document.getElementById('pgIns'); if(!pg) return;
   var host = document.getElementById('scaOnlyPanel');
   if(!host){
@@ -13224,12 +13232,12 @@ function renderScaPanel(){
     host.id = 'scaOnlyPanel';
     pg.insertBefore(host, pg.firstChild);
   }
-  // Icona camera SVG (inline, monocromatica bianca, ~22×22)
   var camSvg = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'+
     '<path d="M9 3.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 3.5V5h3.5A2.5 2.5 0 0 1 21 7.5v11A2.5 2.5 0 0 1 18.5 21h-13A2.5 2.5 0 0 1 3 18.5v-11A2.5 2.5 0 0 1 5.5 5H9V3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>'+
     '<circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2"/>'+
     '</svg>';
   host.innerHTML =
+    '<button class="mp-back" onclick="backToModePicker()">← Cambia modalità</button>'+
     '<div class="sca-title">SCANNER BOLLE</div>'+
     '<div class="sca-sub">Fotografa la bolla o il DDT.<br>L\'AI legge i codici e li invia in tempo reale al ricevimento PC.</div>'+
     '<button class="sca-big" onclick="document.getElementById(\'ocrInput\').click()" title="Foto bolla / DDT">'+
@@ -13238,12 +13246,10 @@ function renderScaPanel(){
     '<div class="sca-hint">📶 Serve connessione — sync via Firebase</div>';
 }
 
-// v34t — Mode picker in cima al pgIns (per ADM/RIC/UFF/MAG che vogliono passare rapidamente
-// alla modalità SCA o RPC senza andare in Impostazioni)
+// v34u — Mode picker: SEMPRE visibile in pgIns finché non si sceglie una modalità
 function renderModePickerPanel(){
-  if(typeof ROLE==='undefined') return;
-  // Solo per ruoli che NON sono già SCA/RPC
-  if(ROLE==='SCA' || ROLE==='RPC') return;
+  // Se una modalità è già attiva (data-mode o ROLE=SCA/RPC vecchio), niente picker
+  if(_isMode('SCA') || _isMode('RPC')) return;
   var pg = document.getElementById('pgIns'); if(!pg) return;
   var host = document.getElementById('modePickerPanel');
   if(!host){
@@ -13252,7 +13258,7 @@ function renderModePickerPanel(){
     pg.insertBefore(host, pg.firstChild);
   }
   host.innerHTML =
-    '<div class="mp-title">MODALITÀ RICEVIMENTO</div>'+
+    '<div class="mp-title">SCEGLI MODALITÀ RICEVIMENTO</div>'+
     '<div class="mp-btns">'+
       '<button class="mp-btn" onclick="switchToMode(\'SCA\')">'+
         '<span class="ico">📱</span>Scanner bolle'+
@@ -13264,28 +13270,51 @@ function renderModePickerPanel(){
       '</button>'+
     '</div>';
 }
-// Passa a un ruolo (SCA o RPC) al volo, senza logout
-function switchToMode(role){
-  if(role !== 'SCA' && role !== 'RPC') return;
-  window.ROLE = role;
-  try{ sessionStorage.setItem('devrole', role); }catch(e){}
-  try{
-    var rn={RIC:'📥 RIC',UFF:'🏢 UFF',MAG:'📦 MAG',ADM:'🔑 ADM',SCA:'📱 SCA',RPC:'💻 RPC'};
-    var rp=document.getElementById('rolePill'); if(rp) rp.textContent = rn[role]||role;
-  }catch(e){}
-  if(typeof applyRoleUI==='function') applyRoleUI();
-  if(typeof gTab==='function') gTab('pgIns');
-  // Rimuovo il picker per evitare che resti visibile sopra il panel SCA/RPC
-  var mp = document.getElementById('modePickerPanel'); if(mp) mp.remove();
-  if(typeof initOcrLiveAuto==='function') initOcrLiveAuto();
-  try{ if(typeof toast==='function') toast('Modalità: '+(role==='SCA'?'SCANNER BOLLE':'RICEVIMENTO PC'),'b'); }catch(e){}
+
+// v34u — Rileva se una modalità è attiva (via data-mode o ROLE vecchio)
+function _isMode(m){
+  var d = document.documentElement.getAttribute('data-mode');
+  if(d === m) return true;
+  return (typeof ROLE!=='undefined' && ROLE === m);
 }
 
-// Pannello card scans (in cima a pgIns quando ROLE='RPC')
+// v34u — Attiva modalità (SCA o RPC) senza cambiare il ROLE dell'utente
+function switchToMode(mode){
+  if(mode !== 'SCA' && mode !== 'RPC') return;
+  try{ document.documentElement.setAttribute('data-mode', mode); }catch(e){}
+  try{ sessionStorage.setItem('devmode', mode); }catch(e){}
+  // Rimuovo il picker (nascosto dal CSS ma per pulizia elimino il nodo)
+  var mp = document.getElementById('modePickerPanel'); if(mp) mp.remove();
+  // Rimuovo anche l'altro panel se presente (residuo di cambio modalità)
+  if(mode === 'SCA'){ var op = document.getElementById('ocrLivePanel'); if(op) op.remove(); renderScaPanel(); }
+  else { var sp = document.getElementById('scaOnlyPanel'); if(sp) sp.remove(); if(typeof ocrLiveListen==='function') ocrLiveListen(); renderOcrLivePanel(); }
+  try{ if(typeof toast==='function') toast('Modalità: '+(mode==='SCA'?'📱 SCANNER BOLLE':'💻 RICEVIMENTO PC'),'b'); }catch(e){}
+}
+
+// v34u — Torna alla schermata di scelta modalità
+function backToModePicker(){
+  try{ document.documentElement.removeAttribute('data-mode'); }catch(e){}
+  try{ sessionStorage.removeItem('devmode'); }catch(e){}
+  // Rimuovo i panel della modalità corrente
+  var sp = document.getElementById('scaOnlyPanel'); if(sp) sp.remove();
+  var op = document.getElementById('ocrLivePanel'); if(op) op.remove();
+  renderModePickerPanel();
+}
+
+// v34u — Al boot, se c'è una modalità salvata in sessionStorage, ripristinala
+(function _restoreModeOnBoot(){
+  try{
+    var saved = sessionStorage.getItem('devmode');
+    if(saved==='SCA' || saved==='RPC'){
+      document.documentElement.setAttribute('data-mode', saved);
+    }
+  }catch(e){}
+})();
+
+// v34u: Pannello card scans (visibile quando modalità RPC attiva — via data-mode o ROLE)
 function renderOcrLivePanel(){
-  if(typeof ROLE==='undefined') return;
-  if(ROLE==='SCA'){ renderScaPanel(); return; }
-  if(ROLE!=='RPC') return;
+  if(_isMode('SCA')){ renderScaPanel(); return; }
+  if(!_isMode('RPC')) return;
   var pg = document.getElementById('pgIns'); if(!pg) return;
   var host = document.getElementById('ocrLivePanel');
   if(!host){
@@ -13297,11 +13326,15 @@ function renderOcrLivePanel(){
   }
   var keys = Object.keys(OCR_LIVE_LOCAL).sort(function(a,b){ return (OCR_LIVE_LOCAL[b].ts||0) - (OCR_LIVE_LOCAL[a].ts||0); });
   if(!keys.length){
-    host.innerHTML = '<div class="ch" style="background:rgba(59,159,212,.1)"><span>📨 SCANSIONI IN ARRIVO DAL MOBILE</span><span style="font-size:10px;color:#888;font-weight:400">0 in attesa</span></div>'+
+    host.innerHTML =
+      '<div style="padding:8px 8px 0"><button class="mp-back" onclick="backToModePicker()">← Cambia modalità</button></div>'+
+      '<div class="ch" style="background:rgba(59,159,212,.1)"><span>📨 SCANSIONI IN ARRIVO DAL MOBILE</span><span style="font-size:10px;color:#888;font-weight:400">0 in attesa</span></div>'+
       '<div class="cb" style="text-align:center;padding:16px;color:#888;font-size:12px">Nessuna scansione. Quando uno SCANNER fotografa una bolla, comparirà qui.</div>';
     return;
   }
-  var html = '<div class="ch" style="background:rgba(59,159,212,.1)"><span>📨 SCANSIONI IN ARRIVO DAL MOBILE</span><span style="font-size:11px;color:#3B9FD4;font-weight:800">'+keys.length+' in attesa</span></div><div class="cb">';
+  var html =
+    '<div style="padding:8px 8px 0"><button class="mp-back" onclick="backToModePicker()">← Cambia modalità</button></div>'+
+    '<div class="ch" style="background:rgba(59,159,212,.1)"><span>📨 SCANSIONI IN ARRIVO DAL MOBILE</span><span style="font-size:11px;color:#3B9FD4;font-weight:800">'+keys.length+' in attesa</span></div><div class="cb">';
   keys.forEach(function(k){
     var r = OCR_LIVE_LOCAL[k] || {};
     var d = new Date(r.ts||Date.now());
@@ -13353,13 +13386,11 @@ function ocrLiveScarta(id){
   try{ if(OCR_LIVE_REF) OCR_LIVE_REF.child(id).remove(); }catch(e){}
 }
 
-// Bootstrap listener per RPC dopo il login (SCA solo render panel, no listen)
+// v34u: Bootstrap panel in base a data-mode (o ROLE vecchio SCA/RPC per retrocompat)
 function initOcrLiveAuto(){
   if(typeof ROLE==='undefined') return;
-  if(ROLE==='SCA'){ try{ renderScaPanel(); }catch(e){} return; }
-  if(ROLE!=='RPC') return;
-  ocrLiveListen();
-  try{ renderOcrLivePanel(); }catch(e){}
+  if(_isMode && _isMode('SCA')){ try{ renderScaPanel(); }catch(e){} return; }
+  if(_isMode && _isMode('RPC')){ try{ ocrLiveListen(); renderOcrLivePanel(); }catch(e){} return; }
 }
 // Aggancio al boot: aspetta FB pronto poi avvia listener se RPC
 setTimeout(initOcrLiveAuto, 2000);
