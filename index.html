@@ -10521,7 +10521,8 @@ function showOcrConfirm(res, photoUrl, source){
   var box=document.createElement('div'); box.id='ocrConfBox';
   box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1400;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto;-webkit-overflow-scrolling:touch';
   var inner=document.createElement('div');
-  inner.style.cssText='background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:16px;width:100%;max-width:440px;margin:auto';
+  // v34q: modal allargato per PC (fino a 1100px, era 440px)
+  inner.style.cssText='background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:16px;width:100%;max-width:min(96vw,1100px);margin:auto';
 
   var nArt=res.articoli.length;
   function fInp(id,val,ph){ return '<input id="'+id+'" value="'+xe(val||'')+'" placeholder="'+(ph||'')+'" oninput="this.value=this.value.toUpperCase()" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">'; }
@@ -10561,32 +10562,17 @@ function showOcrConfirm(res, photoUrl, source){
 
   html+='<div style="height:1px;background:#222;margin:6px 0 10px"></div>';
   html+=lab('SOGGETTO / COD. CLIENTE')+'<input id="ocrSogg" value="'+xe(res.sogg||'')+'" placeholder="codice o nome cliente" oninput="this.value=this.value.toUpperCase();ocrSoggLookup(this)" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:4px;display:block"><div id="ocrSoggTip" style="margin-bottom:8px;display:flex;align-items:center;flex-wrap:wrap;gap:4px"></div>';
-  // v34p: RIMOSSI Fornitore + Causale "comuni" — ora sono per-riga (accanto al codice).
-  // Motivo: se ci sono più codici, spesso hanno fornitori e causali diversi.
-  html+=lab('VETTORE RIC.')+fInp('ocrVet',res.vetRic,'es. CIPI');
-  // Tipo flusso + Tipo doc + Fase + Stato (obbligatori per addRow)
-  var _fluL=['STANDARD','FILIALE IN','FILIALE OUT','ANOMALIA','ECCEZIONE'];
-  var _docL=['FLOTTA','SCONTRINO','FATTURA','VENDITA','ACQUISTO','VISIONE','RESO FILIALE','NOLEGGIO','BL/FIM','BL/TRA','NESSUNO'];
-  var _fasL=['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'];
-  function _cV(id){var e=document.getElementById(id); return e?e.value||'':'';}
-  function _oOpts(list,cur){var h=''; for(var oi=0;oi<list.length;oi++){var v=list[oi];h+='<option value="'+v.replace(/"/g,'&quot;')+'"'+(v===cur?' selected':'')+'>'+v+'</option>';} return h;}
-  var _selCss='width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block';
-  var _curFas=_cV('cFas')||'RICEVIMENTO';
-  // Se AI ha rilevato ANOMALIA: forza il flusso ANOMALIA e stato "ANOMALIA RICEVIMENTO"
-  var _curFlu = _cV('cFlu');
-  var _curSta = _cV('cSta');
-  if(res.anomaliaRilevata || res.flussoSug === 'ANOMALIA'){
-    _curFlu = 'ANOMALIA';
-    _curSta = 'ANOMALIA RICEVIMENTO';
-  }
-  var _staL=(typeof STATI!=='undefined' && STATI[_curFas]) ? STATI[_curFas] : [];
-  html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('TIPO FLUSSO')+'<select id="ocrFlu" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_fluL,_curFlu)+'</select></div><div style="flex:1">'+lab('TIPO DOC')+'<select id="ocrDoc" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_docL,_cV('cDoc'))+'</select></div></div>';
-  html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('FASE')+'<select id="ocrFas" onchange="ocrRefreshStato()" style="'+_selCss+'">'+_oOpts(_fasL,_curFas)+'</select></div><div style="flex:1">'+lab('STATO')+'<select id="ocrSta" style="'+_selCss+'"><option value="">\u2014</option>'+_oOpts(_staL,_curSta||_staL[0]||'')+'</select></div></div>';
-  html+='<div style="display:flex;gap:8px"><div style="flex:1">'+lab('RMA / N\u00b0 BOLLA')+fInp('ocrRma',res.rma,'BL/TRA/...')+'</div><div style="flex:1">'+lab('DATA LISTATO')+'<input id="ocrData" type="date" value="'+xe(res.data||'')+'" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block"></div></div>';
-  // v34o: DATA ACQUISTO FORNITORE (richiesta utente \u2014 nel form OCR post-scan)
-  var _curDatAcq=(document.getElementById('cDatAcq')||{}).value||'';
-  html+=lab('DATA ACQUISTO DAL FORNITORE')+'<input id="ocrDatAcq" type="date" value="'+xe(_curDatAcq)+'" placeholder="gg/mm/aaaa" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">';
-  html+=lab('NOTE')+'<input id="ocrNote" value="'+xe(res.note||(a0.desc||''))+'" placeholder="annotazioni" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:10px;display:block">';
+  // v34q: RIMOSSI Fornitore + Causale + Fase + Stato + TipoDoc + TipoFlusso + DataAcqForn
+  // dai "comuni" — ora SONO TUTTI PER RIGA (codici diversi = valori diversi).
+  // Rimangono comuni SOLO: VETTORE, DATA LISTATO, SOGGETTO, RMA, NOTE.
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+        '<div>'+lab('VETTORE RIC.')+fInp('ocrVet',res.vetRic,'es. CIPI')+'</div>'+
+        '<div>'+lab('DATA LISTATO')+'<input id="ocrData" type="date" value="'+xe(res.data||'')+'" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block"></div>'+
+        '</div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+        '<div>'+lab('RMA / N° BOLLA')+fInp('ocrRma',res.rma,'BL/TRA/...')+'</div>'+
+        '<div>'+lab('NOTE')+'<input id="ocrNote" value="'+xe(res.note||(a0.desc||''))+'" placeholder="annotazioni" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block"></div>'+
+        '</div>';
 
   if(photoUrl) html+='<img src="'+photoUrl+'" style="width:100%;max-height:150px;object-fit:contain;border-radius:8px;background:#0a0a0a;margin-bottom:12px">';
 
@@ -10669,29 +10655,66 @@ function ocrRowHtml(i, a){
   var prc=(a.prc==='' || a.prc==null) ? '' : (parseFloat(a.prc)||0);
   var cau=(a.causale||'').toString();
   var forn=(a.fornitore||'').toString().toUpperCase();
+  var fas=(a.fase||'RICEVIMENTO').toString();
+  var sta=(a.stato||'DA GESTIRE \u23f3').toString();
+  var doc=(a.tipoDoc||'').toString();
+  var flu=(a.flusso||'STANDARD').toString();
+  var datAcq=(a.datAcqForn||'').toString();
   function xe2(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  // v34p: causale + fornitore SEMPRE visibili per-riga (niente accordion). Rimosso il \u25be.
+  // v34q: TUTTI i campi decisionali PER RIGA (causale, fornitore, flusso, doc, fase, stato, dataAcqForn)
   var _cauL=(typeof CAULIST!=='undefined')?CAULIST:[];
-  var _cauOpts='<option value="">\u2014 scegli causale \u2014</option>';
-  if(cau && _cauL.indexOf(cau)<0) _cauOpts += '<option value="'+xe2(cau)+'" selected>'+xe2(cau)+'</option>';
-  for(var oi=0;oi<_cauL.length;oi++){ var v=_cauL[oi]; _cauOpts += '<option value="'+xe2(v)+'"'+(v===cau?' selected':'')+'>'+xe2(v)+'</option>'; }
-  return '<div class="ocrRow" data-i="'+i+'" style="border-bottom:1px dashed #1e1e1e;padding:5px 0 7px;margin-bottom:5px">'+
-    '<div style="display:flex;gap:5px;align-items:center;margin-bottom:5px">'+
-      '<div style="width:22px;color:#666;font-size:11px;font-weight:700;text-align:right">'+(i+1)+'.</div>'+
+  var _fluL=['STANDARD','FILIALE IN','FILIALE OUT','ANOMALIA','ECCEZIONE'];
+  var _docL=['FLOTTA','SCONTRINO','FATTURA','VENDITA','ACQUISTO','VISIONE','RESO FILIALE','NOLEGGIO','BL/FIM','BL/TRA','NESSUNO'];
+  var _fasL=['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'];
+  var _staL=(typeof STATI!=='undefined' && STATI[fas]) ? STATI[fas] : [];
+  function _mkOpts(list, cur, ph){
+    var h=ph?('<option value="">'+ph+'</option>'):'';
+    if(cur && list.indexOf(cur)<0) h+='<option value="'+xe2(cur)+'" selected>'+xe2(cur)+'</option>';
+    for(var oi=0;oi<list.length;oi++){ var v=list[oi]; h+='<option value="'+xe2(v)+'"'+(v===cur?' selected':'')+'>'+xe2(v)+'</option>'; }
+    return h;
+  }
+  var _selCss='background:#111;color:#fff;border:1.5px solid rgba(59,159,212,.35);padding:7px 8px;font-size:11px;border-radius:6px;outline:none;font-family:inherit;-webkit-appearance:none;min-width:0';
+  var _inpCss=_selCss;
+  return '<div class="ocrRow" data-i="'+i+'" style="border:1px solid #1e2530;background:rgba(59,159,212,.03);border-radius:9px;padding:8px;margin-bottom:6px">'+
+    '<div style="display:flex;gap:5px;align-items:center;margin-bottom:6px">'+
+      '<div style="width:22px;color:#3B9FD4;font-size:12px;font-weight:800;text-align:right">'+(i+1)+'.</div>'+
       '<input class="ocrRowPre" value="'+xe2(pre)+'" placeholder="PRE" oninput="this.value=this.value.toUpperCase()" style="width:56px;background:#111;color:#3B9FD4;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;font-weight:700;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:center">'+
       '<input class="ocrRowCod" value="'+xe2(cod)+'" placeholder="codice" oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 8px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;min-width:0">'+
-      '<input class="ocrRowQty" type="number" min="1" value="'+qty+'" style="width:44px;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 4px;font-size:12px;border-radius:7px;outline:none;font-family:inherit;-webkit-appearance:none;text-align:center">'+
-      '<input class="ocrRowPrc" type="number" step="0.01" value="'+(prc===''?'':prc)+'" placeholder="\u20ac" style="width:64px;background:#111;color:#5BB8E0;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:right">'+
-      '<button type="button" onclick="ocrDelRow(this)" title="Elimina" style="width:26px;height:32px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;padding:0">\u00d7</button>'+
+      '<input class="ocrRowQty" type="number" min="1" value="'+qty+'" title="Quantità" style="width:44px;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 4px;font-size:12px;border-radius:7px;outline:none;font-family:inherit;-webkit-appearance:none;text-align:center">'+
+      '<input class="ocrRowPrc" type="number" step="0.01" value="'+(prc===''?'':prc)+'" placeholder="€" title="Prezzo" style="width:64px;background:#111;color:#5BB8E0;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:right">'+
+      '<button type="button" onclick="ocrDelRow(this)" title="Elimina" style="width:26px;height:32px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;padding:0">×</button>'+
     '</div>'+
-    // Causale + Fornitore per-riga SEMPRE VISIBILI (niente pi\u00f9 accordion)
-    '<div style="display:flex;gap:5px;margin-left:27px">'+
-      '<select class="ocrRowCau" style="flex:2;min-width:0;background:#111;color:#fff;border:1.5px solid rgba(59,159,212,.35);padding:7px 8px;font-size:11px;border-radius:6px;outline:none;font-family:inherit;-webkit-appearance:none">'+_cauOpts+'</select>'+
-      '<input class="ocrRowForn" value="'+xe2(forn)+'" placeholder="Fornitore" oninput="this.value=this.value.toUpperCase()" style="flex:1;min-width:0;background:#111;color:#fff;border:1.5px solid rgba(59,159,212,.35);padding:7px 8px;font-size:11px;border-radius:6px;outline:none;font-family:inherit;-webkit-appearance:none">'+
+    // Riga 2: causale + fornitore (span più largo)
+    '<div style="display:grid;grid-template-columns:2fr 1fr;gap:5px;margin-bottom:5px">'+
+      '<select class="ocrRowCau" style="'+_selCss+'" title="Causale">'+_mkOpts(_cauL, cau, '— causale —')+'</select>'+
+      '<input class="ocrRowForn" value="'+xe2(forn)+'" placeholder="Fornitore" oninput="this.value=this.value.toUpperCase()" style="'+_inpCss+'" title="Fornitore">'+
+    '</div>'+
+    // Riga 3: flusso, tipo doc, fase, stato, data acq — griglia flessibile che va a wrap su mobile
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:5px">'+
+      '<select class="ocrRowFlu" style="'+_selCss+'" title="Tipo flusso">'+_mkOpts(_fluL, flu, '')+'</select>'+
+      '<select class="ocrRowDoc" style="'+_selCss+'" title="Tipo documento">'+_mkOpts(_docL, doc, '— tipo doc —')+'</select>'+
+      '<select class="ocrRowFas" onchange="ocrRowRefreshStato(this)" style="'+_selCss+'" title="Fase">'+_mkOpts(_fasL, fas, '')+'</select>'+
+      '<select class="ocrRowSta" style="'+_selCss+'" title="Stato">'+_mkOpts(_staL, sta, '— stato —')+'</select>'+
+      '<input class="ocrRowDatAcq" type="date" value="'+xe2(datAcq)+'" title="Data acquisto dal fornitore" style="'+_inpCss+'">'+
     '</div>'+
     '</div>';
 }
-// (v34o toggle rimosso in v34p \u2014 causale e fornitore sono ora sempre visibili)
+// Quando cambia FASE per una riga, aggiorna la lista STATI di quella riga
+function ocrRowRefreshStato(sel){
+  var row = sel.closest('.ocrRow'); if(!row) return;
+  var staSel = row.querySelector('.ocrRowSta'); if(!staSel) return;
+  var fase = sel.value;
+  var lst = (typeof STATI!=='undefined' && STATI[fase]) ? STATI[fase] : [];
+  var cur = staSel.value;
+  staSel.innerHTML = '<option value="">— stato —</option>';
+  for(var i=0;i<lst.length;i++){
+    var o=document.createElement('option'); o.value=lst[i]; o.textContent=lst[i];
+    if(lst[i]===cur) o.selected=true;
+    staSel.appendChild(o);
+  }
+  if(!staSel.value && lst.length) staSel.value = lst[0];
+}
+// (compat con v34o — no-op)
 function ocrToggleExtra(btn){ /* no-op back-compat */ }
 function ocrAddRow(){
   var list=document.getElementById('ocrArtList'); if(!list) return;
@@ -10724,13 +10747,20 @@ function ocrCollectRows(){
     var cod=(rows[i].querySelector('.ocrRowCod')||{}).value||'';
     var qty=(rows[i].querySelector('.ocrRowQty')||{}).value||'1';
     var prc=(rows[i].querySelector('.ocrRowPrc')||{}).value||'';
-    // v34o: campi extra per-riga (causale + fornitore custom)
+    // v34q: TUTTI i campi per-riga
     var cau=(rows[i].querySelector('.ocrRowCau')||{}).value||'';
     var forn=(rows[i].querySelector('.ocrRowForn')||{}).value||'';
+    var flu=(rows[i].querySelector('.ocrRowFlu')||{}).value||'';
+    var doc=(rows[i].querySelector('.ocrRowDoc')||{}).value||'';
+    var fas=(rows[i].querySelector('.ocrRowFas')||{}).value||'';
+    var sta=(rows[i].querySelector('.ocrRowSta')||{}).value||'';
+    var datAcq=(rows[i].querySelector('.ocrRowDatAcq')||{}).value||'';
     pre=pre.toUpperCase().trim(); cod=cod.toUpperCase().trim();
     forn=forn.toUpperCase().trim();
     if(!pre && !cod) continue;
-    out.push({pre:pre, cod:cod, qty:parseInt(qty)||1, prc:prc, desc:'', causale:cau, fornitore:forn});
+    out.push({pre:pre, cod:cod, qty:parseInt(qty)||1, prc:prc, desc:'',
+              causale:cau, fornitore:forn, flusso:flu, tipoDoc:doc,
+              fase:fas, stato:sta, datAcqForn:datAcq});
   }
   return out;
 }
@@ -10751,11 +10781,7 @@ function applyOcrConfirm(allArticles){
 
   // Campi comuni: trasferisco al form principale TUTTI i campi obbligatori
   var data=g('ocrData'); if(data&&/^\d{4}-\d{2}-\d{2}$/.test(data)) sv('hArr',data);
-  // v34p: ocrForn rimosso (ora per-riga) — non serve sv su cFor qui
-  var _flu=g('ocrFlu'); if(_flu) sv('cFlu', _flu);
-  var _doc=g('ocrDoc'); if(_doc) sv('cDoc', _doc);
-  var _fas=g('ocrFas'); if(_fas){ sv('cFas', _fas); try{ if(typeof fillStato==='function') fillStato('cFas','cSta'); }catch(e){} }
-  var _sta=g('ocrSta'); if(_sta) sv('cSta', _sta);
+  // v34q: ocrForn/Cau/Flu/Doc/Fas/Sta rimossi dai comuni — vengono impostati PER RIGA nel loop sotto
   // Soggetto: aggancia codice cliente <-> nome via CLI_DATA (così l'anomalia trova il contatto)
   var soggRaw=g('ocrSogg');
   if(soggRaw){
@@ -10780,14 +10806,8 @@ function applyOcrConfirm(allArticles){
   var articoli = (typeof ocrCollectRows==='function') ? ocrCollectRows() : [];
   if(allArticles){
     if(!articoli.length){ toast('\u26a0 Nessun articolo con codice: correggi la lista prima di inserire','y'); return; }
-    // Guardia: campi obbligatori DEVONO essere compilati nel modulo OCR.
-    // Se manca qualcosa addRow fallirebbe silenziosamente \u2192 nessuna riga in lista.
-    // v34p: rimossi ocrForn e ocrCau \u2014 ora sono per-riga (accanto al codice)
+    // v34q: validazione semplificata — SOLO comuni: VETTORE + DATA LISTATO
     var _need=[
-      {id:'ocrFlu',  lbl:'TIPO FLUSSO'},
-      {id:'ocrDoc',  lbl:'TIPO DOC'},
-      {id:'ocrFas',  lbl:'FASE'},
-      {id:'ocrSta',  lbl:'STATO'},
       {id:'ocrData', lbl:'DATA LISTATO'},
       {id:'ocrVet',  lbl:'VETTORE RIC.'}
     ];
@@ -10800,42 +10820,47 @@ function applyOcrConfirm(allArticles){
       } else if(_el){ _el.style.border=''; }
     }
     if(_miss.length){
-      toast('\u26a0 Prima compila nel modulo: '+_miss.join(', '),'r');
+      toast('⚠ Prima compila nel modulo: '+_miss.join(', '),'r');
       if(_firstEl) try{ _firstEl.scrollIntoView({behavior:'smooth',block:'center'}); _firstEl.focus(); }catch(e){}
       return;
     }
-    // v34p: validazione per-riga \u2014 ogni articolo deve avere Causale + Fornitore compilati
+    // v34q: validazione PER-RIGA — tutti i campi decisionali obbligatori per riga
     var _rowMiss=[];
     var _listEl=document.getElementById('ocrArtList');
     var _rowEls=_listEl?_listEl.querySelectorAll('.ocrRow'):[];
+    var _reqFields=[
+      {k:'causale',   cls:'.ocrRowCau',  lbl:'causale'},
+      {k:'fornitore', cls:'.ocrRowForn', lbl:'fornitore'},
+      {k:'flusso',    cls:'.ocrRowFlu',  lbl:'flusso'},
+      {k:'tipoDoc',   cls:'.ocrRowDoc',  lbl:'tipo doc'},
+      {k:'fase',      cls:'.ocrRowFas',  lbl:'fase'},
+      {k:'stato',     cls:'.ocrRowSta',  lbl:'stato'}
+    ];
     for(var _ri=0;_ri<articoli.length;_ri++){
       var _art=articoli[_ri];
-      var _hasCod=!!(_art.cod||_art.pre);
-      if(!_hasCod) continue;
+      if(!(_art.cod||_art.pre)) continue;
       var _rowEl=_rowEls[_ri];
-      var _cauEl=_rowEl?_rowEl.querySelector('.ocrRowCau'):null;
-      var _fornEl=_rowEl?_rowEl.querySelector('.ocrRowForn'):null;
-      if(!_art.causale){ _rowMiss.push('riga '+(_ri+1)+' causale'); if(_cauEl){ _cauEl.style.border='2px solid #E05555'; if(!_firstEl) _firstEl=_cauEl; } }
-      else if(_cauEl){ _cauEl.style.border='1.5px solid rgba(59,159,212,.35)'; }
-      if(!_art.fornitore){ _rowMiss.push('riga '+(_ri+1)+' fornitore'); if(_fornEl){ _fornEl.style.border='2px solid #E05555'; if(!_firstEl) _firstEl=_fornEl; } }
-      else if(_fornEl){ _fornEl.style.border='1.5px solid rgba(59,159,212,.35)'; }
+      for(var _fi=0;_fi<_reqFields.length;_fi++){
+        var _f=_reqFields[_fi];
+        var _elR=_rowEl?_rowEl.querySelector(_f.cls):null;
+        if(!(_art[_f.k]||'').toString().trim()){
+          _rowMiss.push('r.'+(_ri+1)+' '+_f.lbl);
+          if(_elR){ _elR.style.border='2px solid #E05555'; if(!_firstEl) _firstEl=_elR; }
+        } else if(_elR){ _elR.style.border='1.5px solid rgba(59,159,212,.35)'; }
+      }
     }
     if(_rowMiss.length){
-      toast('\u26a0 Compila causale + fornitore per ogni riga ('+_rowMiss.length+' mancanti)','r');
+      toast('⚠ Manca su riga: '+_rowMiss.slice(0,6).join(' | ')+(_rowMiss.length>6?' (+'+(_rowMiss.length-6)+')':''),'r');
       if(_firstEl) try{ _firstEl.scrollIntoView({behavior:'smooth',block:'center'}); _firstEl.focus(); }catch(e){}
       return;
     }
-    // v34o: propago DATA ACQUISTO FORNITORE al form principale (se compilato nel modulo OCR)
-    var _datAcq=g('ocrDatAcq'); if(_datAcq){ var _daEl=document.getElementById('cDatAcq'); if(_daEl){ _daEl.value=_datAcq; if(typeof ce==='function')ce(_daEl); } }
 
-    // v34o: se ruolo SCA, non inserire in lista locale \u2014 spedisci direttamente al PC via Firebase
+    // v34q: se ruolo SCA, spedisci a Firebase e chiudi (l'utente RPC finira' di compilare)
     if(typeof ROLE!=='undefined' && ROLE==='SCA'){
       if(typeof ocrLiveSend==='function'){
         ocrLiveSend({
           articoli: articoli, sogg: g('ocrSogg'),
-          vetRic: g('ocrVet'), flusso: g('ocrFlu'),
-          tipoDoc: g('ocrDoc'), fase: g('ocrFas'), stato: g('ocrSta'),
-          data: g('ocrData'), datAcqForn: g('ocrDatAcq'),
+          vetRic: g('ocrVet'), data: g('ocrData'),
           rma: g('ocrRma'), note: g('ocrNote'),
           anomaliaRilevata: !!(window._ocrRes && window._ocrRes.anomaliaRilevata),
           motivoAnomalia: (window._ocrRes && window._ocrRes.motivoAnomalia) || ''
@@ -10848,25 +10873,40 @@ function applyOcrConfirm(allArticles){
     document.getElementById('ocrConfBox').remove();
     gTab('pgIns');
     var cRmaVal=(document.getElementById('cRma')||{}).value||'';
-    var added=0;
+    var added=0, failed=[];
     if(typeof loadCodeMem==='function')loadCodeMem();
     for(var i=0;i<articoli.length;i++){
       var a=articoli[i];
       try{ if(a.cod){ CODE_MEM[a.cod]={pre:a.pre, qty:a.qty}; } }catch(e){}
-      // v34p: causale + fornitore PER-RIGA obbligatori (non pi\u00f9 fallback comune)
-      var fEl=document.getElementById('cFor'); if(fEl){ fEl.value=a.fornitore||''; if(typeof ce==='function')ce(fEl); }
-      var cauEl=document.getElementById('cCau'); if(cauEl){ cauEl.value=a.causale||''; if(typeof onCauChange==='function')onCauChange(cauEl); }
-      var rEl=document.getElementById('cRma'); if(rEl) rEl.value=cRmaVal;
-      var pEl0=document.getElementById('cPre'); if(pEl0) pEl0.value=a.pre;
+      var _set=function(id,val){var e=document.getElementById(id); if(e){e.value=val||''; if(typeof ce==='function')ce(e);}};
+      // v34q: TUTTI i campi per-riga trasferiti al form principale prima di addRow
+      _set('cFor', a.fornitore);
+      _set('cFlu', a.flusso);
+      _set('cDoc', a.tipoDoc);
+      _set('cFas', a.fase);
+      try{ if(typeof fillStato==='function') fillStato('cFas','cSta'); }catch(e){}
+      _set('cSta', a.stato);
+      var cauEl=document.getElementById('cCau');
+      if(cauEl){ cauEl.value=a.causale||''; try{ if(typeof onCauChange==='function') onCauChange(cauEl); }catch(e){} }
+      _set('cDatAcqForn', a.datAcqForn);   // id corretto (era cDatAcq errato in v34o/p)
+      _set('cRma', cRmaVal);
+      _set('cPre', a.pre);
       var cEl=document.getElementById('cCod'); if(cEl){cEl.value=a.cod; if(typeof ce==='function')ce(cEl);}
-      var qEl=document.getElementById('cQty'); if(qEl) qEl.value=a.qty;
+      _set('cQty', a.qty);
       var pEl=document.getElementById('cPrc'); if(pEl) pEl.value=parseFloat(a.prc)||0;
       var before=Object.keys(rows).length;
       if(typeof addRow==='function'){ try{ addRow(); }catch(e){} }
       if(Object.keys(rows).length>before) added++;
+      else failed.push(i+1);
     }
     try{ if(typeof saveCodeMem==='function')saveCodeMem(); }catch(e){}
-    toast(added?('\u2705 '+added+'/'+articoli.length+' articoli aggiunti dalla bolla'):'\u26a0 Mancano campi obbligatori (fornitore, fase, stato, tipo doc)','b');
+    if(added===articoli.length){
+      toast('✅ '+added+'/'+articoli.length+' articoli aggiunti dalla bolla','g');
+    } else if(added>0){
+      toast('⚠ Aggiunti '+added+'/'+articoli.length+' (fallite: '+failed.join(', ')+'). Controlla data acq. fornitore, coerenza flusso/documento e permessi.','y');
+    } else {
+      toast('⚠ Nessuna riga aggiunta. Verifica: DATA ACQUISTO FORNITORE per riga, permessi ruolo, coerenza flusso/doc.','r');
+    }
     return;
   }
 
