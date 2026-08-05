@@ -10793,24 +10793,24 @@ function ocrRowHtml(i, a){
   return '<div class="ocrRow" data-i="'+i+'" style="border:1px solid #1e2530;background:rgba(59,159,212,.03);border-radius:9px;padding:8px;margin-bottom:6px">'+
     '<div style="display:flex;gap:5px;align-items:center;margin-bottom:6px">'+
       '<div style="width:22px;color:#3B9FD4;font-size:12px;font-weight:800;text-align:right">'+(i+1)+'.</div>'+
-      '<input class="ocrRowPre" value="'+xe2(pre)+'" placeholder="PRE" oninput="this.value=this.value.toUpperCase()" style="width:56px;background:#111;color:#3B9FD4;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;font-weight:700;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:center">'+
-      '<input class="ocrRowCod" value="'+xe2(cod)+'" placeholder="codice" oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 8px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;min-width:0">'+
-      '<input class="ocrRowQty" type="number" min="1" value="'+qty+'" title="Quantità" style="width:44px;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 4px;font-size:12px;border-radius:7px;outline:none;font-family:inherit;-webkit-appearance:none;text-align:center">'+
-      '<input class="ocrRowPrc" type="number" step="0.01" value="'+(prc===''?'':prc)+'" placeholder="€" title="Prezzo" style="width:64px;background:#111;color:#5BB8E0;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:right">'+
+      '<input class="ocrRowPre" value="'+xe2(pre)+'" placeholder="PRE" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:56px;background:#111;color:#3B9FD4;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;font-weight:700;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:center">'+
+      '<input class="ocrRowCod" value="'+xe2(cod)+'" placeholder="codice" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="flex:1;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 8px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;min-width:0">'+
+      '<input class="ocrRowQty" type="number" min="1" value="'+qty+'" title="Quantità" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:44px;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 4px;font-size:12px;border-radius:7px;outline:none;font-family:inherit;-webkit-appearance:none;text-align:center">'+
+      '<input class="ocrRowPrc" type="number" step="0.01" value="'+(prc===''?'':prc)+'" placeholder="€" title="Prezzo" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:64px;background:#111;color:#5BB8E0;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:right">'+
       '<button type="button" onclick="ocrDelRow(this)" title="Elimina" style="width:26px;height:32px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;padding:0">×</button>'+
     '</div>'+
     // Riga 2: causale + fornitore (span più largo)
     '<div style="display:grid;grid-template-columns:2fr 1fr;gap:5px;margin-bottom:5px">'+
-      '<select class="ocrRowCau" onchange="ocrRowOnCauChange(this)" style="'+_selCss+'" title="Causale">'+_mkOpts(_cauL, cau, '— causale —')+'</select>'+
-      '<input class="ocrRowForn" value="'+xe2(forn)+'" placeholder="Fornitore" oninput="this.value=this.value.toUpperCase()" style="'+_inpCss+'" title="Fornitore">'+
+      '<select class="ocrRowCau" onchange="ocrRowOnCauChange(this);ocrRowFocusNext(this)" style="'+_selCss+'" title="Causale">'+_mkOpts(_cauL, cau, '— causale —')+'</select>'+
+      '<input class="ocrRowForn" value="'+xe2(forn)+'" placeholder="Fornitore" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="'+_inpCss+'" title="Fornitore">'+
     '</div>'+
-    // Riga 3: flusso, tipo doc, fase, stato, data acq — griglia flessibile che va a wrap su mobile
+    // Riga 3: flusso, tipo doc, fase, stato, data acq — griglia flessibile
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:5px">'+
-      '<select class="ocrRowFlu" style="'+_selCss+'" title="Tipo flusso">'+_mkOpts(_fluL, flu, '')+'</select>'+
-      '<select class="ocrRowDoc" style="'+_selCss+'" title="Tipo documento">'+_mkOpts(_docL, doc, '— tipo doc —')+'</select>'+
-      '<select class="ocrRowFas" onchange="ocrRowRefreshStato(this)" style="'+_selCss+'" title="Fase">'+_mkOpts(_fasL, fas, '')+'</select>'+
-      '<select class="ocrRowSta" style="'+_selCss+'" title="Stato">'+_mkOpts(_staL, sta, '— stato —')+'</select>'+
-      '<input class="ocrRowDatAcq" type="date" value="'+xe2(datAcq)+'" title="Data acquisto dal fornitore" style="'+_inpCss+'">'+
+      '<select class="ocrRowFlu" onchange="ocrRowFocusNext(this)" style="'+_selCss+'" title="Tipo flusso">'+_mkOpts(_fluL, flu, '')+'</select>'+
+      '<select class="ocrRowDoc" onchange="ocrRowFocusNext(this)" style="'+_selCss+'" title="Tipo documento">'+_mkOpts(_docL, doc, '— tipo doc —')+'</select>'+
+      '<select class="ocrRowFas" onchange="ocrRowRefreshStato(this);ocrRowFocusNext(this)" style="'+_selCss+'" title="Fase">'+_mkOpts(_fasL, fas, '')+'</select>'+
+      '<select class="ocrRowSta" onchange="ocrRowFocusNext(this)" style="'+_selCss+'" title="Stato">'+_mkOpts(_staL, sta, '— stato —')+'</select>'+
+      '<input class="ocrRowDatAcq" type="date" value="'+xe2(datAcq)+'" onchange="ocrRowFocusNext(this)" title="Data acquisto dal fornitore" style="'+_inpCss+'">'+
     '</div>'+
     '</div>';
 }
@@ -11002,12 +11002,14 @@ function applyOcrConfirm(allArticles){
     gTab('pgIns');
     var cRmaVal=(document.getElementById('cRma')||{}).value||'';
     var added=0, failed=[];
+    // v34v: snapshot chiavi PRIMA dell'inserimento per undo
+    var _keysBefore = {};
+    try{ Object.keys(rows||{}).forEach(function(k){ _keysBefore[k]=true; }); }catch(e){}
     if(typeof loadCodeMem==='function')loadCodeMem();
     for(var i=0;i<articoli.length;i++){
       var a=articoli[i];
       try{ if(a.cod){ CODE_MEM[a.cod]={pre:a.pre, qty:a.qty}; } }catch(e){}
       var _set=function(id,val){var e=document.getElementById(id); if(e){e.value=val||''; if(typeof ce==='function')ce(e);}};
-      // v34q: TUTTI i campi per-riga trasferiti al form principale prima di addRow
       _set('cFor', a.fornitore);
       _set('cFlu', a.flusso);
       _set('cDoc', a.tipoDoc);
@@ -11016,7 +11018,7 @@ function applyOcrConfirm(allArticles){
       _set('cSta', a.stato);
       var cauEl=document.getElementById('cCau');
       if(cauEl){ cauEl.value=a.causale||''; try{ if(typeof onCauChange==='function') onCauChange(cauEl); }catch(e){} }
-      _set('cDatAcqForn', a.datAcqForn);   // id corretto (era cDatAcq errato in v34o/p)
+      _set('cDatAcqForn', a.datAcqForn);
       _set('cRma', cRmaVal);
       _set('cPre', a.pre);
       var cEl=document.getElementById('cCod'); if(cEl){cEl.value=a.cod; if(typeof ce==='function')ce(cEl);}
@@ -11028,8 +11030,14 @@ function applyOcrConfirm(allArticles){
       else failed.push(i+1);
     }
     try{ if(typeof saveCodeMem==='function')saveCodeMem(); }catch(e){}
+    // v34v: registra le chiavi NUOVE nel undo stack e mostra il toast con "↶ ANNULLA"
+    if(added>0){
+      var _newKeys = Object.keys(rows||{}).filter(function(k){ return !_keysBefore[k]; });
+      try{ if(typeof pushUndoBatch==='function') pushUndoBatch(_newKeys); }catch(e){}
+    }
     if(added===articoli.length){
-      toast('✅ '+added+'/'+articoli.length+' articoli aggiunti dalla bolla','g');
+      // Toast normale silenziato: mostra invece il toast UNDO (pushUndoBatch)
+      // toast('✅ '+added+'/'+articoli.length+' articoli aggiunti','g');
     } else if(added>0){
       toast('⚠ Aggiunti '+added+'/'+articoli.length+' (fallite: '+failed.join(', ')+'). Controlla data acq. fornitore, coerenza flusso/documento e permessi.','y');
     } else {
@@ -13220,6 +13228,81 @@ function ocrLiveListen(){
       renderOcrLivePanel();
     });
   }catch(e){}
+}
+
+// v34v — Focus automatico al campo successivo della stessa riga OCR (o riga dopo).
+// Scatta a onchange su select e a Enter su input della riga.
+function ocrRowFocusNext(el){
+  try{
+    var row = el.closest('.ocrRow'); if(!row) return;
+    var seq = row.querySelectorAll(
+      '.ocrRowPre, .ocrRowCod, .ocrRowQty, .ocrRowPrc, .ocrRowCau, .ocrRowForn, ' +
+      '.ocrRowFlu, .ocrRowDoc, .ocrRowFas, .ocrRowSta, .ocrRowDatAcq'
+    );
+    var arr = Array.from(seq);
+    var idx = arr.indexOf(el);
+    // Cerca il PROSSIMO campo NON compilato (skip quelli già pieni per essere piu fluido)
+    for(var i = idx + 1; i < arr.length; i++){
+      var n = arr[i]; if(!n) continue;
+      if(!n.value || String(n.value).trim()===''){ n.focus(); return; }
+    }
+    // Tutti compilati in questa riga: passa alla riga successiva
+    var next = row.nextElementSibling;
+    while(next && !next.classList.contains('ocrRow')) next = next.nextElementSibling;
+    if(next){
+      var candidates = next.querySelectorAll('.ocrRowCau, .ocrRowForn, .ocrRowFlu, .ocrRowDoc, .ocrRowFas, .ocrRowSta');
+      for(var j=0;j<candidates.length;j++){
+        var c = candidates[j];
+        if(!c.value || String(c.value).trim()===''){ c.focus(); return; }
+      }
+      if(candidates[0]) candidates[0].focus();
+      return;
+    }
+    // Fine articoli: focus al VETTORE (primo campo comune)
+    var vet = document.getElementById('ocrVet'); if(vet){ vet.focus(); return; }
+  }catch(e){}
+}
+
+// v34v — UNDO / ROLLBACK ultimo inserimento
+window._insertUndoStack = window._insertUndoStack || [];
+function pushUndoBatch(addedKeys){
+  if(!addedKeys || !addedKeys.length) return;
+  window._insertUndoStack.push({ keys: addedKeys.slice(), ts: Date.now() });
+  if(window._insertUndoStack.length > 5) window._insertUndoStack.shift();
+  showUndoToast(addedKeys.length);
+}
+function showUndoToast(n){
+  var old = document.getElementById('undoToast'); if(old) old.remove();
+  var box = document.createElement('div');
+  box.id = 'undoToast';
+  box.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:2000;'+
+    'background:linear-gradient(135deg,#0e3f60,#0a2f4a);border:2px solid #3B9FD4;border-radius:12px;'+
+    'padding:12px 18px;color:#fff;box-shadow:0 8px 32px rgba(0,0,0,.55);display:flex;align-items:center;'+
+    'gap:14px;font-family:inherit;font-size:14px;font-weight:700';
+  box.innerHTML = '<span>✅ Inseriti '+n+' articoli</span>'+
+    '<button onclick="undoLastInsert()" style="background:#E05555;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit;font-size:13px">↶ ANNULLA</button>'+
+    '<button onclick="document.getElementById(\'undoToast\').remove()" title="Chiudi" style="background:transparent;color:#888;border:none;font-size:16px;cursor:pointer">✕</button>';
+  document.body.appendChild(box);
+  setTimeout(function(){ var b = document.getElementById('undoToast'); if(b) b.remove(); }, 30000);
+}
+function undoLastInsert(){
+  var stack = window._insertUndoStack || [];
+  if(!stack.length){ if(typeof toast==='function') toast('Nessuna operazione da annullare','y'); return; }
+  var batch = stack.pop();
+  var removed = 0;
+  batch.keys.forEach(function(k){
+    if(rows[k]){
+      try{ if(typeof sendMsg==='function') sendMsg({type:'del', key:k}); }catch(e){}
+      delete rows[k]; removed++;
+    }
+  });
+  try{ if(typeof idbSet==='function') idbSet('td', JSON.stringify(rows)); }catch(e){}
+  try{ if(typeof renderList==='function') renderList(); }catch(e){}
+  try{ if(typeof renderQueue==='function') renderQueue(); }catch(e){}
+  try{ if(typeof updBS==='function') updBS(); }catch(e){}
+  var box = document.getElementById('undoToast'); if(box) box.remove();
+  if(typeof toast==='function') toast('↶ Annullato: '+removed+' articoli rimossi','g');
+  try{ if(typeof notifLog==='function') notifLog('mod', 'undo OCR ('+removed+' righe)'); }catch(e){}
 }
 
 // v34u — Panel SCA con icona camera SVG + pulsante "Cambia modalità"
