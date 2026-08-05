@@ -21,4 +21,4 @@ jobs:
       - name: Check HTML structure (script tags, syntax, id refs)
         run: node scripts/check-html.js
       - name: Run domain rules unit tests
-        run: node --test tests/
+        run: node --test tests/*.test.js

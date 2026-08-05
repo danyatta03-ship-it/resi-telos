@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node dev-server.js",
     "check": "node scripts/check-html.js",
-    "test": "node --test tests/",
+    "test": "node --test tests/*.test.js",
     "bump-cache": "node scripts/bump-cache.js",
     "precommit": "npm run check && npm test"
   },
