@@ -1,0 +1,317 @@
+/* js/ui/spunta/spunta.css — stile SPUNTA BANCALE.
+ *
+ * Usa le variabili tema (var(--bg1), var(--txt), var(--blu), ...) già
+ * presenti in index.html. In caso di uso con js/ui/theme.css (Fase 6)
+ * mappa automaticamente sui nuovi custom-properties.
+ *
+ * Fallback: se la variabile non esiste, degrada su un valore sensato.
+ */
+
+/* ═══════════════════════════════════════════════════════════════════
+   TOKEN LOCALI (usano le var esistenti + fallback)
+   ═══════════════════════════════════════════════════════════════════ */
+.pg#pgSpunta {
+  --sp-ok:      var(--grn, #4CAF50);
+  --sp-warn:    var(--yel, #E6B03C);
+  --sp-err:     var(--red, #E05555);
+  --sp-info:    var(--blu, #3B9FD4);
+  --sp-bg:      var(--bg1, #0a0a0a);
+  --sp-bg-row:  var(--bg2, #111);
+  --sp-txt:     var(--txt, #e6e6e6);
+  --sp-txt2:    var(--txt2, #b8b8b8);
+  --sp-txt3:    var(--txt3, #7a7a7a);
+  --sp-brd:     rgba(255,255,255,.08);
+}
+html[data-theme="light"] .pg#pgSpunta {
+  --sp-brd: rgba(0,0,0,.08);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   HEADER CARD (badges + sticky)
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-sticky {
+  position: sticky; top: 0; z-index: 40;
+  backdrop-filter: blur(8px);
+}
+.sp-sticky-2 {
+  position: sticky; top: 88px; z-index: 39;
+  backdrop-filter: blur(8px);
+}
+.sp-badges { display:flex; gap:6px; flex-wrap:wrap; }
+.sp-badges .chip { font-weight:700; font-size:11px; padding:3px 8px; }
+.sp-b-ok   { background:rgba(76,175,80,.15); color:var(--sp-ok);   border:1px solid rgba(76,175,80,.45); }
+.sp-b-warn { background:rgba(230,176,60,.15); color:var(--sp-warn); border:1px solid rgba(230,176,60,.45); }
+.sp-b-err  { background:rgba(224,85,85,.15); color:var(--sp-err);  border:1px solid rgba(224,85,85,.45); }
+.sp-b-extra{ background:rgba(59,159,212,.15); color:var(--sp-info); border:1px solid rgba(59,159,212,.45); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   AZIONI PRINCIPALI (bottoni grandi)
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-actions {
+  display:grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap:8px;
+  margin-top:10px;
+}
+.sp-btn {
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--sp-brd);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-appearance: none;
+  font-family: inherit;
+  transition: transform .06s, opacity .1s;
+}
+.sp-btn:active { transform: scale(.97); }
+.sp-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+.sp-btn-primary  { background:var(--sp-info); color:#fff; border-color:transparent; }
+.sp-btn-secondary{ background:rgba(59,159,212,.14); color:var(--sp-info); }
+.sp-btn-danger   { background:rgba(224,85,85,.12); color:var(--sp-err); }
+.sp-btn-scan     { background:rgba(76,175,80,.14); color:var(--sp-ok); min-height:44px; padding:8px 14px; }
+.sp-btn-close    { background:var(--sp-ok); color:#fff; border-color:transparent; flex:1; }
+.sp-btn-report   { background:rgba(230,176,60,.14); color:var(--sp-warn); flex:1; }
+.sp-btn-mini     { background:transparent; color:var(--sp-info); border:1px solid rgba(59,159,212,.4); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; -webkit-appearance:none; font-family:inherit; }
+
+@media (max-width: 640px){
+  .sp-actions { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LOADING (OCR in corso)
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-loading {
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(59,159,212,.08);
+  border: 1px solid rgba(59,159,212,.3);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--sp-info);
+  font-weight: 600;
+  font-size: 13px;
+}
+.sp-spinner {
+  width:16px; height:16px;
+  border:2px solid rgba(59,159,212,.3);
+  border-top-color: var(--sp-info);
+  border-radius:50%;
+  animation: sp-spin .8s linear infinite;
+  display:inline-block;
+}
+@keyframes sp-spin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════════════════════════════════
+   INPUT SPUNTA
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-search-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: stretch;
+}
+.sp-search {
+  padding: 14px 14px;
+  font-size: 16px;   /* >= 16px per non far zoomare iOS */
+  font-weight: 600;
+  border-radius: 10px;
+  border: 2px solid var(--sp-info);
+  background: var(--sp-bg-row);
+  color: var(--sp-txt);
+  outline: none;
+  width: 100%;
+}
+.sp-search:focus { box-shadow: 0 0 0 3px rgba(59,159,212,.25); }
+.sp-hint {
+  margin-top: 6px;
+  color: var(--sp-txt3);
+  font-size: 11px;
+  font-style: italic;
+}
+
+/* Popup match multiplo inline */
+.sp-matches {
+  margin-top: 10px;
+  border: 1px solid rgba(230,176,60,.4);
+  background: rgba(230,176,60,.06);
+  border-radius: 10px;
+  padding: 8px;
+}
+.sp-match-opt {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px;
+  border-bottom: 1px dashed var(--sp-brd);
+  cursor: pointer;
+}
+.sp-match-opt:last-child { border-bottom: none; }
+.sp-match-opt:hover, .sp-match-opt:active { background: rgba(230,176,60,.12); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   LISTA RIGHE SPUNTA
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sp-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--sp-txt3);
+  font-style: italic;
+  font-size: 13px;
+}
+.sp-total {
+  color: var(--sp-txt3);
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.sp-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--sp-brd);
+  background: var(--sp-bg-row);
+  transition: background .15s;
+}
+.sp-row.st-ok      { background: rgba(76,175,80,.10);  border-color: rgba(76,175,80,.4); }
+.sp-row.st-partial { background: rgba(230,176,60,.10); border-color: rgba(230,176,60,.4); }
+.sp-row.st-miss    { background: rgba(224,85,85,.10);  border-color: rgba(224,85,85,.45); }
+.sp-row.st-extra   { background: rgba(59,159,212,.10); border-color: rgba(59,159,212,.4); }
+
+.sp-row-icon {
+  font-size: 20px;
+  line-height: 1;
+  min-width: 24px;
+  text-align: center;
+}
+
+.sp-row-info { min-width: 0; }
+.sp-row-name {
+  font-weight: 700;
+  color: var(--sp-txt);
+  font-size: 14px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sp-row-meta {
+  color: var(--sp-txt2);
+  font-size: 11px;
+  margin-top: 2px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sp-row-meta .k { color: var(--sp-txt3); }
+.sp-row-cod {
+  color: var(--sp-info);
+  font-weight: 700;
+  font-size: 10px;
+  background: rgba(59,159,212,.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.sp-count {
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--sp-txt);
+  min-width: 46px;
+  text-align: center;
+}
+.sp-count .letti { color: var(--sp-ok); }
+.sp-count .attesi { color: var(--sp-txt3); }
+.sp-row.st-miss .sp-count .letti { color: var(--sp-err); }
+
+.sp-row-actions {
+  display: flex;
+  gap: 4px;
+}
+.sp-row-actions button {
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 6px;
+  border: 1px solid var(--sp-brd);
+  background: transparent;
+  color: var(--sp-txt2);
+  cursor: pointer;
+  -webkit-appearance: none;
+  font-size: 14px;
+}
+.sp-row-actions button:active { transform: scale(.94); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHIUSURA
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-close-row {
+  display: flex;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   POPUP MODALI (match multipli + report)
+   ═══════════════════════════════════════════════════════════════════ */
+.sp-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.85);
+  z-index: 1600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+.sp-popup-box {
+  background: var(--sp-bg, #0a0a0a);
+  border: 1px solid var(--sp-brd);
+  border-radius: 14px;
+  padding: 16px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: var(--sp-txt);
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+}
+.sp-popup-report { max-width: 640px; }
+.sp-popup-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: var(--sp-info);
+}
+.sp-popup-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  justify-content: flex-end;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LIGHT MODE — override espliciti (segue lo stile v34h3)
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="light"] .sp-search {
+  background: #fff;
+  color: #000;
+}
+html[data-theme="light"] .sp-popup-box {
+  background: #fff;
+  color: #000;
+  border-color: rgba(0,0,0,.15);
+}
+html[data-theme="light"] .sp-row {
+  background: #fff;
+}

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Preview — Spunta Bancale</title>
+<style>
+  /* Minimal reset + variabili tema (approssimazione delle var reali di index.html) */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #000; color: #e6e6e6;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  :root {
+    --bg1:#0a0a0a; --bg2:#111; --txt:#e6e6e6; --txt2:#b8b8b8; --txt3:#7a7a7a;
+    --blu:#3B9FD4; --grn:#4CAF50; --yel:#E6B03C; --red:#E05555;
+  }
+  html[data-theme="light"] { background:#f5f7fa; color:#111; }
+  html[data-theme="light"] body { background:#f5f7fa; color:#111; }
+  html[data-theme="light"] {
+    --bg1:#fff; --bg2:#fff; --txt:#111; --txt2:#444; --txt3:#888;
+  }
+
+  .container { max-width: 720px; margin: 0 auto; padding: 16px; }
+
+  /* Header stile index.html */
+  .toolbar {
+    display:flex; gap:8px; align-items:center; padding: 8px 14px;
+    background: var(--bg1); border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .toolbar h1 { font-size: 14px; color: var(--blu); }
+  .toolbar .spacer { flex:1; }
+  .toolbar button {
+    background: transparent; color: var(--txt2); border: 1px solid rgba(255,255,255,.15);
+    border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px;
+  }
+  html[data-theme="light"] .toolbar { border-bottom-color: rgba(0,0,0,.08); }
+
+  /* Card / ch / cb — copiati dal pattern index.html */
+  .pg { display: block; }
+  .card {
+    background: var(--bg1);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 12px;
+    margin: 10px 0;
+    overflow: hidden;
+  }
+  html[data-theme="light"] .card { border-color: rgba(0,0,0,.06); box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+  .ch {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(255,255,255,.03);
+    border-bottom: 1px solid rgba(255,255,255,.05);
+    font-size: 12px; font-weight: 800; letter-spacing: .5px; color: var(--txt);
+  }
+  html[data-theme="light"] .ch { background: rgba(0,0,0,.02); border-bottom-color: rgba(0,0,0,.05); }
+  .cb { padding: 12px; }
+  .r2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .f label { display: block; font-size: 10px; color: var(--txt3); margin-bottom: 3px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
+  .f input, .f select {
+    width: 100%; padding: 9px 10px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,.12); background: var(--bg2); color: var(--txt);
+    font-size: 13px; -webkit-appearance: none; font-family: inherit;
+  }
+  html[data-theme="light"] .f input, html[data-theme="light"] .f select { background: #fff; border-color: rgba(0,0,0,.15); color:#000; }
+  .chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 10px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
+</style>
+<link rel="stylesheet" href="spunta.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>Preview — Spunta Bancale</h1>
+  <div class="spacer"></div>
+  <button onclick="toggleTheme()">🌓 Tema</button>
+  <button onclick="loadMock()">🎲 Ricarica mock</button>
+</div>
+
+<div class="container">
+  <!-- ═══ INIZIO SPUNTA.HTML ═══ -->
+  <div class="pg" id="pgSpunta">
+
+    <div class="card sp-sticky">
+      <div class="ch">
+        <span>📦 SPUNTA BANCALE</span>
+        <div class="sp-badges">
+          <span class="chip sp-b-ok"   id="spCntOk">✅ 3</span>
+          <span class="chip sp-b-warn" id="spCntPart">⚠ 1</span>
+          <span class="chip sp-b-err"  id="spCntMiss">❌ 1</span>
+          <span class="chip sp-b-extra" id="spCntExtra">➕ 1</span>
+        </div>
+      </div>
+      <div class="cb">
+        <div class="r2">
+          <div class="f">
+            <label><span>VETTORE / MITTENTE BANCALE</span></label>
+            <select id="spVet">
+              <option value="">— Seleziona —</option>
+              <option selected>CIPI</option><option>PIEMME</option><option>AD</option>
+              <option>DIEMME</option><option>GLS</option><option>BRT</option>
+            </select>
+          </div>
+          <div class="f">
+            <label><span>DATA ARRIVO</span></label>
+            <input type="date" id="spDate" value="2026-08-05">
+          </div>
+        </div>
+        <div class="sp-actions">
+          <button class="sp-btn sp-btn-primary">📷 Foto Borderò</button>
+          <button class="sp-btn sp-btn-secondary">✍️ Aggiungi manuale</button>
+          <button class="sp-btn sp-btn-danger">🗑 Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card sp-sticky-2">
+      <div class="cb">
+        <div class="sp-search-row">
+          <input id="spSearch" class="sp-search" placeholder="🔍 Cerca mittente o città… (o scan etichetta)">
+          <button class="sp-btn sp-btn-scan">📷 Scan</button>
+        </div>
+        <div class="sp-hint">Digita almeno 3 caratteri o scansiona l'etichetta del collo.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch">
+        <span>LISTA ATTESA <span class="sp-total">(6 colli)</span></span>
+        <button class="sp-btn-mini">Tutti</button>
+      </div>
+      <div class="cb">
+        <div id="spLista" class="sp-list">
+
+          <div class="sp-row st-ok">
+            <div class="sp-row-icon">✅</div>
+            <div class="sp-row-info">
+              <div class="sp-row-name">CASADEI S.R.L.</div>
+              <div class="sp-row-meta">
+                <span><span class="k">Città:</span> VERRES</span>
+                <span><span class="k">DDT:</span> 4592</span>
+                <span class="sp-row-cod">009820</span>
+              </div>
+            </div>
+            <div class="sp-count"><span class="letti">1</span><span class="attesi">/1</span></div>
+            <div class="sp-row-actions">
+              <button title="Rimuovi ultima lettura">−</button>
+              <button title="Info">ℹ</button>
+            </div>
+          </div>
+
+          <div class="sp-row st-partial">
+            <div class="sp-row-icon">⚠</div>
+            <div class="sp-row-info">
+              <div class="sp-row-name">AUTO SERVICE SPA</div>
+              <div class="sp-row-meta">
+                <span><span class="k">Città:</span> AOSTA</span>
+                <span><span class="k">DDT:</span> 7821</span>
+                <span class="sp-row-cod">014102</span>
+              </div>
+            </div>
+            <div class="sp-count"><span class="letti">1</span><span class="attesi">/2</span></div>
+            <div class="sp-row-actions">
+              <button>−</button>
+              <button>ℹ</button>
+            </div>
+          </div>
+
+          <div class="sp-row st-ok">
+            <div class="sp-row-icon">✅</div>
+            <div class="sp-row-info">
+              <div class="sp-row-name">GARAGE BIANCHI</div>
+              <div class="sp-row-meta">
+                <span><span class="k">Città:</span> IVREA</span>
+                <span><span class="k">DDT:</span> 6120</span>
+                <span class="sp-row-cod">022300</span>
+              </div>
+            </div>
+            <div class="sp-count"><span class="letti">1</span><span class="attesi">/1</span></div>
+            <div class="sp-row-actions">
+              <button>−</button>
+              <button>ℹ</button>
+            </div>
+          </div>
+
+          <div class="sp-row st-ok">
+            <div class="sp-row-icon">✅</div>
+            <div class="sp-row-info">
+              <div class="sp-row-name">PNEUS ALPI</div>
+              <div class="sp-row-meta">
+                <span><span class="k">Città:</span> COURMAYEUR</span>
+                <span><span class="k">DDT:</span> 6120</span>
+              </div>
+            </div>
+            <div class="sp-count"><span class="letti">1</span><span class="attesi">/1</span></div>
+            <div class="sp-row-actions">
+              <button>−</button>
+              <button>ℹ</button>
+            </div>
+          </div>
+
+          <div class="sp-row st-miss">
+            <div class="sp-row-icon">❌</div>
+            <div class="sp-row-info">
+              <div class="sp-row-name">MECC. ROSSI</div>
+              <div class="sp-row-meta">
+                <span><span class="k">Città:</span> CHATILLON</span>
+                <span><span class="k">DDT:</span> 4103</span>
+                <span class="sp-row-cod">005441</span>
+              </div>
+            </div>
+            <div class="sp-count"><span class="letti">0</span><span class="attesi">/1</span></div>
+            <div class="sp-row-actions">
+              <button title="Segna trovato">+</button>
+              <button title="Info">ℹ</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><span>➕ COLLI EXTRA (non nel borderò)</span></div>
+      <div class="cb">
+        <div class="sp-list">
+          <div class="sp-row st-extra">
+            <div class="sp-row-icon">➕</div>
+            <div class="sp-row-info">
+              <div class="sp-row-name">CENTRO GOMME</div>
+              <div class="sp-row-meta">
+                <span><span class="k">Città:</span> PONT-SAINT-MARTIN</span>
+                <span class="sp-row-cod">017890</span>
+              </div>
+            </div>
+            <div class="sp-count"><span class="letti">1</span><span class="attesi">/1</span></div>
+            <div class="sp-row-actions">
+              <button>−</button>
+              <button>ℹ</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cb sp-close-row">
+        <button class="sp-btn sp-btn-close">✅ Chiudi Spunta</button>
+        <button class="sp-btn sp-btn-report">📄 Anteprima Report</button>
+      </div>
+    </div>
+
+  </div>
+  <!-- ═══ FINE SPUNTA.HTML ═══ -->
+</div>
+
+<script>
+function toggleTheme(){
+  var h = document.documentElement;
+  h.setAttribute('data-theme', h.getAttribute('data-theme')==='light'?'dark':'light');
+}
+function loadMock(){ location.reload(); }
+</script>
+</body>
+</html>

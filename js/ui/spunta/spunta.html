@@ -1,0 +1,166 @@
+<!--
+  js/ui/spunta/spunta.html — struttura HTML della funzione SPUNTA BANCALE.
+  Da includere in index.html come nuovo blocco <div class="pg" id="pgSpunta">
+  affianco agli altri pg* (RICEVIMENTO, LISTA, ecc).
+  Naming id/classi coerente con lo stile esistente (pg, card, ch, cb, r2, f, req, chip).
+-->
+
+<div class="pg" id="pgSpunta" style="display:none">
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CARD 1 — STATO SPUNTA + AZIONI PRINCIPALI (sticky in alto)
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="card sp-sticky">
+    <div class="ch">
+      <span>📦 SPUNTA BANCALE</span>
+      <div class="sp-badges">
+        <span class="chip sp-b-ok"   id="spCntOk">✅ 0</span>
+        <span class="chip sp-b-warn" id="spCntPart">⚠ 0</span>
+        <span class="chip sp-b-err"  id="spCntMiss">❌ 0</span>
+        <span class="chip sp-b-extra" id="spCntExtra">➕ 0</span>
+      </div>
+    </div>
+    <div class="cb">
+
+      <!-- Riga di intestazione: nome bancale + data + operatore -->
+      <div class="r2">
+        <div class="f">
+          <label><span>VETTORE / MITTENTE BANCALE</span></label>
+          <select id="spVet">
+            <option value="">— Seleziona —</option>
+            <option>CIPI</option><option>PIEMME</option><option>AD</option>
+            <option>DIEMME</option><option>GLS</option><option>BRT</option>
+            <option>UPS</option><option>DHL</option><option>TNT</option>
+          </select>
+        </div>
+        <div class="f">
+          <label><span>DATA ARRIVO</span></label>
+          <input type="date" id="spDate">
+        </div>
+      </div>
+
+      <!-- Bottoni principali -->
+      <div class="sp-actions">
+        <button class="sp-btn sp-btn-primary" id="spBtnFoto"
+                onclick="spuntaHandleFotoBordero()">
+          📷 Foto Borderò
+        </button>
+        <button class="sp-btn sp-btn-secondary" id="spBtnManuale"
+                onclick="spuntaAggiungiRigaManuale()">
+          ✍️ Aggiungi manuale
+        </button>
+        <button class="sp-btn sp-btn-danger" id="spBtnReset"
+                onclick="spuntaReset()">
+          🗑 Reset
+        </button>
+      </div>
+
+      <!-- Input nascosto per la foto -->
+      <input type="file" id="spFotoInput" accept="image/*" capture="environment"
+             style="display:none" onchange="spuntaOnFotoSelected(this)">
+
+      <!-- Loading OCR -->
+      <div class="sp-loading" id="spLoading" style="display:none">
+        <span class="sp-spinner"></span>
+        <span id="spLoadingMsg">Sto leggendo il borderò con AI…</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CARD 2 — INPUT SPUNTA (sticky sotto)
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="card sp-sticky-2" id="spCardInput" style="display:none">
+    <div class="cb">
+      <div class="sp-search-row">
+        <input id="spSearch" class="sp-search"
+               placeholder="🔍 Cerca mittente o città…  (o scan etichetta)"
+               autocomplete="off" oninput="spuntaOnSearchInput(this.value)"
+               onkeydown="if(event.key==='Enter')spuntaConfermaMatch()">
+        <button class="sp-btn sp-btn-scan" onclick="spuntaScanEtichetta()">
+          📷 Scan
+        </button>
+      </div>
+      <div class="sp-hint" id="spHint">
+        Digita almeno 3 caratteri o scansiona l'etichetta del collo.
+      </div>
+      <!-- Popup match multipli -->
+      <div class="sp-matches" id="spMatches" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CARD 3 — LISTA ATTESA (in spunta)
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="card">
+    <div class="ch">
+      <span>LISTA ATTESA <span class="sp-total" id="spTotAttesi">(0 colli)</span></span>
+      <button class="sp-btn-mini" onclick="spuntaToggleFilter()" id="spFilterBtn">
+        Tutti
+      </button>
+    </div>
+    <div class="cb">
+      <div id="spLista" class="sp-list">
+        <!-- generato da renderSpuntaList() -->
+        <div class="sp-empty">
+          Nessuna riga. Fotografa il borderò o aggiungi una riga manuale per iniziare.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CARD 4 — EXTRA (colli non previsti)
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="card" id="spCardExtra" style="display:none">
+    <div class="ch">
+      <span>➕ COLLI EXTRA (non nel borderò)</span>
+    </div>
+    <div class="cb">
+      <div id="spExtra" class="sp-list"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CARD 5 — CHIUSURA
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="card" id="spCardClose" style="display:none">
+    <div class="cb sp-close-row">
+      <button class="sp-btn sp-btn-close" onclick="spuntaChiudi()">
+        ✅ Chiudi Spunta
+      </button>
+      <button class="sp-btn sp-btn-report" onclick="spuntaMostraReport()">
+        📄 Anteprima Report
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!--
+  Popup CONFERMA MATCH MULTIPLO — flotta sopra tutto, mostrato da JS.
+-->
+<div id="spPopupMulti" class="sp-popup" style="display:none">
+  <div class="sp-popup-box">
+    <div class="sp-popup-title">Match multipli — scegli la riga corretta</div>
+    <div id="spPopupList"></div>
+    <div class="sp-popup-actions">
+      <button class="sp-btn sp-btn-danger" onclick="spuntaChiudiPopup()">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<!--
+  Popup CHIUSURA SPUNTA — report finale.
+-->
+<div id="spPopupReport" class="sp-popup" style="display:none">
+  <div class="sp-popup-box sp-popup-report">
+    <div class="sp-popup-title">Report Spunta</div>
+    <div id="spReportBody"></div>
+    <div class="sp-popup-actions">
+      <button class="sp-btn sp-btn-secondary" onclick="spuntaChiudiPopup()">Torna</button>
+      <button class="sp-btn sp-btn-primary" onclick="spuntaSalvaSuFirebase()">💾 Salva e nuovo</button>
+    </div>
+  </div>
+</div>
