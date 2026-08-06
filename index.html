@@ -815,6 +815,127 @@ html[data-theme="light"] select{
   background-position:right 10px center !important;
   padding-right:32px !important;
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   v34w — LIGHT MODE AGGRESSIVE OVERHAUL
+   Regola: icone BLU (#3B9FD4), scritte NERE, pulsanti BLU su testo NERO.
+   Eccezioni tassative: stato "anomalia" ROSSO, chip/badge "FILIALE IN" AZZURRO.
+   Sostituisce ogni residuo scuro ("juventini") sulle card CORRIERI/LOGISTICA.
+   ══════════════════════════════════════════════════════════════════════ */
+html[data-theme="light"] body{background:#f5f7fb !important;color:#000 !important}
+html[data-theme="light"] .pg,
+html[data-theme="light"] .card,
+html[data-theme="light"] .ch,
+html[data-theme="light"] .cb,
+html[data-theme="light"] .hdr,
+html[data-theme="light"] .tabs,
+html[data-theme="light"] .bot,
+html[data-theme="light"] .ac,
+html[data-theme="light"] .fu,
+html[data-theme="light"] .sc,
+html[data-theme="light"] .cht,
+html[data-theme="light"] .hc,
+html[data-theme="light"] .arc-item,
+html[data-theme="light"] .sup-card,
+html[data-theme="light"] .flt-bar,
+html[data-theme="light"] .bulk-bar,
+html[data-theme="light"] .sh,
+html[data-theme="light"] .popup-box,
+html[data-theme="light"] .cmod-box,
+html[data-theme="light"] .role-card,
+html[data-theme="light"] .bst{
+  background:#ffffff !important;
+  color:#000 !important;
+  border-color:#3B9FD4 !important;
+}
+/* Testo generico → nero */
+html[data-theme="light"] p,
+html[data-theme="light"] span,
+html[data-theme="light"] div,
+html[data-theme="light"] label,
+html[data-theme="light"] .sup-name,
+html[data-theme="light"] .sup-info,
+html[data-theme="light"] .arc-cod,
+html[data-theme="light"] .arc-sogg,
+html[data-theme="light"] .ac-sogg,
+html[data-theme="light"] .ac-who,
+html[data-theme="light"] .fu-sogg,
+html[data-theme="light"] .log-ts,
+html[data-theme="light"] .log-txt,
+html[data-theme="light"] .rn,
+html[data-theme="light"] .rd,
+html[data-theme="light"] .popup-label,
+html[data-theme="light"] .popup-sub,
+html[data-theme="light"] .empty{
+  color:#000 !important;
+}
+/* Icone / emoji dentro pulsanti/link → BLU (via colore font;
+   emoji sono glyph, quindi si tinge il testo intorno che tipicamente contiene
+   sia icona che etichetta — la richiesta è "tutto blu+nero", quindi lasciamo
+   il testo nero e coloriamo blu la BORDATURA + gli sfondi accento) */
+html[data-theme="light"] button{
+  background:#eaf5fc !important;
+  color:#000 !important;
+  border:1.5px solid #3B9FD4 !important;
+}
+html[data-theme="light"] button:hover{background:#d8ecf7 !important}
+/* Titoli / label piccole storicamente color grn/blu → BLU */
+html[data-theme="light"] .sh-ttl,
+html[data-theme="light"] .sh-section,
+html[data-theme="light"] .tab.on,
+html[data-theme="light"] .log-user,
+html[data-theme="light"] .htab-btn.on,
+html[data-theme="light"] .usub-btn.on{
+  color:#3B9FD4 !important;
+}
+/* Card CORRIERI: forza sfondo bianco + bordo BLU (sostituisce border-left rosso "CHIUSO") */
+html[data-theme="light"] .sup-card{
+  background:#ffffff !important;
+  border:1px solid #3B9FD4 !important;
+  border-left:3px solid #3B9FD4 !important;
+  color:#000 !important;
+}
+html[data-theme="light"] .sup-card div,
+html[data-theme="light"] .sup-card span,
+html[data-theme="light"] .sup-card a{color:#000 !important}
+html[data-theme="light"] .sup-card a[href^="mailto"]{color:#3B9FD4 !important}
+html[data-theme="light"] .sup-ok{background:#eaf5fc !important;color:#3B9FD4 !important;border-color:#3B9FD4 !important}
+html[data-theme="light"] .sup-warn{background:#eaf5fc !important;color:#3B9FD4 !important;border-color:#3B9FD4 !important}
+/* "CHIUSO" (cutoff superato) NON è un'anomalia: va in BLU come il resto */
+html[data-theme="light"] .sup-closed{background:#eaf5fc !important;color:#3B9FD4 !important;border-color:#3B9FD4 !important}
+/* Chip di stato: solo ANOMALIA resta rossa, FILIALE IN azzurra */
+html[data-theme="light"] .stato-ric,
+html[data-theme="light"] .stato-uff,
+html[data-theme="light"] .stato-mag,
+html[data-theme="light"] .stato-fin,
+html[data-theme="light"] .stato-stallo{
+  background:#eaf5fc !important;color:#3B9FD4 !important;border-color:#3B9FD4 !important;
+}
+html[data-theme="light"] .stato-anomalia{
+  background:#ffe6e6 !important;color:#E05555 !important;border-color:#E05555 !important;
+}
+/* FILIALE IN chip (se presente) → azzurro cielo dedicato */
+html[data-theme="light"] .stato-filiale,
+html[data-theme="light"] .chip-filiale{
+  background:#e3f3ff !important;color:#5BB8E0 !important;border:1px solid #5BB8E0 !important;
+}
+/* Toast: mantieni rosso per errori ('r'), tutto il resto in blu */
+html[data-theme="light"] .toast.tg,
+html[data-theme="light"] .toast.tb,
+html[data-theme="light"] .toast.ty,
+html[data-theme="light"] .toast.tp{
+  background:#eaf5fc !important;color:#3B9FD4 !important;border:1px solid #3B9FD4 !important;
+}
+html[data-theme="light"] .toast.tr{background:#ffe6e6 !important;color:#E05555 !important;border:1px solid #E05555 !important}
+/* Pulsanti secondari a colore rosso (sb sr) → in light restano rossi SOLO se rappresentano
+   davvero un'anomalia (elimina/anomalia); i pulsanti "juventini" delle card corrieri devono
+   diventare blu. Copriamo il caso più diffuso: .sb.sr resta rosso (delete conferma), il resto
+   ereditate lo stile "button" azzurro qui sopra. */
+html[data-theme="light"] .sb.sr,
+html[data-theme="light"] button[data-anomalia="1"],
+html[data-theme="light"] .btn-anomalia{
+  background:#ffe6e6 !important;color:#E05555 !important;border:1.5px solid #E05555 !important;
+}
 </style>
 <!-- defer, non async: i moduli "compat" si registrano sull'oggetto creato da
      firebase-app, quindi vanno eseguiti in quest'ordine. Con async l'ordine è
@@ -894,7 +1015,7 @@ html[data-theme="light"] select{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34r · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34w · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1406,9 +1527,9 @@ html[data-theme="light"] select{
 <div class="pg" id="pgHist" style="display:none">
   <div class="htab">
     <button class="htab-btn on" id="hTabDash" onclick="swHTab('dash')">📊 DASH</button>
+    <button class="htab-btn" id="hTabGal" onclick="swHTab('gal')">🖼 GALLERIA</button>
     <button class="htab-btn" id="hTabArc" onclick="swHTab('arc')">🗄 ARCHIVIO</button>
     <button class="htab-btn" id="hTabTempi" onclick="swHTab('tempi')">⏱ TEMPI</button>
-    <button class="htab-btn" id="hTabGal" onclick="swHTab('gal')">🖼 GALLERIA</button>
     <button class="htab-btn" id="hTabExp" onclick="swHTab('exp')">💾 EXPORT</button>
   </div>
   <!-- host per il pannello ARCHIVIO (contenuto di pgArc spostato qui al boot) -->
@@ -1473,10 +1594,6 @@ html[data-theme="light"] select{
   </div>
 
   <div id="hPanForn" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b>v34r</b></div>
-      <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
-    </div>
   <!-- Sub-tabs LOGISTICA -->
   <div style="display:flex;gap:6px;margin-bottom:10px">
     <button onclick="swLogTab('corrieri')" id="logTabC"
@@ -1558,6 +1675,11 @@ html[data-theme="light"] select{
   </div>
 
   <div id="hPanExp" style="display:none">
+    <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v34w</b></div>
+      <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
+    </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
       <div style="font-size:11px;font-weight:800;color:#3B9FD4;margin-bottom:4px">🗃 ESPORTAZIONE COMPLETA DATABASE</div>
       <div style="font-size:10px;color:var(--txt2);line-height:1.5;margin-bottom:8px">Un file Excel con TUTTO quello che c'è nell'app: righe correnti, archivio e storico trimestre, ognuno nel suo foglio. Comodo per backup, controlli mensili o passaggio alla direzione.</div>
@@ -2119,6 +2241,39 @@ function goSA(reason) {
   idbGet('td').then(function(v){ try{rows=JSON.parse(v||'{}')||{};}catch(e){rows={};} renderAll(); });
 }
 
+// v34w — Offline sync buffer per sendMsg.
+// Quando FB_REF è null (rete assente / Firebase non ancora connesso) le scritture
+// vengono comunque applicate in locale ma sarebbero PERSE alla riconnessione perché
+// FB_REF.once('value') sovrascrive rows con i dati del server. Salviamo qui la coda
+// (con lo snapshot della riga aggiornata) e la ri-spediamo su FB al primo login utile.
+function _ofpBufGet(){ try{ return JSON.parse(localStorage.getItem('_ofpBuf')||'[]'); }catch(e){ return []; } }
+function _ofpBufSet(a){ try{ localStorage.setItem('_ofpBuf', JSON.stringify(a||[])); }catch(e){} }
+function _ofpPush(op){
+  var b = _ofpBufGet(); b.push(op);
+  if (b.length > 500) b = b.slice(-500);
+  _ofpBufSet(b);
+}
+function _ofpFlush(){
+  if (typeof FB_REF==='undefined' || !FB_REF) return;
+  var b = _ofpBufGet(); if (!b.length) return;
+  // Svuota SUBITO il buffer: se la connessione ricade e si riaccumula, non ripetiamo.
+  _ofpBufSet([]);
+  var n = b.length, done = 0, ok = 0, fail = 0;
+  function _done(){ done++; if(done===n){ try{ toast('☁ Sync offline: '+ok+' ok'+(fail?', '+fail+' err':''), fail?'y':'g'); }catch(e){} } }
+  b.forEach(function(op){
+    try{
+      var p = null;
+      if (op.type==='add' && op.key && op.row)         p = FB_REF.child(op.key).set(op.row);
+      else if (op.type==='update' && op.key && op.row) p = FB_REF.child(op.key).set(op.row);
+      else if (op.type==='remove' && op.key)           p = FB_REF.child(op.key).remove();
+      else if (op.type==='archive' && op.key)          p = FB_REF.child(op.key).remove();
+      else if (op.type==='clear')                      p = FB_REF.remove();
+      if (p && p.then) p.then(function(){ ok++; _done(); }, function(){ fail++; _done(); });
+      else _done();
+    }catch(e){ fail++; _done(); }
+  });
+}
+
 function sendMsg(m) {
   handleLocal(m);
   if (FB_REF) {
@@ -2132,6 +2287,14 @@ function sendMsg(m) {
     if (m.type==='archive' && m.key)                      { FB_REF.child(m.key).remove().catch(_fail);            secLog('archive', m.key, {}); return; }
     return;
   }
+  // Offline: bufferizza con snapshot della riga corrente per replay a riconnessione
+  try{
+    if      (m.type==='add' && m._key && rows[m._key])    _ofpPush({type:'add',     key:m._key, row:rows[m._key]});
+    else if (m.type==='update' && m.key && rows[m.key])   _ofpPush({type:'update',  key:m.key,  row:rows[m.key]});
+    else if (m.type==='remove' && m.key)                  _ofpPush({type:'remove',  key:m.key});
+    else if (m.type==='archive' && m.key)                 _ofpPush({type:'archive', key:m.key});
+    else if (m.type==='clear')                            _ofpPush({type:'clear'});
+  }catch(e){}
   if (!STANDALONE && ws && ws.readyState===1) ws.send(JSON.stringify(m));
 }
 
@@ -6115,6 +6278,7 @@ function doFBConnect() {
       try{ if(typeof initChat==='function') initChat(); }catch(e){}
       try{ if(typeof syncPkgPhotosFromFB==='function') syncPkgPhotosFromFB(); }catch(e){}
       try{ if(typeof secFlushBuffer==='function') secFlushBuffer(); }catch(e){}
+      try{ if(typeof _ofpFlush==='function') setTimeout(_ofpFlush, 1500); }catch(e){}
     } else {
       if(st){st.textContent = msg || 'Connessione fallita';st.style.color='#E05555';st.style.background='rgba(224,85,85,.1)';st.style.display='block';}
       if(btn) btn.textContent = 'CONNETTI';
@@ -6136,6 +6300,7 @@ function ensureFB() {
       try{ if(typeof initChat==='function') initChat(); }catch(e){}
       try{ if(typeof syncPkgPhotosFromFB==='function') syncPkgPhotosFromFB(); }catch(e){}
       try{ if(typeof secFlushBuffer==='function') secFlushBuffer(); }catch(e){}
+      try{ if(typeof _ofpFlush==='function') setTimeout(_ofpFlush, 1500); }catch(e){}
     }
   });
 }
