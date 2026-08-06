@@ -1015,7 +1015,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34ab · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34ac · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1677,7 +1677,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v34ab</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v34ac</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -2685,6 +2685,28 @@ function pickSogg(cod, nome){
   var parts=(CLI_DATA[cod]||'').split('|');
   var fil=parts[1]||'';
   var vet=(CLI_FIL&&CLI_FIL[fil])||'CIPI/PIEMME';
+  // v34ac — Filiale diversa dalla "01" (sede) = flusso FILIALE IN di default.
+  // Forziamo il flusso su cFlu (form ricevimento) e hFlu (header form) se
+  // esistono. L'utente puo' sempre sovrascrivere. Anche su tutte le righe OCR
+  // gia' presenti in schermata.
+  try{
+    var _filX = (fil||'').trim();
+    if(_filX && _filX !== '01' && _filX !== '1'){
+      ['cFlu','hFlu'].forEach(function(id){
+        var e=document.getElementById(id);
+        if(e && (!e.value || e.value==='STANDARD')){ e.value='FILIALE IN'; if(typeof ce==='function') ce(e); }
+      });
+      // Righe OCR gia' renderizzate: aggiorno solo quelle senza scelta esplicita
+      try{
+        var _rows = document.querySelectorAll('.ocrRow .ocrRowFlu');
+        for(var _ri=0;_ri<_rows.length;_ri++){
+          var _s=_rows[_ri];
+          if(!_s.value || _s.value==='STANDARD'){ _s.value='FILIALE IN'; }
+        }
+      }catch(e){}
+      try{ toast('Filiale '+_filX+' → flusso FILIALE IN','b'); }catch(e){}
+    }
+  }catch(e){}
   var tip=document.getElementById('cliTip');
   if(tip){
     tip.innerHTML='<span style="color:#3B9FD4;font-weight:700">'+xe(cod)+' — '+xe(nome)+'</span>'+
@@ -2796,11 +2818,22 @@ function fillStato(fi,si) {
 // ══════════════════════════════════════════════════
 function addRow() {
   var cod=gv('cCod'),forno=gv('cFor'),causale=gv('cCau'),fase=gv('cFas'),stato=gv('cSta'),datArr=gv('hArr'),vetRic=gv('hVet'),datAcqForn=gv('cDatAcqForn');
-  var checks=[{id:'hArr',v:datArr},{id:'hVet',v:vetRic},{id:'cCod',v:cod},{id:'cFor',v:forno},{id:'cCau',v:causale},{id:'cFas',v:fase},{id:'cSta',v:stato},{id:'cDatAcqForn',v:datAcqForn}];
-  checks.push({id:'cDoc',v:gv('cDoc')});
-  var ok=true,fe=null;
-  for(var i=0;i<checks.length;i++){if(!checks[i].v){var el=document.getElementById(checks[i].id);if(el){el.classList.add('err');if(!fe)fe=el;}ok=false;}}
-  if(!ok){toast('Campi obbligatori mancanti','r');if(fe)fe.scrollIntoView({behavior:'smooth',block:'center'});return;}
+  var _fluForCheck = gv('cFlu');
+  // v34ac — FILIALE IN: nessun campo obbligatorio oltre al CODICE. La riga
+  // viene comunque salvata cosi' l'operatore puo' compilare come vuole.
+  var _isFilIn = (_fluForCheck||'').toString().toUpperCase()==='FILIALE IN';
+  if(_isFilIn){
+    if(!cod){
+      var _cEl=document.getElementById('cCod'); if(_cEl){_cEl.classList.add('err'); _cEl.scrollIntoView({behavior:'smooth',block:'center'});}
+      toast('Serve almeno il CODICE ARTICOLO','r'); return;
+    }
+  } else {
+    var checks=[{id:'hArr',v:datArr},{id:'hVet',v:vetRic},{id:'cCod',v:cod},{id:'cFor',v:forno},{id:'cCau',v:causale},{id:'cFas',v:fase},{id:'cSta',v:stato},{id:'cDatAcqForn',v:datAcqForn}];
+    checks.push({id:'cDoc',v:gv('cDoc')});
+    var ok=true,fe=null;
+    for(var i=0;i<checks.length;i++){if(!checks[i].v){var el=document.getElementById(checks[i].id);if(el){el.classList.add('err');if(!fe)fe=el;}ok=false;}}
+    if(!ok){toast('Campi obbligatori mancanti','r');if(fe)fe.scrollIntoView({behavior:'smooth',block:'center'});return;}
+  }
   // ── Regole di coerenza ──
   var _anoV=gv('cAno'), _fluV=gv('cFlu'), _docV=gv('cDoc');
   // RICEVIMENTO + flusso ANOMALIA: lo stato non puo' restare "DA GESTIRE"
@@ -10947,6 +10980,35 @@ function showOcrConfirm(res, photoUrl, source){
       }
     }
   }catch(e){}
+  // v34ac — Se il SOGGETTO ricade su un codice cliente con filiale != "01",
+  // forziamo il flusso di ogni articolo a "FILIALE IN" (default modificabile).
+  try{
+    var _soggRaw = (res.soggetto||res.sogg||'').toString().toUpperCase();
+    if(_soggRaw && typeof CLI_DATA!=='undefined' && CLI_DATA){
+      var _codMatch = '';
+      var _di = _soggRaw.indexOf(' - '); if(_di>0) _soggRaw = _soggRaw.slice(0,_di).trim();
+      if(CLI_DATA[_soggRaw]) _codMatch = _soggRaw;
+      if(!_codMatch){
+        var _nz = _soggRaw.replace(/^0+/,'');
+        if(_nz){ for(var _kk in CLI_DATA){ if(_kk.replace(/^0+/,'')===_nz){ _codMatch=_kk; break; } } }
+      }
+      if(_codMatch){
+        var _fil = (CLI_DATA[_codMatch]||'').split('|')[1] || '';
+        if(_fil && _fil !== '01' && _fil !== '1'){
+          for(var _ai=0;_ai<res.articoli.length;_ai++){
+            var _ar = res.articoli[_ai];
+            if(!_ar) continue;
+            if(!(_ar.flusso||'').toString().trim() || _ar.flusso === 'STANDARD'){
+              _ar.flusso = 'FILIALE IN';
+            }
+          }
+          window._ocrFilIn = true; // flag per rilassare la validazione
+        } else {
+          window._ocrFilIn = false;
+        }
+      }
+    }
+  }catch(e){}
   window._ocrRes=res;
   var old=document.getElementById('ocrConfBox'); if(old) old.remove();
 
@@ -11310,22 +11372,25 @@ function applyOcrConfirm(allArticles){
     if(!articoli.length){ toast('\u26a0 Nessun articolo con codice: correggi la lista prima di inserire','y'); return; }
 
     // v34q: validazione semplificata — SOLO comuni: VETTORE + DATA LISTATO
+    // v34ac — FILIALE IN: nessun campo obbligatorio, si compila come si vuole.
     var _need=[
       {id:'ocrData', lbl:'DATA LISTATO'},
       {id:'ocrVet',  lbl:'VETTORE RIC.'}
     ];
     var _miss=[], _firstEl=null;
-    for(var _mi=0;_mi<_need.length;_mi++){
-      var _el=document.getElementById(_need[_mi].id);
-      if(!_el || !(_el.value||'').trim()){
-        _miss.push(_need[_mi].lbl);
-        if(_el){ _el.style.border='2px solid #E05555'; if(!_firstEl) _firstEl=_el; }
-      } else if(_el){ _el.style.border=''; }
-    }
-    if(_miss.length){
-      toast('⚠ Prima compila nel modulo: '+_miss.join(', '),'r');
-      if(_firstEl) try{ _firstEl.scrollIntoView({behavior:'smooth',block:'center'}); _firstEl.focus(); }catch(e){}
-      return;
+    if(!window._ocrFilIn){
+      for(var _mi=0;_mi<_need.length;_mi++){
+        var _el=document.getElementById(_need[_mi].id);
+        if(!_el || !(_el.value||'').trim()){
+          _miss.push(_need[_mi].lbl);
+          if(_el){ _el.style.border='2px solid #E05555'; if(!_firstEl) _firstEl=_el; }
+        } else if(_el){ _el.style.border=''; }
+      }
+      if(_miss.length){
+        toast('⚠ Prima compila nel modulo: '+_miss.join(', '),'r');
+        if(_firstEl) try{ _firstEl.scrollIntoView({behavior:'smooth',block:'center'}); _firstEl.focus(); }catch(e){}
+        return;
+      }
     }
     // v34q: validazione PER-RIGA — tutti i campi decisionali obbligatori per riga
     var _rowMiss=[];
@@ -11343,6 +11408,14 @@ function applyOcrConfirm(allArticles){
       var _art=articoli[_ri];
       if(!(_art.cod||_art.pre)) continue;
       var _rowEl=_rowEls[_ri];
+      // v34ac — FILIALE IN: nessun blocco. Le righe interne di filiale (non 01)
+      // devono poter essere compilate come si vuole, anche solo con codice.
+      var _isFilInRow = ((_art.flusso||'').toString().toUpperCase()==='FILIALE IN') || !!window._ocrFilIn;
+      if(_isFilInRow){
+        // Rimuovi eventuali evidenze di errore residue
+        if(_rowEl){ try{ _rowEl.querySelectorAll('select,input').forEach(function(x){ x.style.border=''; }); }catch(e){} }
+        continue;
+      }
       for(var _fi=0;_fi<_reqFields.length;_fi++){
         var _f=_reqFields[_fi];
         var _elR=_rowEl?_rowEl.querySelector(_f.cls):null;
