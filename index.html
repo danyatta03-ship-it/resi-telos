@@ -1015,7 +1015,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34x · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34y · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1677,7 +1677,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v34x</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v34y</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -6959,6 +6959,64 @@ function loadCodeMem(){ try{CODE_MEM=JSON.parse(localStorage.getItem('codemem')|
 function saveCodeMem(){ try{localStorage.setItem('codemem',JSON.stringify(CODE_MEM));}catch(e){} }
 loadCodeMem();
 
+// v34y — Mappa CODICE ARTICOLO → FORNITORE, costruita on-demand da storico
+// (DB_TRI) + record vivi (rows) + persistenza locale (COD_FORN_MEM).
+// Serve al lookup automatico del fornitore per riga OCR: come per il codice
+// cliente, se il codice e' gia' passato in azienda restituiamo il fornitore
+// storico piu' frequente.
+var COD_FORN_MEM = {};
+try{ COD_FORN_MEM = JSON.parse(localStorage.getItem('codFornMem')||'{}') || {}; }catch(e){ COD_FORN_MEM = {}; }
+function _codKeyNorm(pre, cod){
+  var p=(pre||'').toString().toUpperCase().trim();
+  var c=(cod||'').toString().toUpperCase().trim();
+  return c ? (p?(p+'|'+c):c) : '';
+}
+function _codFornCollect(rec, tally){
+  if(!rec) return;
+  var c=(rec.cod||'').toString().toUpperCase().trim();
+  var p=(rec.pre||'').toString().toUpperCase().trim();
+  var f=(rec.forn||'').toString().toUpperCase().trim();
+  if(!c || !f) return;
+  var keys=[]; keys.push(_codKeyNorm(p,c)); keys.push(_codKeyNorm('',c));
+  for(var i=0;i<keys.length;i++){
+    var k=keys[i]; if(!k) continue;
+    if(!tally[k]) tally[k]={};
+    tally[k][f]=(tally[k][f]||0)+1;
+  }
+}
+function _codFornBuildIndex(){
+  var tally={};
+  try{ if(typeof DB_TRI!=='undefined' && DB_TRI){ for(var i=0;i<DB_TRI.length;i++) _codFornCollect(DB_TRI[i], tally); } }catch(e){}
+  try{ for(var k in rows){ _codFornCollect(rows[k], tally); } }catch(e){}
+  return tally;
+}
+var _CODF_IDX_CACHE = null, _CODF_IDX_TS = 0;
+function _codFornIndex(){
+  var now = Date.now();
+  if(_CODF_IDX_CACHE && (now - _CODF_IDX_TS) < 60000) return _CODF_IDX_CACHE;
+  _CODF_IDX_CACHE = _codFornBuildIndex();
+  _CODF_IDX_TS = now;
+  return _CODF_IDX_CACHE;
+}
+function fornForCod(pre, cod){
+  var key1=_codKeyNorm(pre,cod), key2=_codKeyNorm('',cod);
+  if(COD_FORN_MEM[key1]) return COD_FORN_MEM[key1];
+  if(COD_FORN_MEM[key2]) return COD_FORN_MEM[key2];
+  var idx=_codFornIndex();
+  var slot = idx[key1] || idx[key2];
+  if(!slot) return '';
+  var best='', bn=0;
+  for(var f in slot){ if(slot[f]>bn){ bn=slot[f]; best=f; } }
+  return best;
+}
+function rememberCodForn(pre, cod, forn){
+  if(!cod || !forn) return;
+  var f=String(forn).toUpperCase().trim();
+  COD_FORN_MEM[_codKeyNorm(pre,cod)] = f;
+  COD_FORN_MEM[_codKeyNorm('',cod)]  = f;
+  try{ localStorage.setItem('codFornMem', JSON.stringify(COD_FORN_MEM)); }catch(e){}
+}
+
 function setScanModeUbica(){
   scanMode='chooseubi';
   var ctx=document.getElementById('scanCtxMsg');
@@ -7852,9 +7910,13 @@ function populateCauSelect(){
   var current = s.value;
   s.innerHTML = '<option value="">—</option>' + CAULIST.map(function(o){return '<option'+(o===current?' selected':'')+'>'+xe(o)+'</option>';}).join('');
 }
-// Popup documenti garanzia (in base al fornitore corrente)
-function showGaranziaDocsPopup(){
-  var forn=((document.getElementById('cFor')||{}).value||'').trim();
+// Popup documenti garanzia (in base al fornitore corrente).
+// v34y: se viene passato un fornitore esplicito (dalla riga OCR) lo usiamo,
+// altrimenti fallback al vecchio comportamento (#cFor globale).
+function showGaranziaDocsPopup(fornOverride){
+  var forn = (fornOverride && String(fornOverride).trim())
+    ? String(fornOverride).trim()
+    : (((document.getElementById('cFor')||{}).value||'').trim());
   var g=getGaranziaInfo(forn);
   var docs=(g&&g.documenti&&g.documenti.length)?g.documenti.slice():['BOLLA','MODULO','LIBRETTO'];
   var old=document.getElementById('garDocsBox'); if(old)old.remove();
@@ -10811,6 +10873,19 @@ function showOcrConfirm(res, photoUrl, source){
   res=res||{}; res.articoli=res.articoli||[];
   // Memoria OCR: se un codice è già noto e la lettura non ha trovato il PRE, lo riempie dal ricordo
   try{ if(typeof loadCodeMem==='function')loadCodeMem(); for(var _ci=0;_ci<res.articoli.length;_ci++){ var _ca=res.articoli[_ci], _cc=(_ca.cod||'').toUpperCase(); if(_cc && !_ca.pre && CODE_MEM[_cc] && CODE_MEM[_cc].pre){ _ca.pre=CODE_MEM[_cc].pre; } } }catch(e){}
+  // v34y — Auto-fornitore per articolo dal codice (mappa storica cod→forn).
+  // Se l'AI non ha compilato il fornitore, lo cerchiamo nello storico/rows.
+  try{
+    if(typeof fornForCod==='function'){
+      for(var _fi=0;_fi<res.articoli.length;_fi++){
+        var _fa = res.articoli[_fi];
+        if(!_fa) continue;
+        if((_fa.fornitore||'').toString().trim()) continue;
+        var _ff = fornForCod(_fa.pre||'', _fa.cod||'');
+        if(_ff) _fa.fornitore = _ff;
+      }
+    }
+  }catch(e){}
   window._ocrRes=res;
   var old=document.getElementById('ocrConfBox'); if(old) old.remove();
 
@@ -10979,8 +11054,8 @@ function ocrRowHtml(i, a){
   return '<div class="ocrRow" data-i="'+i+'" style="border:1px solid #1e2530;background:rgba(59,159,212,.03);border-radius:9px;padding:8px;margin-bottom:6px">'+
     '<div style="display:flex;gap:5px;align-items:center;margin-bottom:6px">'+
       '<div style="width:22px;color:#3B9FD4;font-size:12px;font-weight:800;text-align:right">'+(i+1)+'.</div>'+
-      '<input class="ocrRowPre" value="'+xe2(pre)+'" placeholder="PRE" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:56px;background:#111;color:#3B9FD4;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;font-weight:700;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:center">'+
-      '<input class="ocrRowCod" value="'+xe2(cod)+'" placeholder="codice" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="flex:1;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 8px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;min-width:0">'+
+      '<input class="ocrRowPre" value="'+xe2(pre)+'" placeholder="PRE" oninput="this.value=this.value.toUpperCase()" onchange="ocrRowAutoForn(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:56px;background:#111;color:#3B9FD4;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;font-weight:700;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:center">'+
+      '<input class="ocrRowCod" value="'+xe2(cod)+'" placeholder="codice" oninput="this.value=this.value.toUpperCase()" onchange="ocrRowAutoForn(this)" onblur="ocrRowAutoForn(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="flex:1;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 8px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;min-width:0">'+
       '<input class="ocrRowQty" type="number" min="1" value="'+qty+'" title="Quantità" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:44px;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 4px;font-size:12px;border-radius:7px;outline:none;font-family:inherit;-webkit-appearance:none;text-align:center">'+
       '<input class="ocrRowPrc" type="number" step="0.01" value="'+(prc===''?'':prc)+'" placeholder="€" title="Prezzo" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:64px;background:#111;color:#5BB8E0;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:right">'+
       '<button type="button" onclick="ocrDelRow(this)" title="Elimina" style="width:26px;height:32px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;padding:0">×</button>'+
@@ -10988,7 +11063,7 @@ function ocrRowHtml(i, a){
     // Riga 2: causale + fornitore (span più largo)
     '<div style="display:grid;grid-template-columns:2fr 1fr;gap:5px;margin-bottom:5px">'+
       '<select class="ocrRowCau" onchange="ocrRowOnCauChange(this);ocrRowFocusNext(this)" style="'+_selCss+'" title="Causale">'+_mkOpts(_cauL, cau, '— causale —')+'</select>'+
-      '<input class="ocrRowForn" value="'+xe2(forn)+'" placeholder="Fornitore" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="'+_inpCss+'" title="Fornitore">'+
+      '<input class="ocrRowForn" value="'+xe2(forn)+'" placeholder="Fornitore" oninput="this.value=this.value.toUpperCase()" onchange="ocrRowRememberForn(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="'+_inpCss+'" title="Fornitore">'+
     '</div>'+
     // Riga 3: flusso, tipo doc, fase, stato, data acq — griglia flessibile
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:5px">'+
@@ -11001,12 +11076,46 @@ function ocrRowHtml(i, a){
     '</div>';
 }
 // v34r: quando cambia CAUSALE di una riga OCR, se è GARANZIA apri il popup documenti
+// v34y: usa il fornitore DELLA RIGA (non piu' il campo globale) cosi' il popup
+//       elenca i documenti specifici richiesti da QUEL fornitore.
 function ocrRowOnCauChange(sel){
   try{
     var v = String((sel&&sel.value)||'').toUpperCase();
     if(v.indexOf('GARANZIA')===0 && typeof showGaranziaDocsPopup==='function'){
-      showGaranziaDocsPopup();
+      var row = sel.closest ? sel.closest('.ocrRow') : null;
+      var fEl = row ? row.querySelector('.ocrRowForn') : null;
+      var f   = fEl ? (fEl.value||'').trim() : '';
+      showGaranziaDocsPopup(f);
     }
+  }catch(e){}
+}
+// v34y — Auto-fornitore per riga OCR: chiamata quando l'utente esce dal
+// campo codice (o cambia il PRE). Se il fornitore e' gia' compilato, non lo
+// tocca; altrimenti prova a dedurlo da storico/rows/memoria e lo scrive.
+function ocrRowAutoForn(el){
+  try{
+    var row = el && el.closest ? el.closest('.ocrRow') : null; if(!row) return;
+    var codEl = row.querySelector('.ocrRowCod'); if(!codEl) return;
+    var cod = (codEl.value||'').toUpperCase().trim(); if(!cod) return;
+    var preEl = row.querySelector('.ocrRowPre');
+    var pre = preEl ? (preEl.value||'').toUpperCase().trim() : '';
+    var fornEl = row.querySelector('.ocrRowForn'); if(!fornEl) return;
+    if((fornEl.value||'').trim()) return;  // rispetta scelta manuale
+    if(typeof fornForCod!=='function') return;
+    var f = fornForCod(pre, cod); if(!f) return;
+    fornEl.value = f;
+    try{ toast('Fornitore riconosciuto: '+f, 'b'); }catch(e){}
+  }catch(e){}
+}
+// v34y — Quando l'utente scrive/corregge il fornitore di una riga OCR,
+// memorizza l'associazione codice→fornitore per riusarla al prossimo scan.
+function ocrRowRememberForn(el){
+  try{
+    var row = el && el.closest ? el.closest('.ocrRow') : null; if(!row) return;
+    var cod = ((row.querySelector('.ocrRowCod')||{}).value||'').toUpperCase().trim();
+    var pre = ((row.querySelector('.ocrRowPre')||{}).value||'').toUpperCase().trim();
+    var forn = (el.value||'').toUpperCase().trim();
+    if(cod && forn && typeof rememberCodForn==='function') rememberCodForn(pre, cod, forn);
   }catch(e){}
 }
 // Quando cambia FASE per una riga, aggiorna la lista STATI di quella riga
@@ -11195,6 +11304,7 @@ function applyOcrConfirm(allArticles){
     for(var i=0;i<articoli.length;i++){
       var a=articoli[i];
       try{ if(a.cod){ CODE_MEM[a.cod]={pre:a.pre, qty:a.qty}; } }catch(e){}
+      try{ if(a.cod && a.fornitore && typeof rememberCodForn==='function') rememberCodForn(a.pre, a.cod, a.fornitore); }catch(e){}
       var _set=function(id,val){var e=document.getElementById(id); if(e){e.value=val||''; if(typeof ce==='function')ce(e);}};
       _set('cFor', a.fornitore);
       _set('cFlu', a.flusso);
