@@ -4,124 +4,50 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0b0f14">
-<title data-edit-id="page-title">Gestione Resi — Generica</title>
+<title>App Aziendale</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- ============ LOGIN ============ -->
-<section class="view" id="view-login">
-  <div class="login-card" data-edit-id="login-card">
-    <img class="logo" id="brandLogo" src="icon.svg" alt="logo" data-edit-id="login-logo">
-    <h1 data-edit-id="login-title">Accesso</h1>
-    <p class="muted" data-edit-id="login-sub">Inserisci il tuo nome per iniziare</p>
-    <input id="loginName" placeholder="Nome operatore" autocomplete="off" data-edit-id="login-input">
-    <button class="btn primary" id="btnLogin" data-edit-id="login-btn">Entra</button>
-    <div class="hint" data-edit-id="login-hint">Suggerimento: PIN admin per aprire il pannello di personalizzazione.</div>
+<!-- LOGIN -->
+<section id="view-login" class="view">
+  <div class="login-card">
+    <img id="loginLogo" class="logo" src="icon.svg" alt="">
+    <h1 id="loginTitle">Accesso</h1>
+    <p class="muted">Scrivi il tuo nome — <code>admin</code> per la personalizzazione</p>
+    <input id="loginName" placeholder="Nome" autocomplete="off">
+    <button id="btnLogin" class="btn primary">Entra</button>
   </div>
 </section>
 
-<!-- ============ HOME / MODE PICKER ============ -->
-<section class="view hidden" id="view-home">
-  <header class="topbar" data-edit-id="home-header">
-    <img class="logo-sm" src="icon.svg" data-edit-id="home-logo">
-    <div class="title" data-edit-id="home-title">Menu principale</div>
-    <button class="icon-btn" id="btnLogout" title="Esci" data-edit-id="home-logout">⎋</button>
-  </header>
-  <div class="hello" data-edit-id="home-hello">Ciao <span id="whoami">operatore</span></div>
-  <div class="grid modes" id="modeGrid" data-edit-id="mode-grid">
-    <button class="mode-tile" data-go="rcv" data-edit-id="tile-rcv">
-      <div class="ico">📦</div>
-      <div class="lbl">Ricevimento</div>
-    </button>
-    <button class="mode-tile" data-go="scan" data-edit-id="tile-scan">
-      <div class="ico">📷</div>
-      <div class="lbl">Scan codici</div>
-    </button>
-    <button class="mode-tile" data-go="list" data-edit-id="tile-list">
-      <div class="ico">📋</div>
-      <div class="lbl">Elenco pratiche</div>
-    </button>
-    <button class="mode-tile" data-go="export" data-edit-id="tile-export">
-      <div class="ico">💾</div>
-      <div class="lbl">Storico / Export</div>
-    </button>
-  </div>
-  <footer class="footer" data-edit-id="home-footer">v1.0 — configurabile</footer>
+<!-- APP -->
+<section id="view-app" class="view hidden">
+  <header id="appHeader"></header>
+  <nav id="appNav"></nav>
+  <main id="appMain"></main>
+  <footer id="appFooter" class="muted"></footer>
 </section>
 
-<!-- ============ RCV ============ -->
-<section class="view hidden" id="view-rcv">
-  <header class="topbar" data-edit-id="rcv-header">
-    <button class="icon-btn" data-back="home">←</button>
-    <div class="title" data-edit-id="rcv-title">Ricevimento</div>
-  </header>
-  <div class="pad">
-    <label data-edit-id="rcv-lbl-codice">Codice pratica</label>
-    <input id="rcvCodice" placeholder="es. RES-000123">
-    <label data-edit-id="rcv-lbl-forn">Fornitore</label>
-    <input id="rcvForn" placeholder="Nome fornitore">
-    <label data-edit-id="rcv-lbl-note">Note</label>
-    <textarea id="rcvNote" rows="3"></textarea>
-    <button class="btn primary" id="btnRcvSave" data-edit-id="rcv-save">Salva pratica</button>
-  </div>
-</section>
-
-<!-- ============ SCAN ============ -->
-<section class="view hidden" id="view-scan">
-  <header class="topbar" data-edit-id="scan-header">
-    <button class="icon-btn" data-back="home">←</button>
-    <div class="title" data-edit-id="scan-title">Scan codici</div>
-  </header>
-  <div class="pad">
-    <input id="scanInput" placeholder="Digita o incolla codice" data-edit-id="scan-input">
-    <button class="btn primary" id="btnScanAdd" data-edit-id="scan-add">Aggiungi</button>
-    <ul id="scanList" class="rows"></ul>
-  </div>
-</section>
-
-<!-- ============ LIST ============ -->
-<section class="view hidden" id="view-list">
-  <header class="topbar" data-edit-id="list-header">
-    <button class="icon-btn" data-back="home">←</button>
-    <div class="title" data-edit-id="list-title">Pratiche</div>
-  </header>
-  <div class="pad">
-    <input id="listFilter" placeholder="Filtra..." data-edit-id="list-filter">
-    <ul id="listRows" class="rows"></ul>
-  </div>
-</section>
-
-<!-- ============ EXPORT ============ -->
-<section class="view hidden" id="view-export">
-  <header class="topbar" data-edit-id="exp-header">
-    <button class="icon-btn" data-back="home">←</button>
-    <div class="title" data-edit-id="exp-title">Storico / Export</div>
-  </header>
-  <div class="pad">
-    <button class="btn" id="btnExportJson" data-edit-id="exp-json">Esporta JSON</button>
-    <button class="btn" id="btnExportCsv" data-edit-id="exp-csv">Esporta CSV</button>
-    <button class="btn danger" id="btnWipe" data-edit-id="exp-wipe">Cancella tutto</button>
-  </div>
-</section>
-
-<!-- ============ EDITOR OVERLAY ============ -->
+<!-- EDITOR BAR -->
 <div id="editorBar" class="hidden">
   <span class="dot"></span>
-  <span>MODALITÀ EDITOR — doppio tap su qualunque elemento per modificarlo</span>
-  <button id="btnEditorAdmin">⚙ Admin</button>
-  <button id="btnEditorSave">💾 Salva</button>
-  <button id="btnEditorReset">↺ Reset</button>
-  <button id="btnEditorOff">✕ Esci</button>
+  <span class="lbl">EDITOR</span>
+  <button data-act="header">🎨 Header</button>
+  <button data-act="theme">🌈 Tema</button>
+  <button data-act="pages">📄 Pagine</button>
+  <button data-act="addblock">➕ Blocco</button>
+  <button data-act="io">📥 Import/Export</button>
+  <button data-act="reset">↺ Reset</button>
+  <button data-act="off">✕</button>
 </div>
 
-<dialog id="editDlg"></dialog>
-<dialog id="adminDlg"></dialog>
+<dialog id="dlg"></dialog>
 
-<script src="overrides.js"></script>
-<script src="app.js"></script>
+<script src="schema.js"></script>
+<script src="render.js"></script>
 <script src="editor.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
