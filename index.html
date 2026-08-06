@@ -1015,7 +1015,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34y · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34z · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1677,7 +1677,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v34y</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v34z</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -11224,12 +11224,13 @@ function applyOcrConfirm(allArticles){
   // Leggo gli articoli SEMPRE dalla lista editabile: cosi' le correzioni manuali dell'utente vengono rispettate.
   var articoli = (typeof ocrCollectRows==='function') ? ocrCollectRows() : [];
   if(allArticles){
-    if(!articoli.length){ toast('\u26a0 Nessun articolo con codice: correggi la lista prima di inserire','y'); return; }
-
-    // v34s: SCA (scanner mobile) invia SEMPRE all'RPC, anche con campi vuoti.
-    // Sara' l'RPC (PC) a compilare tutto prima di aggiungere in lista.
-    // Skip di TUTTE le validazioni. Solo requisito: almeno 1 articolo con codice.
-    if(typeof ROLE!=='undefined' && ROLE==='SCA'){
+    // v34s/v34z: SCA (scanner mobile / modalit\u00e0 SCA da mode-picker) invia
+    // SEMPRE al PC, anche con campi vuoti O con lista articoli vuota. Sara'
+    // l'RPC a compilare tutto prima di aggiungere in lista.
+    // ZERO blocchi: lo scanner sul telefono deve essere velocissimo.
+    var _isScaFast = (typeof ROLE!=='undefined' && ROLE==='SCA') ||
+                     (typeof _isMode==='function' && _isMode('SCA'));
+    if(_isScaFast){
       if(typeof ocrLiveSend==='function'){
         ocrLiveSend({
           articoli: articoli, sogg: g('ocrSogg'),
@@ -11243,6 +11244,8 @@ function applyOcrConfirm(allArticles){
       try{ window._ocrRes = null; }catch(e){}
       return;
     }
+
+    if(!articoli.length){ toast('\u26a0 Nessun articolo con codice: correggi la lista prima di inserire','y'); return; }
 
     // v34q: validazione semplificata — SOLO comuni: VETTORE + DATA LISTATO
     var _need=[
