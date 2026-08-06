@@ -1,52 +1,64 @@
-# App Aziendale — configurabile 360°
+# App Aziendale — page builder completo
 
-Page-builder in un singolo pacchetto statico. Nessun Firebase.
+Sito/app aziendale statico configurabile al 100% dall'admin. Nessun backend, nessun Firebase, nessuna build.
 
-## Cosa puoi fare (dall'editor)
+## Attivazione editor
+Login con **`admin`** (o `admin260403`) → compare la barra arancione.
 
-- **Header**: titolo, sottotitolo, colore sfondo, colore testo, allineamento, **upload logo dalla galleria** (o URL), posizione logo (sinistra/centro/destra/nessuno), dimensione logo, mostra/nascondi.
-- **Tema**: tutti i colori dell'app (primary, sfondo, pannelli, bordi, testo, muted, danger).
-- **Pagine**: aggiungi/rimuovi/riordina pagine, icona emoji, nome, id.
-- **Blocchi** per pagina (aggiungi, riordina ▲▼, elimina ✕, modifica ✎):
-  - **Testo/Titolo**: contenuto, tag (h1/h2/h3/p/div), font-size, weight, allineamento, colore, padding.
-  - **Pulsanti**: layout orizzontale/verticale; per ogni pulsante: etichetta, stile (primary/default/danger/ghost), **azione**:
-    - `goto` (vai ad altra pagina)
-    - `alert` (mostra messaggio)
-    - `openUrl` (apri link)
-    - `addRow` (aggiungi riga a una tabella)
-    - `exportCsv` / `exportJson` (esporta una tabella)
-    - `clearTable` (svuota una tabella)
-    - `logout`
-    - `js` (codice libero)
-  - **Tabella**: titolo, chiave di storage, **colonne** (aggiungi/rimuovi/riordina; tipo text/textarea/number/date/datetime/select con opzioni), **righe** (aggiungi/modifica/elimina), flag consenti aggiunta/modifica/eliminazione/export.
-  - **Immagine**: upload o URL, larghezza %, allineamento.
-  - **HTML libero**: incolla HTML custom.
-- **Import/Export**: scarica `schema.json` (solo config) o `schema-full.json` (config + dati); ricarica per portare la config su un altro dispositivo.
-- **Reset**: ripristina i default (i dati delle tabelle restano).
+## Cosa puoi fare
+- **🎨 Header**: titolo, sottotitolo, upload logo dalla galleria, posizione/dimensione logo, colori, sticky/non, mostra menu, mostra/nascondi
+- **🌈 Tema**: primary, sfondo, pannelli, bordi, testo, muted, danger, ok, warn
+- **📄 Pagine**: aggiungi/rimuovi/riordina, icona, id, "nascondi dal menu", **impostazioni per pagina** (sfondo, padding, nascondi header/footer, SEO title/desc)
+- **⚙ Sito**: nome PWA, colore tema mobile, **favicon** (upload), **footer con colonne** (aggiungi/rimuovi/riordina, ogni colonna con titolo + voci), copyright, **Custom CSS** globale
+- **➕ Blocco**: aggiungi in fondo a una pagina; in pagina compare **➕ blocco qui** dentro sezioni/colonne
+- **📥 IO**: esporta `schema.json` (solo config) o `schema-full.json` (config + dati tabelle + invii form); importa un backup
+- **↺**: reset ai default (i dati restano)
 
-## Come si attiva l'editor
+## Blocchi disponibili
+| Icona | Nome | Cosa fa |
+|---|---|---|
+| ⭐ | Hero | Banner con titolo, sottotitolo, immagine di sfondo (upload), overlay, CTA multipli |
+| 📦 | Sezione | Contenitore con titolo/sottotitolo + blocchi annidati |
+| ▦ | Colonne | 1-6 colonne, ognuna con blocchi annidati |
+| 📝 | Testo/titolo | tag h1-h4/p/div, size, weight, allineamento, colore, padding |
+| 🔘 | Pulsanti | Etichetta + stile + **azione** (goto pagina · alert · apri URL · aggiungi riga tabella · export CSV/JSON · svuota tabella · logout · JS libero) |
+| 🃏 | Griglia di card | Card con immagine (upload), titolo, testo, link |
+| 🗂 | Card singola | Card riutilizzabile in qualsiasi punto |
+| 📈 | Statistiche | Numeri grandi con etichetta (griglia) |
+| 💬 | Testimonianze | Testo, autore, ruolo, avatar |
+| 🖼️ | Galleria | Upload multiplo immagini in griglia |
+| ▼ | Accordion/FAQ | Domanda + risposta |
+| ▶️ | Video | YouTube / Vimeo / MP4, aspect-ratio |
+| 🌐 | Iframe | Embed qualsiasi URL |
+| 📍 | Mappa | Google Maps con indirizzo/query |
+| ☎️ | Info contatto | Icona + etichetta + valore |
+| 🌐 | Social | Cerchi con emoji linkati (linkedin/instagram/facebook/…) |
+| 📮 | Form | Campi configurabili (text/email/tel/number/date/textarea/select), invii **salvati in localStorage** e visualizzabili/esportabili dall'editor |
+| 🖼 | Immagine | Upload/URL, larghezza %, link on-click, alt |
+| </> | HTML libero | Incolla HTML/JS custom |
+| 📊 | Tabella | Colonne (text/textarea/number/date/datetime/select) + righe con edit/delete/export |
+| ↕ | Spaziatore | Altezza fissa |
+| — | Divisore | Linea con colore/spessore/margine |
 
-1. Apri `index.html`.
-2. Nella login scrivi **`admin`** (o `admin260403`) → parte l'editor.
-3. Barra arancione in basso: **🎨 Header · 🌈 Tema · 📄 Pagine · ➕ Blocco · 📥 Import/Export · ↺ Reset · ✕**.
-4. In modalità editor ogni blocco mostra i controlli ▲▼✎✕ in alto a destra. I click sui pulsanti normali sono disabilitati (per non attivare le azioni mentre modifichi).
+## Blocchi annidati
+Sezioni e Colonne sono contenitori: in modalità editor mostrano `➕ blocco qui` per aggiungere qualsiasi tipo (anche altri contenitori) al loro interno.
+
+## Persistenza (tutto in localStorage)
+- `app-schema` — configurazione del sito
+- `app-data:<key>` — righe di ogni tabella
+- `app-subm:<key>` — invii di ogni form
+- `sessionStorage['rg-user']` — utente loggato
 
 ## File
-
-- `index.html` — shell.
-- `style.css` — tema e componenti.
-- `schema.js` — storage + schema di default.
-- `render.js` — motore di rendering delle pagine.
-- `editor.js` — pannelli editor (header, tema, pagine, blocchi, tabelle).
-- `app.js` — login + boot.
-- `manifest.json`, `icon.svg` — PWA.
-
-## Persistenza (localStorage)
-
-- `app-schema` — configurazione completa dell'app.
-- `app-data:<storageKey>` — righe di ogni tabella.
-- `sessionStorage['rg-user']` — utente loggato.
+- `index.html` — shell
+- `style.css` — stili base (sovrascrivibili da Custom CSS)
+- `schema.js` — storage + defaults
+- `ui.js` — helper (dialog, azioni, tabella, item-list)
+- `blocks.js` — registro di tutti i tipi di blocco
+- `render.js` — traversal e rendering
+- `editor.js` — barra strumenti e pannelli
+- `app.js` — login + boot
+- `manifest.json`, `icon.svg` — PWA
 
 ## Deploy
-
-Statico. Qualunque hosting (Netlify drag&drop, GitHub Pages, S3, …). Nessuna build.
+Statico. Trascinabile su Netlify/GitHub Pages/S3/qualsiasi hosting.

@@ -5,67 +5,67 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  font-size:15px;min-height:100vh}
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px;min-height:100vh;line-height:1.5}
 .hidden{display:none!important}
 button,input,textarea,select{font-family:inherit;font-size:15px}
 .muted{color:var(--muted);font-size:13px}
 code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px}
+a{color:var(--primary)}
 
-/* base */
 input,textarea,select{width:100%;background:var(--panel);color:var(--text);
-  border:1px solid var(--border);padding:11px;border-radius:var(--radius);outline:none}
+  border:1px solid var(--border);padding:11px;border-radius:var(--radius);outline:none;-webkit-appearance:none}
 input:focus,textarea:focus,select:focus{border-color:var(--primary)}
 .btn{background:var(--panel2);color:var(--text);border:1px solid var(--border);
-  padding:12px 16px;border-radius:var(--radius);font-weight:600;cursor:pointer;transition:transform .1s}
+  padding:11px 14px;border-radius:var(--radius);font-weight:600;cursor:pointer;transition:transform .1s;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .btn:active{transform:scale(.97)}
 .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
 .btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
-.btn.ghost{background:transparent}
+.btn.ghost{background:transparent;border-color:currentColor}
 .btn.sm{padding:6px 10px;font-size:12px;border-radius:8px}
 .btn.block{width:100%}
+.icon-btn{background:transparent;color:inherit;border:none;font-size:20px;
+  width:40px;height:40px;border-radius:50%;cursor:pointer}
 
-/* login */
 #view-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.login-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;
-  padding:26px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:10px;align-items:stretch;text-align:center}
+.login-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:26px;
+  width:100%;max-width:360px;display:flex;flex-direction:column;gap:10px;align-items:stretch;text-align:center}
 .login-card .logo{width:80px;height:80px;margin:0 auto;border-radius:14px;object-fit:contain;background:#fff2}
 .login-card h1{margin:6px 0 0;font-size:22px}
 
-/* app shell */
+/* SHELL */
 #appHeader{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:10px;padding:12px 14px;
   background:var(--panel);border-bottom:1px solid var(--border)}
-#appHeader .hlogo{height:36px;width:auto;border-radius:6px;object-fit:contain;background:transparent}
+#appHeader .hlogo{height:36px;width:auto;border-radius:6px;object-fit:contain}
 #appHeader .htxt{flex:1;min-width:0}
-#appHeader .htitle{font-weight:800;font-size:16px}
+#appHeader .htitle{font-weight:800;font-size:16px;line-height:1.2}
 #appHeader .hsub{font-size:12px;color:var(--muted)}
-#appHeader.center{justify-content:center;text-align:center}
-#appHeader.center .htxt{flex:0}
+#appHeader.center{text-align:center}
 #appHeader.right{flex-direction:row-reverse}
 #appNav{display:flex;gap:6px;overflow-x:auto;padding:8px 10px;background:var(--panel);border-bottom:1px solid var(--border)}
 #appNav button{background:transparent;color:var(--text);border:1px solid var(--border);
   padding:8px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
 #appNav button.active{background:var(--primary);border-color:var(--primary);color:#fff}
-#appMain{padding:14px;display:flex;flex-direction:column;gap:12px;padding-bottom:120px}
-#appFooter{padding:20px;text-align:center;font-size:11px}
+#appMain{padding:14px;display:flex;flex-direction:column;gap:14px;padding-bottom:120px}
+#appFooter{padding:24px 16px 40px;background:var(--panel);border-top:1px solid var(--border);color:var(--muted);font-size:13px;margin-top:20px}
+.footer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px;margin-bottom:16px}
+.footer-grid .fcol-t{font-weight:700;color:var(--text);margin-bottom:6px;text-transform:uppercase;font-size:12px;letter-spacing:.5px}
+.footer-grid .fcol-i{padding:2px 0}
+.fcopy{text-align:center;padding-top:12px;border-top:1px solid var(--border);font-size:12px}
 
-/* blocks */
+/* BLOCKS common */
 .blk{position:relative}
-.blk-controls{position:absolute;top:-4px;right:-4px;display:none;gap:2px;background:var(--warn);
-  border-radius:8px;padding:2px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.blk-controls{position:absolute;top:-6px;right:-6px;display:none;gap:2px;background:var(--warn);
+  border-radius:8px;padding:2px;z-index:20;box-shadow:0 2px 8px rgba(0,0,0,.4)}
 .blk-controls button{background:#111;color:var(--warn);border:none;padding:4px 7px;
   border-radius:5px;font-size:11px;font-weight:800;cursor:pointer}
-body.edit-on .blk{outline:1px dashed rgba(255,152,0,.5);outline-offset:4px;border-radius:6px}
+body.edit-on .blk{outline:1px dashed rgba(255,152,0,.4);outline-offset:4px;border-radius:6px}
 body.edit-on .blk:hover{outline:2px solid var(--warn)}
 body.edit-on .blk .blk-controls{display:flex}
+.add-here{align-self:flex-start;background:transparent!important;border:1px dashed var(--warn)!important;color:var(--warn)!important;font-size:11px!important;margin-top:4px}
 
-.blk-text h1,.blk-text h2,.blk-text h3,.blk-text p{margin:0}
-.blk-buttons{display:flex;gap:8px;flex-wrap:wrap}
-.blk-buttons.stack{flex-direction:column}
-.blk-buttons.stack .btn{width:100%}
-.blk-image img{max-width:100%;border-radius:var(--radius)}
-
-/* table block */
+/* TABLE block */
 .blk-table{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 .blk-table .thead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--panel2)}
 .blk-table .thead .name{flex:1;font-weight:700}
@@ -76,22 +76,22 @@ body.edit-on .blk .blk-controls{display:flex}
 .blk-table th{background:var(--panel2);font-size:11px;text-transform:uppercase;color:var(--muted);position:sticky;top:0}
 .blk-table tr:hover td{background:rgba(255,255,255,.02)}
 .blk-table .empty{padding:20px;text-align:center;color:var(--muted);font-size:13px}
-.blk-table .row-del{background:transparent;color:var(--danger);border:none;font-size:16px;cursor:pointer;padding:0}
+.blk-table .row-del{background:transparent;color:var(--danger);border:none;font-size:16px;cursor:pointer;padding:0 4px}
 .blk-table .row-edit{background:transparent;color:var(--primary);border:none;font-size:14px;cursor:pointer;padding:0 6px}
 
-/* editor bar */
+/* Editor bar */
 #editorBar{position:fixed;bottom:0;left:0;right:0;z-index:9998;background:var(--warn);color:#111;
   display:flex;align-items:center;gap:6px;padding:8px 10px;font-size:12px;font-weight:800;
   box-shadow:0 -2px 12px rgba(0,0,0,.5);overflow-x:auto}
 #editorBar .dot{width:8px;height:8px;border-radius:50%;background:#111;animation:pulse 1s infinite;flex-shrink:0}
 #editorBar .lbl{flex-shrink:0}
-#editorBar button{background:#111;color:var(--warn);border:none;padding:6px 9px;
-  border-radius:6px;font-weight:800;font-size:11px;cursor:pointer;flex-shrink:0}
+#editorBar button{background:#111;color:var(--warn);border:none;padding:6px 9px;border-radius:6px;
+  font-weight:800;font-size:11px;cursor:pointer;flex-shrink:0}
 @keyframes pulse{50%{opacity:.3}}
 
 /* dialogs */
 dialog{border:none;padding:0;border-radius:14px;background:var(--panel);color:var(--text);
-  max-width:min(96vw,560px);width:100%}
+  max-width:min(96vw,620px);width:100%;max-height:90vh}
 dialog::backdrop{background:rgba(0,0,0,.7)}
 dialog .h{padding:12px 16px;border-bottom:1px solid var(--border);font-weight:800;display:flex;align-items:center;gap:8px}
 dialog .h .x{margin-left:auto;background:transparent;border:none;color:var(--text);font-size:22px;cursor:pointer}
@@ -104,9 +104,14 @@ dialog .fld > label{font-size:11px;color:var(--muted);text-transform:uppercase;l
 dialog input[type=color]{height:38px;padding:2px}
 dialog .list{display:flex;flex-direction:column;gap:6px}
 dialog .list .it{display:flex;gap:6px;align-items:center;background:var(--panel2);padding:8px;border-radius:8px}
-dialog .list .it .grip{color:var(--muted);cursor:grab}
-dialog .list .it input,dialog .list .it select{padding:6px 8px}
+dialog .list .it input,dialog .list .it select,dialog .list .it textarea{padding:6px 8px}
 dialog .tabs{display:flex;gap:4px;padding:6px 10px;background:var(--panel2);overflow-x:auto}
 dialog .tabs button{background:transparent;border:1px solid var(--border);color:var(--text);
   padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap}
 dialog .tabs button.active{background:var(--primary);border-color:var(--primary);color:#fff}
+
+/* Responsive tweaks */
+@media(max-width:640px){
+  dialog .row,dialog .row3{grid-template-columns:1fr}
+  .footer-grid{grid-template-columns:1fr 1fr}
+}

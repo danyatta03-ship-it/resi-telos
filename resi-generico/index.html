@@ -11,41 +11,40 @@
 </head>
 <body>
 
-<!-- LOGIN -->
 <section id="view-login" class="view">
   <div class="login-card">
     <img id="loginLogo" class="logo" src="icon.svg" alt="">
     <h1 id="loginTitle">Accesso</h1>
-    <p class="muted">Scrivi il tuo nome — <code>admin</code> per la personalizzazione</p>
+    <p class="muted">Scrivi il tuo nome — <code>admin</code> per l'editor</p>
     <input id="loginName" placeholder="Nome" autocomplete="off">
     <button id="btnLogin" class="btn primary">Entra</button>
   </div>
 </section>
 
-<!-- APP -->
 <section id="view-app" class="view hidden">
   <header id="appHeader"></header>
   <nav id="appNav"></nav>
   <main id="appMain"></main>
-  <footer id="appFooter" class="muted"></footer>
+  <footer id="appFooter"></footer>
 </section>
 
-<!-- EDITOR BAR -->
 <div id="editorBar" class="hidden">
-  <span class="dot"></span>
-  <span class="lbl">EDITOR</span>
+  <span class="dot"></span><span class="lbl">EDITOR</span>
   <button data-act="header">🎨 Header</button>
   <button data-act="theme">🌈 Tema</button>
   <button data-act="pages">📄 Pagine</button>
+  <button data-act="site">⚙ Sito</button>
   <button data-act="addblock">➕ Blocco</button>
-  <button data-act="io">📥 Import/Export</button>
-  <button data-act="reset">↺ Reset</button>
+  <button data-act="io">📥 IO</button>
+  <button data-act="reset">↺</button>
   <button data-act="off">✕</button>
 </div>
 
 <dialog id="dlg"></dialog>
 
 <script src="schema.js"></script>
+<script src="ui.js"></script>
+<script src="blocks.js"></script>
 <script src="render.js"></script>
 <script src="editor.js"></script>
 <script src="app.js"></script>
