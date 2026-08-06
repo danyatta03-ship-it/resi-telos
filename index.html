@@ -1015,7 +1015,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34z · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v34aa · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1677,7 +1677,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v34z</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v34aa</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -10521,6 +10521,12 @@ function ocrRequestCrop(){
   if(inp) inp.click();
 }
 
+// v34aa \u2014 sessione OCR: ogni lancio incrementa il token; se l'utente sceglie
+// "\u2702 Ritaglia" durante il caricamento, il token cambia e il risultato in
+// arrivo viene scartato, cosi' non compaiono due popup confirm.
+var _ocrSession = 0;
+var _ocrLastRaw = null;
+
 function ocrDocument(inputEl){
   var file=inputEl.files[0]; if(!file) return;
   inputEl.value='';
@@ -10530,18 +10536,22 @@ function ocrDocument(inputEl){
   var rd=new FileReader();
   rd.onload=function(e){
     var raw = e.target.result;
-    // Nuovo default (v34x): OCR direttamente su TUTTA la foto \u2014 piu' veloce e
-    // meno interazioni. Il ritaglio guidato parte solo se richiesto via
-    // ocrRequestCrop() (pulsante "Ritaglia" nel panel SCA).
+    _ocrLastRaw = raw;
     var launch = function(dataUrl){
       if(!dataUrl){ ocrLoading=false; return; }
-      ocrShowLoading('Lettura bolla\u2026');
+      _ocrSession++;
+      var myTok = _ocrSession;
+      // Ritaglio come opzione LATERALE durante la lettura: se l'utente tocca
+      // il pulsante \u2702 in basso a destra, tokenizziamo via e apriamo il crop.
+      ocrShowLoading('Lettura bolla\u2026', /*showCrop=*/true);
       var aiWasConfigured = !!ocrAIConfig();
       ocrViaAI(dataUrl, function(aiRes){
+        if(myTok !== _ocrSession) return; // scartato: l'utente ha chiesto ritaglio
         if(aiRes&&aiRes.noDoc){ ocrLoading=false; ocrHideLoading(); toast('\u26a0 Nessuna bolla riconosciuta nella foto: inquadra il documento e riprova','y'); return; }
         if(aiRes){ ocrLoading=false; ocrHideLoading(); showOcrConfirm(aiRes, dataUrl, 'ai'); return; }
         ocrPreprocess(dataUrl, function(proc){
           ocrRunTesseract(proc, function(res){
+            if(myTok !== _ocrSession) return;
             ocrLoading=false; ocrHideLoading();
             showOcrConfirm(res, dataUrl, aiWasConfigured ? 'offline-fallback' : 'offline');
           });
@@ -10553,6 +10563,35 @@ function ocrDocument(inputEl){
   };
   rd.onerror=function(){ ocrLoading=false; ocrHideLoading(); toast('Errore lettura file','r'); };
   rd.readAsDataURL(file);
+}
+
+// v34aa \u2014 Interrompe l'OCR in corso e apre il ritaglio guidato sulla stessa
+// foto: il risultato del vecchio OCR viene scartato (token mismatch).
+function ocrCropMidRead(){
+  if(!_ocrLastRaw) return;
+  _ocrSession++;         // invalida il risultato in arrivo
+  ocrLoading = false;
+  ocrHideLoading();
+  ocrCropShow(_ocrLastRaw, function(dataUrl){
+    if(!dataUrl){ return; }
+    ocrLoading = true;
+    _ocrSession++;
+    var myTok = _ocrSession;
+    ocrShowLoading('Lettura bolla\u2026', /*showCrop=*/false);
+    var aiWasConfigured = !!ocrAIConfig();
+    ocrViaAI(dataUrl, function(aiRes){
+      if(myTok !== _ocrSession) return;
+      if(aiRes&&aiRes.noDoc){ ocrLoading=false; ocrHideLoading(); toast('\u26a0 Nessuna bolla riconosciuta','y'); return; }
+      if(aiRes){ ocrLoading=false; ocrHideLoading(); showOcrConfirm(aiRes, dataUrl, 'ai'); return; }
+      ocrPreprocess(dataUrl, function(proc){
+        ocrRunTesseract(proc, function(res){
+          if(myTok !== _ocrSession) return;
+          ocrLoading=false; ocrHideLoading();
+          showOcrConfirm(res, dataUrl, aiWasConfigured ? 'offline-fallback' : 'offline');
+        });
+      });
+    });
+  });
 }
 
 // \u2500\u2500 Ritaglio guidato prima dell'OCR \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -10634,7 +10673,7 @@ function ocrCropShow(dataUrl, cb){
 }
 
 // \u2500\u2500 Overlay di caricamento OCR \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-function ocrShowLoading(msg){
+function ocrShowLoading(msg, showCrop){
   var ov=document.getElementById('ocrLoadOv');
   if(!ov){
     ov=document.createElement('div'); ov.id='ocrLoadOv';
@@ -10645,9 +10684,31 @@ function ocrShowLoading(msg){
   }
   ov.style.display='flex';
   var m=document.getElementById('ocrLoadMsg'); if(m) m.textContent=msg||'Lettura\u2026';
+  // v34aa \u2014 pulsante Ritaglia in basso a destra: se l'utente lo tocca durante
+  // la lettura, invalidiamo il risultato in arrivo e apriamo il crop overlay
+  // sulla stessa foto. Se non tocca nulla, la lettura di tutta la foto prosegue.
+  var cropBtn = document.getElementById('ocrLoadCropBtn');
+  if(showCrop){
+    if(!cropBtn){
+      cropBtn = document.createElement('button');
+      cropBtn.id = 'ocrLoadCropBtn';
+      cropBtn.type = 'button';
+      cropBtn.setAttribute('onclick','ocrCropMidRead()');
+      cropBtn.style.cssText = 'position:fixed;right:16px;bottom:24px;z-index:1460;background:#ffffff;color:#000000;border:2px solid #3B9FD4;border-radius:24px;padding:12px 18px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;box-shadow:0 4px 12px rgba(0,0,0,.35);display:inline-flex;align-items:center;gap:8px';
+      cropBtn.innerHTML = '<span style="color:#3B9FD4;font-size:16px">\u2702\ufe0f</span><span>Ritaglia</span>';
+      document.body.appendChild(cropBtn);
+    } else {
+      cropBtn.style.display = 'inline-flex';
+    }
+  } else if(cropBtn){
+    cropBtn.style.display = 'none';
+  }
 }
 function ocrSetLoading(msg){ var m=document.getElementById('ocrLoadMsg'); if(m) m.textContent=msg; }
-function ocrHideLoading(){ var ov=document.getElementById('ocrLoadOv'); if(ov) ov.style.display='none'; }
+function ocrHideLoading(){
+  var ov=document.getElementById('ocrLoadOv'); if(ov) ov.style.display='none';
+  var cb=document.getElementById('ocrLoadCropBtn'); if(cb) cb.style.display='none';
+}
 
 // \u2500\u2500 Pre-elaborazione: ridimensiona + scala di grigi + contrasto \u2500\u2500
 function ocrPreprocess(dataUrl, cb){
@@ -10947,11 +11008,12 @@ function showOcrConfirm(res, photoUrl, source){
 
   if(photoUrl) html+='<img src="'+photoUrl+'" style="width:100%;max-height:150px;object-fit:contain;border-radius:8px;background:#0a0a0a;margin-bottom:12px">';
 
-  // v34s: SCA vede "Invia al PC" (che skippa validazioni), gli altri "Aggiungi tutti alla lista"
-  var _btnMainTxt = (typeof ROLE!=='undefined' && ROLE==='SCA') ? '\u2713 Invia al PC (senza compilare campi)' : '\u2713 Aggiungi tutti alla lista';
+  // v34s/v34aa: SCA (via ROLE o mode-picker) vede "Invia al PC" (skippa validazioni), gli altri "Aggiungi tutti alla lista"
+  var _isScaUi = (typeof ROLE!=='undefined' && ROLE==='SCA') || (typeof _isMode==='function' && _isMode('SCA'));
+  var _btnMainTxt = _isScaUi ? '\u2713 Invia al PC (senza compilare campi)' : '\u2713 Aggiungi tutti alla lista';
   html+='<button onclick="applyOcrConfirm(true)" style="width:100%;background:#3B9FD4;color:#fff;border:none;padding:13px;font-size:15px;font-weight:800;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">'+_btnMainTxt+'</button>';
   // "Precompila solo il form" non ha senso per SCA (non ha il form principale)
-  if(typeof ROLE==='undefined' || ROLE!=='SCA'){
+  if(!_isScaUi){
     html+='<button onclick="applyOcrConfirm(false)" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1.5px solid #3B9FD4;padding:10px;font-size:12px;font-weight:700;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">Precompila solo il form (senza inserire)</button>';
   }
   html+='<button onclick="document.getElementById(\'ocrConfBox\').remove()" style="width:100%;background:none;color:#555;border:none;padding:9px;font-size:13px;cursor:pointer;font-family:inherit;-webkit-appearance:none">Annulla</button>';
@@ -13624,12 +13686,6 @@ function renderScaPanel(){
     '<div class="sca-sub">Fotografa la bolla o il DDT.<br>L\'AI legge i codici e li invia in tempo reale al ricevimento PC.</div>'+
     '<button class="sca-big" onclick="document.getElementById(\'ocrInput\').click()" title="Foto bolla / DDT">'+
       camSvg + '<span>Foto bolla</span>'+
-    '</button>'+
-    // v34x — Ritaglio come SECONDA scelta esplicita (al posto del vecchio "Tutta la foto"):
-    // default = leggi tutta la foto, opzionale = ritaglia prima
-    '<button class="sca-crop" onclick="ocrRequestCrop()" title="Ritaglia la bolla prima di leggerla" '+
-      'style="display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;background:#ffffff;color:#000000;border:2px solid #3B9FD4;border-radius:10px;padding:12px 18px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;box-shadow:0 2px 6px rgba(0,0,0,.15)">'+
-      '<span style="color:#3B9FD4">✂️</span><span>Ritaglia prima di leggere</span>'+
     '</button>'+
     '<div class="sca-hint">📶 Serve connessione — sync via Firebase</div>';
 }
