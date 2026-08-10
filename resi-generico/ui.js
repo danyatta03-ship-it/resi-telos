@@ -316,17 +316,26 @@ function editTable(blk, done){
               </div>`).join('')}</div>
             <button class="btn" id="_add">➕ Aggiungi colonna</button>
             <button class="btn primary" id="_savec">Salva colonne</button>`;
+          // v35 fix: capture() prima di riordino/rimuovi/aggiungi/opts,
+          // altrimenti key/label/type in edit vengono persi al re-render di tab().
+          const _capCols=()=>{
+            body.querySelectorAll('#_cl .it').forEach(it=>{ const i=+it.dataset.i; const c=blk.columns[i]; if(!c) return;
+              const _k=it.querySelector('[data-f=key]');   if(_k) c.key=_k.value.trim()||c.key;
+              const _l=it.querySelector('[data-f=label]'); if(_l) c.label=_l.value;
+              const _t=it.querySelector('[data-f=type]');  if(_t) c.type=_t.value;
+            });
+          };
           body.querySelectorAll('#_cl .it').forEach(it=>{
             const i=+it.dataset.i;
             it.querySelector('[data-a=opts]').onclick=()=>{
               const c=blk.columns[i]; const s=prompt('Opzioni (una per riga o separate da virgola):', (c.options||[]).join('\n')); if(s==null)return;
               c.options = s.split(/[\n,]/).map(x=>x.trim()).filter(Boolean); alert('Salvate ('+c.options.length+').');
             };
-            it.querySelector('[data-a=up]').onclick=()=>{if(i<=0)return;[blk.columns[i-1],blk.columns[i]]=[blk.columns[i],blk.columns[i-1]];tab('cols');};
-            it.querySelector('[data-a=dn]').onclick=()=>{if(i>=blk.columns.length-1)return;[blk.columns[i+1],blk.columns[i]]=[blk.columns[i],blk.columns[i+1]];tab('cols');};
-            it.querySelector('[data-a=rm]').onclick=()=>{if(!confirm('Rimuovere?'))return;blk.columns.splice(i,1);tab('cols');};
+            it.querySelector('[data-a=up]').onclick=()=>{if(i<=0)return;_capCols();[blk.columns[i-1],blk.columns[i]]=[blk.columns[i],blk.columns[i-1]];tab('cols');};
+            it.querySelector('[data-a=dn]').onclick=()=>{if(i>=blk.columns.length-1)return;_capCols();[blk.columns[i+1],blk.columns[i]]=[blk.columns[i],blk.columns[i+1]];tab('cols');};
+            it.querySelector('[data-a=rm]').onclick=()=>{if(!confirm('Rimuovere?'))return;_capCols();blk.columns.splice(i,1);tab('cols');};
           });
-          body.querySelector('#_add').onclick=()=>{blk.columns.push({key:'col'+(blk.columns.length+1),label:'Nuova colonna',type:'text'});tab('cols');};
+          body.querySelector('#_add').onclick=()=>{_capCols();blk.columns.push({key:'col'+(blk.columns.length+1),label:'Nuova colonna',type:'text'});tab('cols');};
           body.querySelector('#_savec').onclick=()=>{
             body.querySelectorAll('#_cl .it').forEach(it=>{const i=+it.dataset.i;const c=blk.columns[i];
               c.key=it.querySelector('[data-f=key]').value.trim()||c.key;

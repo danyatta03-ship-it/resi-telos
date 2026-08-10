@@ -3642,7 +3642,7 @@ function renderList(){
     // v34n: chip FASE ben visibile TRA causale e stato (era solo testo grigio in header)
     if(r.fase) html+=_cGrp('fase','<span class="chip" style="background:rgba(59,159,212,.28);color:#3B9FD4;border:1.5px solid #3B9FD4;font-weight:800;letter-spacing:.4px">'+xe(r.fase)+'</span>');
     if(r.stato) html+=_cGrp('stato',statoChip(r.stato,r.fase));
-    if(r.stato==='NON RENDIBILE'&&r.motivoNR) html+='<span class="chip cr">'+xe(r.motivoNR)+'</span>';
+    if(isNR(r.stato)&&r.motivoNR) html+='<span class="chip cr">'+xe(r.motivoNR)+'</span>';
     if(r.rma) html+=_cGrp('rma','<span class="chip cn">'+xe(r.rma)+'</span>');
     if(r.vetUsc) html+=_cGrp('uscita','<span class="chip cb">→ '+xe(r.vetUsc)+'</span>');
     html+='</div>';
@@ -4581,7 +4581,7 @@ function renderDBTable(filt, maxShow){
     html+='<td style="color:#5BB8E0;font-family:monospace;padding:6px 7px;font-size:11px;white-space:nowrap">'+(r.prc?parseFloat(r.prc).toFixed(2):'')+'</td>';
     html+='<td style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 7px;font-size:11px;color:#fff">'+xe(r.causale||'')+'</td>';
     html+='<td style="padding:6px 7px"><span class="stato-chip '+faseCls+'">'+xe(r.fase||'')+'</span></td>';
-    html+='<td style="padding:6px 7px"><span class="stato-chip '+statoCls+'" style="white-space:nowrap">'+xe(r.stato||'')+'</span>'+((r.stato==='NON RENDIBILE'&&r.motivoNR)?'<div style="font-size:9px;color:#E05555;margin-top:2px;white-space:nowrap">'+xe(r.motivoNR)+'</div>':'')+'</td>';
+    html+='<td style="padding:6px 7px"><span class="stato-chip '+statoCls+'" style="white-space:nowrap">'+xe(r.stato||'')+'</span>'+((isNR(r.stato)&&r.motivoNR)?'<div style="font-size:9px;color:#E05555;margin-top:2px;white-space:nowrap">'+xe(r.motivoNR)+'</div>':'')+'</td>';
     html+='<td style="padding:6px 7px;font-size:11px;color:#3B9FD4;white-space:nowrap">'+xe(r.vetUsc||'')+'</td>';
     html+='<td style="padding:6px 7px"><button class="sb sg" onclick="dlRow('+ri+')" style="padding:4px 8px;font-size:10px;white-space:nowrap">XLS</button></td>';
     var _canEd=(ROLE==='UFF'||ROLE==='ADM');
@@ -4933,7 +4933,7 @@ function showCyclesFornitori(){
 
 // ── RESI PER CICLO / FASE — apre modale con la lista dei resi appartenenti
 // a un dato ciclo in una data fase (di solito UFFICIO RESI). Utilizza
-// cycleOfSupplier(). Ogni riga apre l'editor (openSheet) sul reso.
+// cycleOfSupplier(). Ogni riga apre l'editor (editRow) sul reso.
 function showResiByCycle(cicloName, fase){
   var rowsAll = (typeof gra==='function') ? gra() : [];
   var flt = rowsAll.filter(function(r){
@@ -10858,7 +10858,7 @@ function buildDbSummary(){
   var today=new Date(), aperti=[];
   for(var i=0;i<arr.length;i++){ var r=arr[i];
     inc(byFase,r.fase); inc(byStato,r.stato); inc(byCausale,r.causale); inc(byForn,r.forn);
-    if(r.stato==='NON RENDIBILE'&&r.motivoNR) inc(byMotivoNR,r.motivoNR);
+    if(isNR(r.stato)&&r.motivoNR) inc(byMotivoNR,r.motivoNR);
     if(r.datArr){ var d=new Date(r.datArr); if(!isNaN(d.getTime())){ var days=Math.floor((today-d)/86400000); aging[days<=7?'0-7':days<=15?'8-15':days<=30?'16-30':'oltre30']++; } }
     if(r.fase!=='FINALE') aperti.push({cod:r.cod,forn:r.forn,cliente:r.sogg,causale:r.causale,fase:r.fase,stato:r.stato,data:r.datArr,prezzo:r.prc});
   }

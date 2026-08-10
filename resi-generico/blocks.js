@@ -676,13 +676,24 @@ const form = {
               </div>`).join('')}</div>
             <button class="btn" id="_add">➕ Aggiungi campo</button>
             <button class="btn primary" id="_savef">Salva campi</button>`;
+            // v35 fix: capture() prima di riordino/rimuovi/aggiungi, altrimenti
+            // key/label/required in edit vengono sovrascritti dal draw().
+            const _capFields=()=>{
+              body.querySelectorAll('#_fl .it').forEach(it=>{ const i=+it.dataset.i; const f=b.fields[i]; if(!f) return;
+                const _k=it.querySelector('[data-f=key]');      if(_k) f.key=_k.value.trim()||f.key;
+                const _l=it.querySelector('[data-f=label]');    if(_l) f.label=_l.value;
+                const _t=it.querySelector('[data-f=type]');     if(_t) f.type=_t.value;
+                const _r=it.querySelector('[data-f=required]'); if(_r) f.required=_r.checked;
+                const _o=it.querySelector('[data-f=options]');  if(_o) f.options=_o.value.split(',').map(s=>s.trim()).filter(Boolean);
+              });
+            };
             body.querySelectorAll('#_fl .it').forEach(it=>{
               const i=+it.dataset.i;
-              it.querySelector('[data-a=up]').onclick=()=>{if(i<=0)return;[b.fields[i-1],b.fields[i]]=[b.fields[i],b.fields[i-1]];draw();};
-              it.querySelector('[data-a=dn]').onclick=()=>{if(i>=b.fields.length-1)return;[b.fields[i+1],b.fields[i]]=[b.fields[i],b.fields[i+1]];draw();};
-              it.querySelector('[data-a=rm]').onclick=()=>{if(!confirm('Rimuovere?'))return;b.fields.splice(i,1);draw();};
+              it.querySelector('[data-a=up]').onclick=()=>{if(i<=0)return;_capFields();[b.fields[i-1],b.fields[i]]=[b.fields[i],b.fields[i-1]];draw();};
+              it.querySelector('[data-a=dn]').onclick=()=>{if(i>=b.fields.length-1)return;_capFields();[b.fields[i+1],b.fields[i]]=[b.fields[i],b.fields[i+1]];draw();};
+              it.querySelector('[data-a=rm]').onclick=()=>{if(!confirm('Rimuovere?'))return;_capFields();b.fields.splice(i,1);draw();};
             });
-            body.querySelector('#_add').onclick=()=>{ b.fields.push({key:'campo'+(b.fields.length+1),label:'Nuovo campo',type:'text',required:false}); draw(); };
+            body.querySelector('#_add').onclick=()=>{ _capFields(); b.fields.push({key:'campo'+(b.fields.length+1),label:'Nuovo campo',type:'text',required:false}); draw(); };
             body.querySelector('#_savef').onclick=()=>{
               body.querySelectorAll('#_fl .it').forEach(it=>{ const i=+it.dataset.i; const f=b.fields[i];
                 f.key=it.querySelector('[data-f=key]').value.trim()||f.key;
