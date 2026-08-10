@@ -686,7 +686,7 @@ select option {
    La modalità è tracciata da html[data-mode="SCA"|"RPC"|""]. */
 
 /* Default (nessuna modalità scelta): SOLO il picker in pgIns */
-html:not([data-mode="SCA"]):not([data-mode="RPC"]):not([data-role="SCA"]):not([data-role="RPC"]) #pgIns > *:not(#modePickerPanel){
+html:not([data-mode="SCA"]):not([data-mode="RPC"]):not([data-mode="MAN"]):not([data-role="SCA"]):not([data-role="RPC"]) #pgIns > *:not(#modePickerPanel){
   display:none !important;
 }
 /* Modalità SCA: SOLO il panel scanner */
@@ -699,6 +699,16 @@ html[data-mode="RPC"] #pgIns > *:not(#ocrLivePanel),
 html[data-role="RPC"] #pgIns > *:not(#ocrLivePanel){
   display:none !important;
 }
+/* v35 — Modalità MAN (manuale): torna al form classico. Nascondiamo SOLO i
+   panel delle altre due modalità e il picker; tutto il resto (data listato,
+   codice, prezzo, causale, fornitore, ecc.) resta visibile come prima. */
+html[data-mode="MAN"] #pgIns > #modePickerPanel,
+html[data-mode="MAN"] #pgIns > #scaOnlyPanel,
+html[data-mode="MAN"] #pgIns > #ocrLivePanel,
+html[data-mode="MAN"] #pgIns > #manBackWrap{ /* placeholder: il wrapper resta visibile via override sotto */ }
+html[data-mode="MAN"] #pgIns > #modePickerPanel,
+html[data-mode="MAN"] #pgIns > #scaOnlyPanel,
+html[data-mode="MAN"] #pgIns > #ocrLivePanel{ display:none !important; }
 
 #scaOnlyPanel{ text-align:center; padding:24px 14px; }
 #scaOnlyPanel .sca-title{ font-size:13px; font-weight:700; color:#3B9FD4; margin-bottom:6px; letter-spacing:.6px; }
@@ -725,7 +735,8 @@ html[data-role="RPC"] #pgIns > *:not(#ocrLivePanel){
   padding:12px 12px; margin-bottom:14px;
 }
 #modePickerPanel .mp-title{ font-size:10px; letter-spacing:1px; font-weight:800; color:#3B9FD4; margin-bottom:8px; text-align:center; }
-#modePickerPanel .mp-btns{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+#modePickerPanel .mp-btns{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+@media (max-width:420px){ #modePickerPanel .mp-btns{ grid-template-columns:1fr; } }
 #modePickerPanel .mp-btn{
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   background:#0a1e3a; color:#3B9FD4; border:1.5px solid #3B9FD4;
@@ -1015,7 +1026,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35 · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35a · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1677,7 +1688,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35a</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -14248,7 +14259,7 @@ function renderScaPanel(){
 // v34u — Mode picker: SEMPRE visibile in pgIns finché non si sceglie una modalità
 function renderModePickerPanel(){
   // Se una modalità è già attiva (data-mode o ROLE=SCA/RPC vecchio), niente picker
-  if(_isMode('SCA') || _isMode('RPC')) return;
+  if(_isMode('SCA') || _isMode('RPC') || _isMode('MAN')) return;
   var pg = document.getElementById('pgIns'); if(!pg) return;
   var host = document.getElementById('modePickerPanel');
   if(!host){
@@ -14267,6 +14278,10 @@ function renderModePickerPanel(){
         '<span class="ico">💻</span>Ricevimento PC'+
         '<small>ricevo scans dal mobile → compilo</small>'+
       '</button>'+
+      '<button class="mp-btn" onclick="switchToMode(\'MAN\')">'+
+        '<span class="ico">✏️</span>Manuale'+
+        '<small>compilo il form classico a mano</small>'+
+      '</button>'+
     '</div>';
 }
 
@@ -14277,17 +14292,34 @@ function _isMode(m){
   return (typeof ROLE!=='undefined' && ROLE === m);
 }
 
-// v34u — Attiva modalità (SCA o RPC) senza cambiare il ROLE dell'utente
+// v34u/v35 — Attiva modalità (SCA / RPC / MAN) senza cambiare il ROLE dell'utente
 function switchToMode(mode){
-  if(mode !== 'SCA' && mode !== 'RPC') return;
+  if(mode !== 'SCA' && mode !== 'RPC' && mode !== 'MAN') return;
   try{ document.documentElement.setAttribute('data-mode', mode); }catch(e){}
   try{ sessionStorage.setItem('devmode', mode); }catch(e){}
   // Rimuovo il picker (nascosto dal CSS ma per pulizia elimino il nodo)
   var mp = document.getElementById('modePickerPanel'); if(mp) mp.remove();
-  // Rimuovo anche l'altro panel se presente (residuo di cambio modalità)
-  if(mode === 'SCA'){ var op = document.getElementById('ocrLivePanel'); if(op) op.remove(); renderScaPanel(); }
-  else { var sp = document.getElementById('scaOnlyPanel'); if(sp) sp.remove(); if(typeof ocrLiveListen==='function') ocrLiveListen(); renderOcrLivePanel(); }
-  try{ if(typeof toast==='function') toast('Modalità: '+(mode==='SCA'?'📱 SCANNER BOLLE':'💻 RICEVIMENTO PC'),'b'); }catch(e){}
+  // Rimuovo anche i panel delle altre modalità (residui di cambio modalità)
+  var _sp = document.getElementById('scaOnlyPanel'); if(_sp) _sp.remove();
+  var _op = document.getElementById('ocrLivePanel'); if(_op) _op.remove();
+  var _mb = document.getElementById('manBackWrap'); if(_mb) _mb.remove();
+  if(mode === 'SCA'){ renderScaPanel(); }
+  else if(mode === 'RPC'){ if(typeof ocrLiveListen==='function') ocrLiveListen(); renderOcrLivePanel(); }
+  else if(mode === 'MAN'){ renderManBackButton(); }
+  try{ if(typeof toast==='function') toast('Modalità: '+(mode==='SCA'?'📱 SCANNER BOLLE':mode==='RPC'?'💻 RICEVIMENTO PC':'✏️ MANUALE'),'b'); }catch(e){}
+}
+
+// v35 — Modalità MANUALE: pulsante "← Cambia modalità" fluttuante in cima al
+// form classico. Il resto della pagina (data listato, codice, prezzo, ecc.)
+// e' gia' visibile grazie al CSS che nasconde solo picker/panel altre modalita.
+function renderManBackButton(){
+  var pg = document.getElementById('pgIns'); if(!pg) return;
+  if(document.getElementById('manBackWrap')) return;
+  var wrap = document.createElement('div');
+  wrap.id = 'manBackWrap';
+  wrap.style.cssText = 'display:flex;justify-content:flex-start;margin-bottom:8px';
+  wrap.innerHTML = '<button class="mp-back" onclick="backToModePicker()" style="background:rgba(59,159,212,.1);color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">← Cambia modalità</button>';
+  pg.insertBefore(wrap, pg.firstChild);
 }
 
 // v34u — Torna alla schermata di scelta modalità
@@ -14297,15 +14329,18 @@ function backToModePicker(){
   // Rimuovo i panel della modalità corrente
   var sp = document.getElementById('scaOnlyPanel'); if(sp) sp.remove();
   var op = document.getElementById('ocrLivePanel'); if(op) op.remove();
+  var mb = document.getElementById('manBackWrap'); if(mb) mb.remove();
   renderModePickerPanel();
 }
 
-// v34u — Al boot, se c'è una modalità salvata in sessionStorage, ripristinala
+// v34u/v35 — Al boot, se c'è una modalità salvata in sessionStorage, ripristinala
 (function _restoreModeOnBoot(){
   try{
     var saved = sessionStorage.getItem('devmode');
-    if(saved==='SCA' || saved==='RPC'){
+    if(saved==='SCA' || saved==='RPC' || saved==='MAN'){
       document.documentElement.setAttribute('data-mode', saved);
+      // MAN: reinject il pulsante "Cambia modalità" dopo che pgIns e' pronto
+      if(saved==='MAN'){ setTimeout(function(){ try{ if(typeof renderManBackButton==='function') renderManBackButton(); }catch(e){} }, 500); }
     }
   }catch(e){}
 })();
