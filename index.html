@@ -997,6 +997,11 @@ html[data-theme="light"] .btn-anomalia{
 <script src="html5-qrcode.min.js" onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';document.head.appendChild(s);})()"></script>
 <script src="zxing.min.js" onerror="(function(){var s=document.createElement('script');s.src='https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';document.head.appendChild(s);})()"></script>
 <script src="ocr-config.js"></script>
+<!-- v35d — Tassonomie dominio (ROLE_PERMS, STATI, CAULIST, CAU_SUBS,
+     FASI_ORDER, NEXT_FASE, PREV_FASE, subsForCausale). Caricate SINCRONO
+     PRIMA della SPA principale: i simboli globali sono disponibili all'inline
+     script che le usa. Vedi js/taxonomies.js. -->
+<script src="js/taxonomies.js"></script>
 <script src="qrcode-lib.min.js" onerror="(function(){var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';document.head.appendChild(s);})()"></script>
 <script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
@@ -1066,7 +1071,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35c · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35d · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1728,7 +1733,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35c</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35d</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -1810,133 +1815,13 @@ window._dataReady = Promise.all([
 
 <script>
 // ══════════════════════════════════════════════════
-// CONFIGURAZIONE PERMESSI PER RUOLO
+// TASSONOMIE spostate in js/taxonomies.js (v35d).
+// I simboli globali ROLE_PERMS, STATI, CAU_SUBS, ANOMALIE_GEN,
+// FASI_ORDER, NEXT_FASE, PREV_FASE, subsForCausale sono gia' disponibili
+// perche' js/taxonomies.js e' caricato SINCRONO nel <head>, PRIMA di
+// questo <script>. CAULIST resta piu' sotto per il momento.
+// Modificare le regole di dominio SOLO in js/taxonomies.js.
 // ══════════════════════════════════════════════════
-var ROLE_PERMS = {
-  // canEditFasi = modifica CAMPI (cumulativo verso l'alto, FINALE solo ADM)
-  // canAdvanceTo = fasi a cui il ruolo può PORTARE un reso (avanzamento/chiusura)
-  // canSendBack  = può rimandare un reso alla fase precedente
-  // canViewPhases: fasi VISIBILI (fuori dalle quali i record vengono nascosti in lista).
-  // canViewOwnOnly: se true, l'utente vede solo i record che ha inserito lui.
-  // canSeeTabs:     tab principali (in alto) mostrati; '*' = tutti; altrimenti sono gli id (pgIns/pgList/pgAno/pgUbi/pgTri/pgHist/pgCon).
-  // v34o: SCA (Scanner solo bolle - spedisce a RPC via FB) + RPC (Ricevimento PC - vede scans realtime)
-  SCA: { canAdd:false, canDelete:false, canArchive:false, canEditFasi:[],               canViewAll:false, canViewPhases:['*'], canViewOwnOnly:true,  canBulk:false, canAdvanceTo:[],                    canSendBack:false, canSeeTabs:['pgIns'] },
-  RPC: { canAdd:true,  canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'],  canViewAll:false, canViewPhases:['*'], canViewOwnOnly:false, canBulk:false, canAdvanceTo:['UFFICIO RESI'],       canSendBack:false, canSeeTabs:['pgIns','pgList'] },
-  RIC: { canAdd:true, canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'], canViewAll:false, canViewPhases:['*'], canViewOwnOnly:true,  canBulk:false, canAdvanceTo:['UFFICIO RESI'], canSendBack:false, canSeeTabs:['pgIns','pgList'] },
-  UFF: { canAdd:true, canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:false, canViewPhases:['UFFICIO RESI'], canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true,  canSeeTabs:['*'] },
-  MAG: { canAdd:true, canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO'],         canViewAll:false, canViewPhases:['MAGAZZINO'],    canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true, canSeeTabs:['*'] },
-  ADM: { canAdd:true, canDelete:true,  canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:true,  canViewPhases:['*'],            canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true, canSeeTabs:['*'] }
-};
-
-var STATI = {
-  'RICEVIMENTO':['DA GESTIRE \u23f3','OK PER UFFICIO','ANOMALIA RICEVIMENTO','STALLO RICEVIMENTO'],
-  'UFFICIO RESI':[
-    'DA GESTIRE \u23f3',
-    'OK PER UFFICIO',
-    'RICHIESTA ATTESA APPROVAZIONE \u23f3',
-    'RICHIESTA \u2705 - ACCUMULARE',
-    'RICHIESTA \u2705 - FARE RNC (FILIALE)',
-    'RNC \ud83d\udd13 - ACCUMULARE (SOLO DDT SENZA RIF AQ)',
-    'RNC \u2705 - FARE RICHIESTA (FILIALE)',
-    'STALLO UFFICIO',
-    'ANOMALIA UFFICIO'
-  ],
-  'MAGAZZINO':['CHIUDERE','PRESA LOGISTICA','ANOMALIA MAGAZZINO','STALLO MAGAZZINO'],
-  'FINALE':[
-    'NOTA CREDITO FORNITORE',
-    'NON RENDIBILE - COSTI DI TRASPORTO',
-    'NON RENDIBILE - FUORI TEMPISTICA',
-    'NON RENDIBILE - IMPORTO INFERIORE',
-    'NON RENDIBILE - IMPORTO INFERIORE E FUORI TEMPISTICA',
-    'NON RENDIBILE - FUORI TEMPISTICA E COSTI DI TRASPORTO',
-    'NON RENDIBILE - COSTI DI TRASPORTO E IMPORTO INFERIORE',
-    'NON RENDIBILE - TUTTE LE CASISTICHE',
-    'VENDUTO CLIENTE',
-    'STOCK MAGAZZINO',
-    'TRASFERITO FILIALE',
-    'ROTTAMATO - FILIALE',
-    'ROTTAMATO - CLIENTE',
-    'REVISIONATO',
-    'ADDEBITATO VETTORE PIEMME',
-    'ADDEBITATO VETTORE CIPI',
-    'SOSTITUZIONE GARANZIA - STOCK',
-    'RIFIUTO FORNITORE - STOCK',
-    'RIFIUTO FORNITORE - ROTTAMAZIONE & COMMERCIALE',
-    'COMMERCIALE - ROTTAMATO',
-    'COMMERCIALE - REN',
-    'COMMERCIALE - SCONTO MERCE',
-    'COMMERCIALE - BST'
-  ]
-};
-
-// Sotto-categorie per CAUSALE \u2014 mutuamente esclusive.
-// Se si sceglie GARANZIA appaiono SOLO le sotto-cat garanzia,
-// se si sceglie GARANZIA MANODOPERA / DANNI appaiono SOLO le sue,
-// se si sceglie qualsiasi altra causale appaiono le anomalie generiche.
-var CAU_SUBS = {
-  'GARANZIA': [
-    'BOLLA MANCANTE',
-    'MANCA MODULO',
-    'DIFETTO NON VALIDO',
-    'MANCA LIBRETTO',
-    'MANCA MODULO E LIBRETTO',
-    'MANCA DIAGNOSI',
-    'FUORI GARANZIA',
-    'MANCA RICEVUTA O RELAZIONE',
-    'MANCA MODULO, LIBRETTO, RICEVUTA E/O RELAZIONE',
-    'NO GARANZIA OE',
-    'MANCA DIAGNOSI E LIBRETTO',
-    'MANCA MODULO, LIBRETTO E DIAGNOSI',
-    'MANCA MODULO E DIAGNOSI',
-    'MANCA DIAGNOSI E RELAZIONE/RICEVUTA'
-  ],
-  'GARANZIA MANODOPERA': [
-    'MANCA RICEVUTA',
-    'MANCA RELAZIONE',
-    'MANCA FATTURA A COSTO 0',
-    'MANCA LIBRETTO',
-    'MANCA RICEVUTA, LIBRETTO, FATTURA A COSTO 0 E FOTO',
-    'FOTO HD PER MANODOPERA E DANNI',
-    'MANCA RICEVUTA, FATTURA A COSTO 0 E DICHIARAZIONE'
-  ],
-  'GARANZIA DANNI E MANODOPERA': [
-    'MANCA RICEVUTA',
-    'MANCA RELAZIONE',
-    'MANCA FATTURA A COSTO 0',
-    'MANCA LIBRETTO',
-    'MANCA RICEVUTA, LIBRETTO, FATTURA A COSTO 0 E FOTO',
-    'FOTO HD PER MANODOPERA E DANNI',
-    'MANCA RICEVUTA, FATTURA A COSTO 0 E DICHIARAZIONE'
-  ]
-};
-// Anomalie generiche disponibili per TUTTE le altre causali (non garanzia)
-var ANOMALIE_GEN = [
-  'MATERIALE ORIGINALE',
-  'BOLLA MANCANTE',
-  'CAUSALE MANCANTE',
-  'DOCUMENTO INCOMPLETO',
-  'BATTERIA ESAUSTA',
-  "QUANTITA' DISCORDANTE",
-  'PEZZO DANNEGGIATO',
-  'MONTATO E SPORCO',
-  'SCATOLA OG MANCANTE',
-  'NON ADDEBITATO/A',
-  'PERVENUTO APERTO (LIQUIDI)',
-  'DANNEGGIATO NON SEGNALATO ENTRO 24h',
-  'INCOMPLETO'
-];
-// Ritorna le sotto-cat disponibili per una data causale (mutex per famiglia)
-function subsForCausale(cau){
-  var c = String(cau||'').trim().toUpperCase();
-  if(c === 'GARANZIA') return CAU_SUBS['GARANZIA'];
-  if(c === 'GARANZIA MANODOPERA') return CAU_SUBS['GARANZIA MANODOPERA'];
-  if(c === 'GARANZIA DANNI E MANODOPERA') return CAU_SUBS['GARANZIA DANNI E MANODOPERA'];
-  return ANOMALIE_GEN;
-}
-
-var FASI_ORDER = ['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'];
-var NEXT_FASE = {'RICEVIMENTO':'UFFICIO RESI','UFFICIO RESI':'MAGAZZINO','MAGAZZINO':'FINALE'};
-var PREV_FASE = {'UFFICIO RESI':'RICEVIMENTO','MAGAZZINO':'UFFICIO RESI','FINALE':'MAGAZZINO'};
 
 // ── Paginazione liste (evita di disegnare migliaia di righe in un colpo) ──
 var LIST_PAGE=100, listShown=100, _lastFiltKeys=[];   // LISTA

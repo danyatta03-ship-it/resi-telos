@@ -3,7 +3,7 @@
 // App shell: network-first (aggiornamenti subito, offline dal cache)
 // Dati anagrafica/storico: cache-first con refresh in background
 // ═══════════════════════════════════════════════════════
-var CACHE = 'resi-telos-v35c';
+var CACHE = 'resi-telos-v35d';
 
 // v34g3: rispondi a SKIP_WAITING dal client per attivare subito la nuova versione
 self.addEventListener('message', function(e){
@@ -18,6 +18,7 @@ var PRECACHE = [
   './icon-192.png',
   './icon-512.png',
   './ocr-config.js',
+  './js/taxonomies.js',
   './html5-qrcode.min.js',
   './zxing.min.js',
   './qrcode-lib.min.js',
