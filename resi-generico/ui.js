@@ -115,9 +115,12 @@ function editButtons(blk, done){
     }, dlgEl=>{
       dlgEl.querySelectorAll('#_bl .it').forEach(it=>{
         const i=+it.dataset.i;
-        it.querySelector('[data-a=up]').onclick=()=>{if(i<=0)return;[blk.items[i-1],blk.items[i]]=[blk.items[i],blk.items[i-1]];render();};
-        it.querySelector('[data-a=dn]').onclick=()=>{if(i>=blk.items.length-1)return;[blk.items[i+1],blk.items[i]]=[blk.items[i],blk.items[i+1]];render();};
-        it.querySelector('[data-a=rm]').onclick=()=>{blk.items.splice(i,1);render();};
+        // v35 fix: capture() prima di render(), altrimenti il testo digitato
+        // negli input dell'item (title/subtitle/…) viene sovrascritto dal
+        // rigenerato che legge blk.items ancora vecchia.
+        it.querySelector('[data-a=up]').onclick=()=>{if(i<=0)return;capture();[blk.items[i-1],blk.items[i]]=[blk.items[i],blk.items[i-1]];render();};
+        it.querySelector('[data-a=dn]').onclick=()=>{if(i>=blk.items.length-1)return;capture();[blk.items[i+1],blk.items[i]]=[blk.items[i],blk.items[i+1]];render();};
+        it.querySelector('[data-a=rm]').onclick=()=>{capture();blk.items.splice(i,1);render();};
         const sel = it.querySelector('[data-a=type]');
         sel.onchange = ()=>{
           const w = it.querySelector('[data-act-wrap] [data-a=params]');
@@ -167,9 +170,12 @@ function editItemList(blk, opts, done){
     }, dlgEl=>{
       dlgEl.querySelectorAll('#_il .it').forEach(it=>{
         const i=+it.dataset.i;
-        it.querySelector('[data-a=up]').onclick=()=>{if(i<=0)return;[blk.items[i-1],blk.items[i]]=[blk.items[i],blk.items[i-1]];render();};
-        it.querySelector('[data-a=dn]').onclick=()=>{if(i>=blk.items.length-1)return;[blk.items[i+1],blk.items[i]]=[blk.items[i],blk.items[i+1]];render();};
-        it.querySelector('[data-a=rm]').onclick=()=>{blk.items.splice(i,1);render();};
+        // v35 fix: capture() prima di render(), altrimenti il testo digitato
+        // negli input dell'item (title/subtitle/…) viene sovrascritto dal
+        // rigenerato che legge blk.items ancora vecchia.
+        it.querySelector('[data-a=up]').onclick=()=>{if(i<=0)return;capture();[blk.items[i-1],blk.items[i]]=[blk.items[i],blk.items[i-1]];render();};
+        it.querySelector('[data-a=dn]').onclick=()=>{if(i>=blk.items.length-1)return;capture();[blk.items[i+1],blk.items[i]]=[blk.items[i],blk.items[i+1]];render();};
+        it.querySelector('[data-a=rm]').onclick=()=>{capture();blk.items.splice(i,1);render();};
         // handle file inputs per-field
         it.querySelectorAll('input[type=file][data-f]').forEach(fi=>{
           const [key,idx] = fi.dataset.f.split(':');

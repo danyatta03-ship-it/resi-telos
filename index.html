@@ -2928,7 +2928,7 @@ function addRow() {
   }) : null;
   if(_forcedNR){
     _autoFase = 'FINALE';
-    _autoStato = 'NON RENDIBILE';
+    _autoStato = nrStatoFromMotivo(_forcedNR.motivo);
     _autoJumped = false;
     toast('⛔ Reso NON RENDIBILE ('+_forcedNR.motivo+'): '+_forcedNR.why,'r');
   } else if(_fs === 'RICEVIMENTO' && !_isProblematic){
@@ -2989,7 +2989,8 @@ function addRow() {
     var nc=document.getElementById('cCod');if(nc&&stato!=='ANOMALIA RICEVIMENTO')nc.focus();
   }
   // NON RENDIBILE → usa la motivazione già scelta nel form, altrimenti chiedila ora
-  if(stato==='NON RENDIBILE'){
+  // v35: match su qualunque variante 'NON RENDIBILE - ...'
+  if(isNR(stato)){
     if(pendingMotivoNR){ row.motivoNR=pendingMotivoNR; commit(); return; }
     askMotivoNR('', function(m){ row.motivoNR=m; commit(); }); return;
   }
@@ -3290,6 +3291,28 @@ function canBack(r){
 // ══════════════════════════════════════════════════
 var MOTIVI_NR = ['SCATOLA DANNEGGIATA','PREZZO INFERIORE','FUORI TEMPISTICHE'];
 
+// v35 — STATI['FINALE'] non contiene piu' la stringa liscia "NON RENDIBILE":
+// ora ci sono 7 varianti che gia' portano il motivo nel nome. Questi due
+// helper preservano la compatibilita' col vecchio codice che confrontava
+// stato==='NON RENDIBILE' (record legacy e forzatura automatica).
+function isNR(s){ return String(s||'').toUpperCase().indexOf('NON RENDIBILE')===0; }
+// Mappa la motivazione (chiave storica) alla variante di stato piu' vicina
+// presente in STATI['FINALE']. Se le condizioni sono piu' d'una, si sceglie
+// la variante combinata. Fallback: 'NON RENDIBILE - TUTTE LE CASISTICHE'.
+function nrStatoFromMotivo(motivo){
+  var m = String(motivo||'').toUpperCase();
+  var costi = m.indexOf('COSTI')>=0 || m.indexOf('TRASPORTO')>=0;
+  var fuori = m.indexOf('FUORI')>=0 || m.indexOf('TEMPIST')>=0;
+  var minv  = m.indexOf('IMPORTO')>=0 || m.indexOf('PREZZO')>=0 || m.indexOf('MIN')>=0 || m.indexOf('INFERIORE')>=0;
+  if(fuori && minv) return 'NON RENDIBILE - IMPORTO INFERIORE E FUORI TEMPISTICA';
+  if(costi && fuori) return 'NON RENDIBILE - FUORI TEMPISTICA E COSTI DI TRASPORTO';
+  if(costi && minv) return 'NON RENDIBILE - COSTI DI TRASPORTO E IMPORTO INFERIORE';
+  if(minv)  return 'NON RENDIBILE - IMPORTO INFERIORE';
+  if(fuori) return 'NON RENDIBILE - FUORI TEMPISTICA';
+  if(costi) return 'NON RENDIBILE - COSTI DI TRASPORTO';
+  return 'NON RENDIBILE - TUTTE LE CASISTICHE';
+}
+
 // v34e: Verifica se il reso è "non rendibile" per regole automatiche del fornitore.
 // Ritorna null se rendibile, altrimenti {motivo, why} con la motivazione da forzare.
 // Controlli:
@@ -3370,7 +3393,14 @@ function nrCancel(){
 var pendingMotivoNR = '';
 function onStatoChange(sel){
   if(!sel) return;
-  if(sel.value==='NON RENDIBILE'){
+  // v35: match qualunque variante NON RENDIBILE (nuovo stato = motivo embedded).
+  // Se lo stato scelto e' gia' una delle varianti che porta il motivo nel nome
+  // ('NON RENDIBILE - IMPORTO INFERIORE', ecc.) uso quella come motivazione
+  // implicita; se l'utente ha cliccato la voce liscia 'NON RENDIBILE'
+  // (record legacy) chiedo popup.
+  if(isNR(sel.value)){
+    var _emb = sel.value.split(' - ')[1] || '';
+    if(_emb){ pendingMotivoNR = _emb; return; }
     askMotivoNR(pendingMotivoNR, function(m){ pendingMotivoNR=m; toast('Motivo: '+m,'b'); });
   } else {
     pendingMotivoNR='';
@@ -3381,7 +3411,16 @@ function onStatoChange(sel){
 var editMotivoNR = '';
 function onEiStatoChange(sel){
   if(!sel) return;
-  if(sel.value==='NON RENDIBILE'){
+  // v35: come sopra — le nuove varianti portano il motivo nel nome, quindi
+  // non serve prompt; solo il vecchio 'NON RENDIBILE' liscio chiede popup.
+  if(isNR(sel.value)){
+    var _emb = sel.value.split(' - ')[1] || '';
+    if(_emb){
+      editMotivoNR = _emb;
+      var ms2=document.getElementById('ei_motivoNR');
+      if(ms2){ var found2=false; for(var j=0;j<ms2.options.length;j++){ if(ms2.options[j].text===_emb){ ms2.value=_emb; found2=true; break; } } if(!found2){ var o2=document.createElement('option'); o2.text=_emb; ms2.add(o2); ms2.value=_emb; } }
+      return;
+    }
     askMotivoNR(editMotivoNR, function(m){
       editMotivoNR=m;
       var ms=document.getElementById('ei_motivoNR');
@@ -3397,15 +3436,29 @@ function qkSt(key,idx,fase){
   if(!canEditRow(rows[key]||{fase:fase})){toast('Non autorizzato','r');return;}
   var sa=STATI[fase]||[],st=sa[parseInt(idx)]||'';
   if(!st)return;
-  // NON RENDIBILE → chiedi la motivazione prima di salvare
-  if(st==='NON RENDIBILE'){
-    askMotivoNR((rows[key]||{}).motivoNR||'', function(motivo){
+  // v35: qualunque variante NON RENDIBILE - ... e' NR. Se il nome porta gia'
+  // il motivo (dopo il " - ") lo salvo direttamente e non chiedo popup.
+  // Solo il vecchio 'NON RENDIBILE' liscio (record legacy) fa il prompt.
+  if(isNR(st)){
+    var _emb = st.split(' - ')[1] || '';
+    var _existing = (rows[key]||{}).motivoNR || '';
+    if(_emb){
+      sendMsg({type:'update',key:key,changes:{stato:st,motivoNR:_emb,datSta:new Date().toISOString().slice(0,10),_lastEdit:deviceName}});
+      toast(st,'b');
+      return;
+    }
+    askMotivoNR(_existing, function(motivo){
       sendMsg({type:'update',key:key,changes:{stato:st,motivoNR:motivo,datSta:new Date().toISOString().slice(0,10),_lastEdit:deviceName}});
       toast(st+' · '+motivo,'b');
     });
     return;
   }
-  sendMsg({type:'update',key:key,changes:{stato:st,motivoNR:'',datSta:new Date().toISOString().slice(0,10),_lastEdit:deviceName}});
+  // v35: passando ad uno stato NON-NR, azzera motivoNR (solo se in precedenza era NR)
+  var _prevSt = (rows[key]||{}).stato || '';
+  var _clearMotivo = isNR(_prevSt);
+  sendMsg({type:'update',key:key,changes:_clearMotivo
+      ? {stato:st,motivoNR:'',datSta:new Date().toISOString().slice(0,10),_lastEdit:deviceName}
+      : {stato:st,datSta:new Date().toISOString().slice(0,10),_lastEdit:deviceName}});
   toast(st,'b');
   // PRESA LOGISTICA: proponi mail fornitore
   if(st==='PRESA LOGISTICA'&&rows[key]){
@@ -3461,7 +3514,9 @@ function advFase(key,fase){
     var _fnr2 = (typeof checkForzaNonRendibile==='function') ? checkForzaNonRendibile(r) : null;
     if(_fnr2){
       if(confirm('⛔ Reso NON RENDIBILE ('+_fnr2.motivo+'):\n'+_fnr2.why+'\n\nNon si può portare a '+fase+'. Vuoi passarlo direttamente a FINALE / NON RENDIBILE?')){
-        var chNR = {fase:'FINALE', stato:'NON RENDIBILE', motivoNR:_fnr2.motivo, datSta:new Date().toISOString().slice(0,10), _lastEdit:deviceName, _role:ROLE};
+        // v35: forza sulla variante specifica di STATI['FINALE'] che porta il motivo nel nome
+        var _tgt2 = nrStatoFromMotivo(_fnr2.motivo);
+        var chNR = {fase:'FINALE', stato:_tgt2, motivoNR:_fnr2.motivo, datSta:new Date().toISOString().slice(0,10), _lastEdit:deviceName, _role:ROLE};
         sendMsg({type:'update',key:key,changes:chNR});
         try{ if(typeof notifLog==='function') notifLog('mod', 'reso '+(r.cod||'')+' forzato NON RENDIBILE — '+_fnr2.why); }catch(e){}
         toast('→ FINALE · NON RENDIBILE · '+_fnr2.motivo,'r');
@@ -4907,7 +4962,7 @@ function showResiByCycle(cicloName, fase){
       var _thumb = r.photoThumb ? '<img src="'+xe(r.photoThumb)+'" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0">' :
                                    '<div style="width:44px;height:44px;border-radius:6px;background:#222;color:#555;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0" title="Nessuna foto">📷</div>';
       body += '<div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid #1a1a1a;cursor:pointer" '+
-                (_key?'onclick="document.getElementById(\'resiCycleBox\').remove();openSheet(\''+xe(_key.replace(/\\\\|\'/g,""))+'\')"':'')+'>'+
+                (_key?'onclick="document.getElementById(\'resiCycleBox\').remove();editRow(\''+xe(_key.replace(/\\\\|\'/g,""))+'\')"':'')+'>'+
                 _thumb +
                 '<div style="flex:1;min-width:0">'+
                   '<div style="font-size:12px;font-weight:800;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_cod+' · '+_forn+'</div>'+
@@ -4982,7 +5037,7 @@ function showPickingList(){
       var _stChip='<span style="background:'+color+'22;color:'+color+';padding:2px 7px;border-radius:8px;font-size:9px;font-weight:800;flex-shrink:0">'+xe(r.stato||'')+'</span>';
       var _rmaChip=(r.rma||'').trim() ? '<span style="background:#0a3a1e;color:#3fbf6f;padding:2px 6px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px" title="RNC/RMA">'+xe(r.rma)+'</span>' : '';
       var _colliChip=(r.colli||'').toString().trim() ? '<span style="background:#1a1a1a;color:#3B9FD4;padding:2px 6px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px" title="colli · imballo">📦 '+xe(r.colli)+(r.tipoImb?' '+xe(r.tipoImb):'')+'</span>' : '';
-      body+='<div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid #1a1a1a;cursor:pointer" '+(_key?'onclick="document.getElementById(\'pickBox\').remove();openSheet(\''+xe(_key.replace(/\\\\|\'/g,""))+'\')"':'')+'>'+
+      body+='<div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid #1a1a1a;cursor:pointer" '+(_key?'onclick="document.getElementById(\'pickBox\').remove();editRow(\''+xe(_key.replace(/\\\\|\'/g,""))+'\')"':'')+'>'+
               _thumb+
               '<div style="flex:1;min-width:0">'+
                 '<div style="font-size:12px;font-weight:800;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_cod+' · '+xe(r.forn||'')+'</div>'+
@@ -5422,7 +5477,13 @@ function editRow(key){
   function inp(fid,val,ph,tp){return'<input id="ei_'+fid+'" type="'+(tp||'text')+'" value="'+xe(val||'')+'" placeholder="'+(ph||'')+'" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:var(--rad2);-webkit-appearance:none;outline:none;font-family:inherit;margin-bottom:7px">';}
   function sl(fid,opts,val){var h='<select id="ei_'+fid+'" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:var(--rad2);-webkit-appearance:none;outline:none;font-family:inherit;margin-bottom:7px"><option value="">—</option>';for(var j=0;j<opts.length;j++)h+='<option'+(opts[j]===val?' selected':'')+'>'+xe(opts[j])+'</option>';return h+'</select>';}
   function fld(lbl,html){return'<div style="margin-bottom:7px"><div style="font-size:9px;font-weight:700;color:var(--txt3);letter-spacing:1px;margin-bottom:3px">'+lbl+'</div>'+html+'</div>';}
-  var sa=r.fase&&STATI[r.fase]?STATI[r.fase]:[];
+  var sa=r.fase&&STATI[r.fase]?STATI[r.fase].slice():[];
+  // v35 — Preserva stato legacy assente in STATI[fase] (stesso pattern usato
+  // per anomalia). Es. record del PREGRESSO con stato 'NOTA CREDITO',
+  // 'VENDUTO', 'ROTTAMATO', 'ADDEBITATO VETTORE', o 'NON RENDIBILE' liscio:
+  // aggiungo il valore corrente in coda cosi' rimane selected e non viene
+  // silenziosamente cancellato al primo Salva.
+  if(r.stato && sa.indexOf(r.stato)<0) sa.push(r.stato);
   var p=ROLE_PERMS[ROLE]||ROLE_PERMS['RIC'];
   var canFull=canEditRow(r);
   // Fasi selezionabili nel menu: corrente + avanzamento/rimando consentiti al ruolo (ADM tutte)
@@ -5558,7 +5619,12 @@ function _archPhOpen(idx){
 // stato "PRESA LOGISTICA" in fase MAGAZZINO. Non tocca il DB remoto: il
 // salvataggio effettivo passa comunque da svEdit.
 function _pickFotoWorkflow(key, kind){
-  if(!key || !rows[key]) return;
+  // v35 — Anche i record del PREGRESSO (tri_*) possono ricevere foto.
+  // Se il record vive in DB_TRI, salviamo la foto negli override TRI_OVR
+  // cosi' persiste attraverso i reload senza toccare DB_TRI (read-only).
+  var _isTri = String(key||'').indexOf('tri_')===0;
+  if(!key) return;
+  if(!_isTri && !rows[key]) return;
   var inp = document.createElement('input');
   inp.type='file'; inp.accept='image/*'; inp.capture='environment';
   inp.style.display='none';
@@ -5576,7 +5642,15 @@ function _pickFotoWorkflow(key, kind){
         var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
         cv.getContext('2d').drawImage(img,0,0,w,h);
         var dataUrl = cv.toDataURL('image/jpeg',0.8);
-        var r = rows[key]; if(!r){ inp.remove(); return; }
+        // v35 — Storage: rows[key] per record vivi, TRI_OVR[key] per pregresso
+        var r;
+        if(_isTri){
+          if(typeof TRI_OVR==='undefined') { inp.remove(); return; }
+          if(!TRI_OVR[key]) TRI_OVR[key] = {};
+          r = TRI_OVR[key];
+        } else {
+          r = rows[key]; if(!r){ inp.remove(); return; }
+        }
         if(kind==='pez'){
           r._photoPez = dataUrl;
           r._photoPezTs = Date.now();
@@ -5590,8 +5664,9 @@ function _pickFotoWorkflow(key, kind){
           r._photoFinTs = Date.now();
           if(typeof toast==='function') toast('✓ Foto bolla firmata salvata','g');
         }
+        if(_isTri){ try{ saveTriOvr(); }catch(e){} }
         // Refresh dell'edit form per mostrare la nuova preview / colori
-        try { if(typeof openSheet==='function') openSheet(key); } catch(e){}
+        try { if(typeof editRow==='function') editRow(key); } catch(e){}
         inp.remove();
       };
       img.onerror = function(){ inp.remove(); };
@@ -5627,7 +5702,17 @@ function svEdit(key){
   if(_cur._photoFin){ ch._photoFin=_cur._photoFin; ch._photoFinTs=_cur._photoFinTs||Date.now(); }
   // ── BLOCCO: passaggio a FINALE richiede foto bolla firmata corriere.
   //   Eccezione: vettore uscita = GLS (foto senza firma tollerata, ma comunque foto).
-  if(ch.fase==='FINALE'){
+  // v35 — Il gate scatta SOLO sulla TRANSIZIONE (fase precedente != FINALE).
+  //       - i record del PREGRESSO (tri_*) sono importati gia' chiusi: mai
+  //         gate su una loro modifica.
+  //       - i record vivi legacy gia' in FINALE prima di questa feature non
+  //         hanno _photoFin e devono restare editabili (correzione note ecc.);
+  //         il gate si attiva solo se qualcuno sta ORA portando in FINALE
+  //         da una fase precedente.
+  var _prevFase = (rows[key] && rows[key].fase) || '';
+  var _isTriKey = String(key).indexOf('tri_')===0;
+  var _isTransitionToFinale = (ch.fase==='FINALE' && _prevFase!=='FINALE' && !_isTriKey);
+  if(_isTransitionToFinale){
     var _vetOk = String(ch.vetUsc||'').toUpperCase().indexOf('GLS')>=0;
     if(!ch._photoFin){
       if(_vetOk){
@@ -5663,14 +5748,17 @@ function svEdit(key){
     return;
   }
   // v34e: blocco rendibilità - forza NON RENDIBILE se prezzo < min fornitore o fuori tempistiche
-  if(ch.stato !== 'NON RENDIBILE'){
+  // v35: match qualunque variante 'NON RENDIBILE - ...' e mappa il motivo
+  //      alla variante corretta di STATI['FINALE'].
+  if(!isNR(ch.stato)){
     var _fnr = (typeof checkForzaNonRendibile==='function') ? checkForzaNonRendibile({
       forn:ch.forn, prc:ch.prc, datAcqForn:ch.datAcqForn
     }) : null;
     if(_fnr){
-      if(!confirm('⛔ Questo reso è NON RENDIBILE ('+_fnr.motivo+'):\n'+_fnr.why+'\n\nLo stato verrà forzato a "NON RENDIBILE" in fase FINALE. Confermi?')){ return; }
+      var _target = nrStatoFromMotivo(_fnr.motivo);
+      if(!confirm('⛔ Questo reso è NON RENDIBILE ('+_fnr.motivo+'):\n'+_fnr.why+'\n\nLo stato verrà forzato a "'+_target+'" in fase FINALE. Confermi?')){ return; }
       ch.fase = 'FINALE';
-      ch.stato = 'NON RENDIBILE';
+      ch.stato = _target;
       ch.motivoNR = _fnr.motivo;
       try{ if(typeof notifLog==='function') notifLog('mod', 'reso '+(ch.cod||'')+' forzato NON RENDIBILE — '+_fnr.why); }catch(e){}
     }
@@ -5714,13 +5802,17 @@ function svEdit(key){
     }catch(e){}
   }
   // NON RENDIBILE → motivazione obbligatoria (dal campo scheda, dalla scelta al volo o dal popup)
-  if(ch.stato==='NON RENDIBILE'){
-    var m=gei('motivoNR')||editMotivoNR||prev.motivoNR||'';
+  // v35: match qualunque variante 'NON RENDIBILE - ...'; se il nome porta gia'
+  //      il motivo (dopo il " - ") lo usiamo come motivoNR senza popup.
+  if(isNR(ch.stato)){
+    var _emb = String(ch.stato).split(' - ')[1] || '';
+    var m = gei('motivoNR') || editMotivoNR || _emb || prev.motivoNR || '';
     if(!m){ askMotivoNR(prev.motivoNR||'', function(mm){ ch.motivoNR=mm; finalize(); }); return; }
     ch.motivoNR=m; finalize(); return;
   }
-  // Stato diverso da NON RENDIBILE → azzera il motivo (solo se lo stato è stato effettivamente impostato)
-  if(ch.stato){ ch.motivoNR=''; }
+  // Stato diverso da NON RENDIBILE → azzera il motivo SOLO se il precedente era NR
+  // (evita di cancellare motivoNR quando si modifica un record non-NR con motivo legacy).
+  if(ch.stato && isNR(prev.stato||'')){ ch.motivoNR=''; }
   finalize();
 }
 

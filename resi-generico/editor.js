@@ -149,9 +149,10 @@ function openPages(){
     d.querySelectorAll('#_pl .it').forEach(it=>{
       const i=+it.dataset.i;
       it.querySelector('[data-a=set]').onclick=()=>{ capture(); RG.save(); openPageSettings(pages[i], ()=>openPages()); };
-      it.querySelector('[data-a=up]').onclick=()=>{if(i<=0)return;[pages[i-1],pages[i]]=[pages[i],pages[i-1]];RG.save();openPages();};
-      it.querySelector('[data-a=dn]').onclick=()=>{if(i>=pages.length-1)return;[pages[i+1],pages[i]]=[pages[i],pages[i+1]];RG.save();openPages();};
-      it.querySelector('[data-a=rm]').onclick=()=>{if(pages.length<=1){alert('Almeno una pagina.');return;}if(!confirm('Rimuovere "'+pages[i].name+'"?'))return;pages.splice(i,1);RG.save();openPages();};
+      // v35 fix: capture() prima di ogni azione che rirende openPages()
+      it.querySelector('[data-a=up]').onclick=()=>{if(i<=0)return;capture();[pages[i-1],pages[i]]=[pages[i],pages[i-1]];RG.save();openPages();};
+      it.querySelector('[data-a=dn]').onclick=()=>{if(i>=pages.length-1)return;capture();[pages[i+1],pages[i]]=[pages[i],pages[i+1]];RG.save();openPages();};
+      it.querySelector('[data-a=rm]').onclick=()=>{if(pages.length<=1){alert('Almeno una pagina.');return;}if(!confirm('Rimuovere "'+pages[i].name+'"?'))return;capture();pages.splice(i,1);RG.save();openPages();};
     });
     d.querySelector('#_add').onclick=()=>{ capture(); pages.push({id:'p_'+Math.random().toString(36).slice(2,6),name:'Nuova pagina',icon:'📄',blocks:[],settings:{}}); RG.save(); openPages(); };
   });
@@ -223,12 +224,21 @@ function openSite(){
           <button class="btn" id="_add">➕ Aggiungi colonna footer</button>
           <button class="btn primary" id="_savef">Salva footer</button>`;
           f.cols=f.cols||[];
+          // v35 fix: capture() prima di riordinare/rimuovere/aggiungere,
+          // altrimenti il testo digitato in title/items viene perso quando
+          // draw() rigenera il body leggendo f.cols ancora vecchia.
+          const _capFooter = ()=>{
+            body.querySelectorAll('#_fc .it').forEach(it=>{const i=+it.dataset.i;const c=f.cols[i]; if(!c) return;
+              const _t=it.querySelector('[data-f=title]'); if(_t) c.title=_t.value;
+              const _i=it.querySelector('[data-f=items]'); if(_i) c.items=_i.value.split('\n').map(s=>s.trim()).filter(Boolean);
+            });
+          };
           body.querySelectorAll('#_fc .it').forEach(it=>{const i=+it.dataset.i;
-            it.querySelector('[data-a=up]').onclick=()=>{if(i<=0)return;[f.cols[i-1],f.cols[i]]=[f.cols[i],f.cols[i-1]];RG.save();draw();};
-            it.querySelector('[data-a=dn]').onclick=()=>{if(i>=f.cols.length-1)return;[f.cols[i+1],f.cols[i]]=[f.cols[i],f.cols[i+1]];RG.save();draw();};
-            it.querySelector('[data-a=rm]').onclick=()=>{f.cols.splice(i,1);RG.save();draw();};
+            it.querySelector('[data-a=up]').onclick=()=>{if(i<=0)return;_capFooter();[f.cols[i-1],f.cols[i]]=[f.cols[i],f.cols[i-1]];RG.save();draw();};
+            it.querySelector('[data-a=dn]').onclick=()=>{if(i>=f.cols.length-1)return;_capFooter();[f.cols[i+1],f.cols[i]]=[f.cols[i],f.cols[i+1]];RG.save();draw();};
+            it.querySelector('[data-a=rm]').onclick=()=>{_capFooter();f.cols.splice(i,1);RG.save();draw();};
           });
-          body.querySelector('#_add').onclick=()=>{f.cols.push({title:'Colonna',items:[]});RG.save();draw();};
+          body.querySelector('#_add').onclick=()=>{_capFooter();f.cols.push({title:'Colonna',items:[]});RG.save();draw();};
           body.querySelector('#_savef').onclick=()=>{
             body.querySelectorAll('#_fc .it').forEach(it=>{const i=+it.dataset.i;const c=f.cols[i];
               c.title=it.querySelector('[data-f=title]').value;
