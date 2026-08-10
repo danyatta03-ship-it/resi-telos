@@ -1071,7 +1071,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35d · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35e · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1733,7 +1733,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35d</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35e</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -2235,6 +2235,12 @@ function _ofpFlush(){
 }
 
 function sendMsg(m) {
+  // v35e — alias 'del' -> 'remove': undoLastInsert (e forse altri chiamanti
+  //   futuri) passava type:'del' che non era gestito ne' in FB ne' in
+  //   handleLocal, quindi la cancellazione locale funzionava ma il record
+  //   restava vivo su Firebase e sugli altri device. Normalizzo qui in un
+  //   solo posto cosi' tutto il resto della catena tratta un solo tipo.
+  if (m && m.type === 'del') m.type = 'remove';
   handleLocal(m);
   if (FB_REF) {
     // .catch su ogni scrittura: se le regole del database rifiutano l'operazione
@@ -14143,9 +14149,21 @@ function undoLastInsert(){
   if(!stack.length){ if(typeof toast==='function') toast('Nessuna operazione da annullare','y'); return; }
   var batch = stack.pop();
   var removed = 0;
+  // v35e — Undo bypassa la permission check di ROLE_PERMS.canDelete perche'
+  //   l'utente sta annullando SOLO cio' che ha appena inserito. Puliamo
+  //   direttamente in locale + Firebase + coda offline; evitiamo sendMsg che
+  //   respinge i non-ADM (toast "Non autorizzato" e la cancellazione salta).
   batch.keys.forEach(function(k){
     if(rows[k]){
-      try{ if(typeof sendMsg==='function') sendMsg({type:'del', key:k}); }catch(e){}
+      try{
+        if(typeof FB_REF!=='undefined' && FB_REF){
+          FB_REF.child(k).remove().catch(function(){});
+          try{ if(typeof secLog==='function') secLog('undo-insert', k, {}); }catch(e){}
+        } else if(typeof _ofpPush==='function'){
+          // Offline: metti in coda la remove, verra' replayata al login
+          _ofpPush({type:'remove', key:k});
+        }
+      }catch(e){}
       delete rows[k]; removed++;
     }
   });

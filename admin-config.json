@@ -1,0 +1,4 @@
+{
+  "_comment": "Config admin white-label distribuita nel bundle (letta al boot da admFetchBundleConfig). Se piu' recente di localStorage.admcfg, l'app la adotta. Placeholder vuoto.",
+  "ts": 0
+}

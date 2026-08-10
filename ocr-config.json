@@ -1,0 +1,6 @@
+{
+  "_comment": "Config OCR AI legacy (fallback). In produzione la chiave sta lato Netlify Function. Se serve locale (file://) compila ocr-config.js.",
+  "endpoint": "",
+  "apiKey": "",
+  "model": ""
+}
