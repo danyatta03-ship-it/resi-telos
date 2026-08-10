@@ -1071,7 +1071,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35e · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35f · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1733,7 +1733,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35e</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35f</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -3947,6 +3947,11 @@ function renderPkgList(){
   var el=document.getElementById('pkgList'); if(!el) return;
   var keys=_pkgKeys();
   var cnt=document.getElementById('pkgCount'); if(cnt) cnt.textContent=keys.length;
+  // v35f — Pannello quota storage + backup: prima della lista mostro un
+  //   riquadro con % occupata (via navigator.storage.estimate) + peso stimato
+  //   delle foto in IndexedDB, e i pulsanti Backup/Ripristina JSON.
+  //   Alert giallo >=80%, rosso >=95% + toast al primo entrata.
+  pkgRenderQuotaBar(keys.length);
   if(!keys.length){ el.innerHTML='<div style="text-align:center;padding:22px;color:#666;font-size:12px">Nessuna foto pacco salvata.</div>'; return; }
   el.innerHTML=keys.map(function(id){ return '<div id="pkgrow_'+id+'" style="display:flex;gap:10px;align-items:center;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:9px;padding:8px;margin-bottom:7px"><div id="pkgimg_'+id+'" style="width:60px;height:60px;border-radius:7px;background:#0a0a0a;flex-shrink:0;overflow:hidden"></div><div style="flex:1;min-width:0"><div id="pkgtag_'+id+'" style="font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div><div id="pkgts_'+id+'" style="font-size:10px;color:#666"></div></div><button onclick="dlPkgPhoto(\''+id+'\')" class="sb sg" style="padding:6px 9px;font-size:11px">📥</button><button onclick="delPkgPhoto(\''+id+'\')" class="sb sr" style="padding:6px 9px;font-size:11px">✕</button></div>'; }).join('');
   keys.forEach(function(id){
@@ -3957,6 +3962,153 @@ function renderPkgList(){
       var ts=document.getElementById('pkgts_'+id); if(ts) ts.textContent=new Date(rec.ts).toLocaleString('it-IT')+(rec.by?(' · '+rec.by):'');
     });
   });
+}
+
+// v35f — Renderizza il banner "quota storage" sopra la lista foto pacco.
+//   Usa Storage API (navigator.storage.estimate) se disponibile, altrimenti
+//   stima locale sommando i dataUrl base64. Mostra:
+//     • n. foto totali · peso totale
+//     • % quota IndexedDB (barra colorata)
+//     • pulsanti Backup / Ripristina
+//   Alert automatico se >=80% quota (toast una volta per sessione).
+var _pkgQuotaWarned = false;
+function pkgRenderQuotaBar(nFoto){
+  var host=document.getElementById('pkgList'); if(!host) return;
+  var bar=document.getElementById('pkgQuotaBar');
+  if(!bar){
+    bar=document.createElement('div');
+    bar.id='pkgQuotaBar';
+    bar.style.cssText='background:#0a0a0a;border:1px solid #2a2a2a;border-radius:10px;padding:11px 13px;margin-bottom:12px';
+    host.parentNode.insertBefore(bar, host);
+  }
+  // Contenuto placeholder (aggiornato dopo il calcolo asincrono)
+  bar.innerHTML='<div style="font-size:11px;color:#888">📊 Storage: calcolo in corso...</div>';
+  // Stima "peso totale foto" locale (somma bytes dataUrl in IDB)
+  var keys=_pkgKeys();
+  var localBytesPromise = Promise.all(keys.map(function(id){
+    return idbGet('pkg:'+id).then(function(rec){
+      if(!rec || !rec.dataUrl) return 0;
+      // dataUrl base64: bytes = length * 0.75 ca.
+      return Math.round(rec.dataUrl.length * 0.75);
+    }).catch(function(){ return 0; });
+  })).then(function(sizes){ return sizes.reduce(function(a,b){return a+b;},0); });
+  // Quota complessiva della storage (IndexedDB + Cache API + altro)
+  var estimatePromise = (navigator.storage && navigator.storage.estimate)
+    ? navigator.storage.estimate().catch(function(){ return null; })
+    : Promise.resolve(null);
+  Promise.all([localBytesPromise, estimatePromise]).then(function(res){
+    var localBytes=res[0], est=res[1];
+    var localMB=(localBytes/1048576).toFixed(1);
+    var quotaMB=(est && est.quota) ? Math.round(est.quota/1048576) : null;
+    var usageMB=(est && est.usage) ? Math.round(est.usage/1048576) : null;
+    var pct=(quotaMB && usageMB) ? Math.round((usageMB/quotaMB)*100) : null;
+    var color = pct==null ? '#3B9FD4'
+                : pct>=95 ? '#E05555'
+                : pct>=80 ? '#E0A055'
+                : '#3B9FD4';
+    var label = pct==null
+      ? '(quota non disponibile su questo browser)'
+      : ('<b style="color:'+color+'">'+pct+'%</b> di '+quotaMB+' MB usati ('+usageMB+' MB)');
+    var html =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+        '<div style="font-size:12px;font-weight:800;color:#3B9FD4">📊 Storage foto pacco</div>'+
+        '<div style="font-size:11px;color:#aaa">'+nFoto+' foto · '+localMB+' MB (locali)</div>'+
+      '</div>'+
+      '<div style="height:8px;background:#1a1a1a;border-radius:4px;overflow:hidden;margin-bottom:6px">'+
+        (pct==null ? '' : '<div style="height:100%;width:'+Math.min(100,pct)+'%;background:'+color+';transition:width .3s"></div>')+
+      '</div>'+
+      '<div style="font-size:10px;color:#888;margin-bottom:8px">'+label+'</div>';
+    // Alert su soglia
+    if(pct!=null && pct>=95){
+      html+='<div style="background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.4);color:#E05555;font-size:11px;font-weight:700;border-radius:7px;padding:8px 10px;margin-bottom:8px">🔴 Storage quasi esaurito. Fai un BACKUP e libera spazio (svuota foto vecchie).</div>';
+    } else if(pct!=null && pct>=80){
+      html+='<div style="background:rgba(224,160,85,.1);border:1px solid rgba(224,160,85,.4);color:#E0A055;font-size:11px;font-weight:700;border-radius:7px;padding:8px 10px;margin-bottom:8px">⚠ Storage oltre l\'80%. Ti conviene fare un BACKUP a breve.</div>';
+    }
+    // Pulsanti backup / restore
+    html+='<div style="display:flex;gap:6px">'+
+      '<button onclick="pkgBackup()" style="flex:1;background:rgba(59,159,212,.15);color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:7px;padding:8px 10px;font-size:11px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">💾 Backup foto (.json)</button>'+
+      '<input type="file" id="pkgRestoreInput" accept="application/json,.json" style="display:none" onchange="pkgRestore(this)">'+
+      '<button onclick="document.getElementById(\'pkgRestoreInput\').click()" style="flex:1;background:rgba(224,224,224,.06);color:#e0e0e0;border:1.5px solid #444;border-radius:7px;padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">📥 Ripristina backup</button>'+
+    '</div>';
+    bar.innerHTML=html;
+    // Toast una volta per sessione se >=80%
+    if(pct!=null && pct>=80 && !_pkgQuotaWarned){
+      _pkgQuotaWarned = true;
+      try{ if(typeof toast==='function') toast(pct>=95
+        ? '🔴 Storage foto quasi esaurito ('+pct+'%): fai un backup!'
+        : '⚠ Storage foto oltre l\'80% ('+pct+'%): valuta un backup.', pct>=95?'r':'y'); }catch(e){}
+    }
+  });
+}
+
+// v35f — Backup: scarica un file JSON con tutte le foto pacco (id + tag +
+//   ts + by + dataUrl) per archivio a freddo. Ripristinabile con pkgRestore.
+function pkgBackup(){
+  var keys=_pkgKeys();
+  if(!keys.length){ toast('Nessuna foto da salvare','y'); return; }
+  toast('💾 Preparo backup di '+keys.length+' foto...','b');
+  Promise.all(keys.map(function(id){
+    return idbGet('pkg:'+id).then(function(rec){ return rec || null; }).catch(function(){ return null; });
+  })).then(function(list){
+    var records = list.filter(function(r){ return r && r.dataUrl; });
+    var backup = {
+      _type: 'resi-telos-pkgphotos-backup',
+      _version: 1,
+      _createdAt: Date.now(),
+      _createdBy: (typeof deviceName!=='undefined'?deviceName:'?'),
+      count: records.length,
+      photos: records
+    };
+    var json = JSON.stringify(backup);
+    var mb = (json.length/1048576).toFixed(1);
+    var blob = new Blob([json], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+    a.href = url; a.download = 'resi-telos-fotopacco-backup-'+ts+'.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+    toast('✅ Backup scaricato: '+records.length+' foto · '+mb+' MB','g');
+  }).catch(function(err){
+    toast('Errore backup: '+(err&&err.message||err),'r');
+  });
+}
+
+// v35f — Ripristino: carica JSON del backup, salta duplicati (per id),
+//   scrive in IDB + sync su Firebase (child_added del listener aggiornera'
+//   la lista sugli altri device automaticamente).
+function pkgRestore(input){
+  var file = input && input.files && input.files[0]; if(!file) return;
+  input.value = '';
+  var rd = new FileReader();
+  rd.onload = function(){
+    try {
+      var backup = JSON.parse(rd.result);
+      if(!backup || backup._type !== 'resi-telos-pkgphotos-backup' || !Array.isArray(backup.photos)){
+        toast('⛔ File non riconosciuto come backup foto Resi Telos','r'); return;
+      }
+      if(!confirm('Ripristino di '+backup.photos.length+' foto dal backup.\nLe foto duplicate (stesso ID) verranno saltate. Confermi?')) return;
+      var existing = {}; _pkgKeys().forEach(function(k){ existing[k]=true; });
+      var toAdd = backup.photos.filter(function(p){ return p && p.id && !existing[p.id] && p.dataUrl; });
+      if(!toAdd.length){ toast('Tutte le foto del backup sono gia\' presenti — nessuna aggiunta','b'); return; }
+      var added = 0, failed = 0;
+      Promise.all(toAdd.map(function(rec){
+        return idbSet('pkg:'+rec.id, rec).then(function(){
+          added++;
+          try{ if(typeof FB_REF!=='undefined' && FB_REF) FB_REF.root.child('pkgphotos').child(rec.id).set(rec).catch(function(){}); }catch(e){}
+        }).catch(function(){ failed++; });
+      })).then(function(){
+        // Aggiorna la lista keys
+        var newKeys = toAdd.map(function(p){ return p.id; });
+        _pkgSaveKeys(newKeys.concat(_pkgKeys()));
+        renderPkgList();
+        toast('✅ Ripristinate '+added+' foto'+(failed?(' · '+failed+' fallite'):'')+' · '+(backup.photos.length-toAdd.length)+' saltate (gia\' presenti)','g');
+      });
+    } catch(e){
+      toast('⛔ JSON non valido: '+(e.message||e),'r');
+    }
+  };
+  rd.readAsText(file);
 }
 function openPkgPhoto(id){
   idbGet('pkg:'+id).then(function(rec){ if(!rec) return;
