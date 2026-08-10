@@ -2835,6 +2835,15 @@ function fillStato(fi,si) {
   if(fase&&STATI[fase]) {
     for(var i=0;i<STATI[fase].length;i++){var o=document.createElement('option');o.textContent=STATI[fase][i];sel.appendChild(o);}
   }
+  // v35 — Task 2: STATO auto-compilato SOLO in RICEVIMENTO (default = primo stato
+  // "DA GESTIRE" restituito da autoStato). In UFFICIO/MAGAZZINO/FINALE resta
+  // vuoto e l'utente deve sceglierlo esplicitamente.
+  if(fase==='RICEVIMENTO'){
+    var _def=(typeof autoStato==='function')?autoStato(fase):(STATI[fase]&&STATI[fase][0])||'';
+    if(_def){
+      for(var _i=0;_i<sel.options.length;_i++){ if(sel.options[_i].value===_def || sel.options[_i].text===_def){ sel.selectedIndex=_i; try{ ce(sel); }catch(e){} break; } }
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -3696,11 +3705,43 @@ function delArch(k){ if(!confirm('Eliminare dall\'archivio?'))return; delete arc
 // ══════════════════════════════════════════════════
 function togChart(){chartVis=!chartVis;document.getElementById('chartBox').style.display=chartVis?'block':'none';if(chartVis)renderChart();}
 function renderChart(){
-  var arr=gra(),cm={},fm={};
-  for(var i=0;i<arr.length;i++){if(arr[i].causale)cm[arr[i].causale]=(cm[arr[i].causale]||0)+1;if(arr[i].flusso)fm[arr[i].flusso]=(fm[arr[i].flusso]||0)+1;}
-  var pal=['#3B9FD4','#3B9FD4','#5BB8E0','#E05555','#E0E0E0','#3B9FD4','#80deea'];
-  function bars(map,n){var keys=Object.keys(map).sort(function(a,b){return map[b]-map[a];}).slice(0,n||6),mx=keys.length?map[keys[0]]:1,h='';for(var i=0;i<keys.length;i++){var pct=Math.round(map[keys[i]]/mx*100);h+='<div class="brow"><div class="blbl" title="'+xe(keys[i])+'">'+xe(keys[i])+'</div><div class="btrk"><div class="bfill" style="width:'+pct+'%;background:'+pal[i%pal.length]+'"></div></div><div class="bval">'+map[keys[i]]+'</div></div>';}return h;}
-  document.getElementById('chartBox').innerHTML='<div class="ct">CAUSALI</div>'+bars(cm,7)+'<div class="ct" style="margin-top:10px">FLUSSI</div>'+bars(fm,5);
+  var arr=gra(),cm={},fm={},fsm={},stm={};
+  // v35 Task 10: pre-carica TUTTE le voci del database (causali/flussi/fasi/stati)
+  // con conteggio 0 così restano visibili anche se al momento non hanno resi.
+  try {
+    (CAULIST||[]).forEach(function(k){ cm[k]=cm[k]||0; });
+    ['STANDARD','FILIALE IN','FILIALE OUT','ANOMALIA','ECCEZIONE'].forEach(function(k){ fm[k]=fm[k]||0; });
+    (FASI_ORDER||[]).forEach(function(k){ fsm[k]=fsm[k]||0; });
+    (FASI_ORDER||[]).forEach(function(f){ (STATI[f]||[]).forEach(function(s){ stm[s]=stm[s]||0; }); });
+  } catch(e){}
+  for(var i=0;i<arr.length;i++){
+    var r=arr[i];
+    if(r.causale) cm[r.causale]=(cm[r.causale]||0)+1;
+    if(r.flusso)  fm[r.flusso]=(fm[r.flusso]||0)+1;
+    if(r.fase)    fsm[r.fase]=(fsm[r.fase]||0)+1;
+    if(r.stato)   stm[r.stato]=(stm[r.stato]||0)+1;
+  }
+  var pal=['#3B9FD4','#5BB8E0','#3fbf6f','#E05555','#E6B03C','#8859E5','#E0E0E0','#80deea'];
+  // bars: se n non specificato o falsy → mostra TUTTE le chiavi, ordinate desc per conteggio;
+  // le voci a 0 vengono comunque mostrate in coda (grigie).
+  function bars(map, n){
+    var keys=Object.keys(map).sort(function(a,b){ return (map[b]||0)-(map[a]||0) || a.localeCompare(b); });
+    if(n) keys=keys.slice(0,n);
+    var mx=1; for(var i=0;i<keys.length;i++){ if((map[keys[i]]||0)>mx) mx=map[keys[i]]; }
+    var h='';
+    for(var i=0;i<keys.length;i++){
+      var v=map[keys[i]]||0, pct=Math.round(v/mx*100), zero=(v===0);
+      h+='<div class="brow"'+(zero?' style="opacity:.45"':'')+'><div class="blbl" title="'+xe(keys[i])+'">'+xe(keys[i])+'</div>'+
+         '<div class="btrk"><div class="bfill" style="width:'+(zero?4:pct)+'%;background:'+(zero?'#444':pal[i%pal.length])+'"></div></div>'+
+         '<div class="bval">'+v+'</div></div>';
+    }
+    return h;
+  }
+  document.getElementById('chartBox').innerHTML =
+    '<div class="ct">CAUSALI (tutte '+Object.keys(cm).length+')</div>'+bars(cm)+
+    '<div class="ct" style="margin-top:10px">FLUSSI (tutti '+Object.keys(fm).length+')</div>'+bars(fm)+
+    '<div class="ct" style="margin-top:10px">FASI (tutte '+Object.keys(fsm).length+')</div>'+bars(fsm)+
+    '<div class="ct" style="margin-top:10px">STATI (tutti '+Object.keys(stm).length+')</div>'+bars(stm);
 }
 
 function clearAll(){
@@ -4818,7 +4859,10 @@ function showCyclesFornitori(){
       '<div style="background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:16px;width:100%;max-width:640px;margin:auto">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
           '<div style="font-size:16px;font-weight:800;color:#3B9FD4">🚚 Cicli fornitori</div>' +
-          '<button onclick="document.getElementById(\'cyclesBox\').remove()" style="background:none;border:none;color:#777;font-size:22px;cursor:pointer">✕</button>' +
+          '<div style="display:flex;gap:6px;align-items:center">'+
+            '<button onclick="document.getElementById(\'cyclesBox\').remove();showPickingList()" style="background:#3B9FD4;color:#fff;border:none;padding:6px 12px;border-radius:14px;font-size:11px;font-weight:800;cursor:pointer" title="Resi pronti al prelievo (MAGAZZINO CHIUDERE / PRESA LOGISTICA / RNC ✅)">📦 Lista prelievo</button>'+
+            '<button onclick="document.getElementById(\'cyclesBox\').remove()" style="background:none;border:none;color:#777;font-size:22px;cursor:pointer">✕</button>' +
+          '</div>' +
         '</div>' +
         '<div style="font-size:11px;color:#999;margin-bottom:12px;line-height:1.5">' +
           '<b>'+totalSuppliers+'</b> fornitori in anagrafica · <b>'+totalResi+'</b> resi correnti in lista. ' +
@@ -4885,6 +4929,81 @@ function showResiByCycle(cicloName, fase){
         '<div style="max-height:74vh;overflow-y:auto;-webkit-overflow-scrolling:touch">'+body+'</div>'+
       '</div>'+
     '</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// ── LISTA PRELIEVO (v35 Task 3) ────────────────────────────────────────
+// Elenco dei resi pronti al prelievo, RAGGRUPPATI PER CICLO. Vi ricadono i
+// record MAGAZZINO in stato CHIUDERE/PRESA LOGISTICA (già assegnati) e i
+// record che hanno un RMA/RNC valorizzato (RNC aperta lato ufficio).
+// Ogni gruppo espandibile; ogni riga apre il reso in editing.
+function showPickingList(){
+  var rowsAll=(typeof gra==='function')?gra():[];
+  var _isPick=function(r){
+    if(!r) return false;
+    var st=(r.stato||'').toUpperCase();
+    var fs=(r.fase||'').toUpperCase();
+    // MAGAZZINO stato "CHIUDERE" o "PRESA LOGISTICA"
+    if(fs==='MAGAZZINO' && (st==='CHIUDERE' || st==='PRESA LOGISTICA')) return true;
+    // UFFICIO RESI con RNC ✅ (indica particolare "da chiudere" pronto al prelievo)
+    if(fs==='UFFICIO RESI' && (r.rma||'').trim() && st.indexOf('RNC')>=0 && st.indexOf('✅')>=0) return true;
+    return false;
+  };
+  var pick=rowsAll.filter(_isPick);
+  var byCycle={};
+  CYCLES_ORDER.forEach(function(c){ byCycle[c]=[]; });
+  pick.forEach(function(r){ (byCycle[cycleOfSupplier(r.forn||'')]||byCycle['ALTRI']).push(r); });
+  // ordina ogni gruppo: prima chi ha stato PRESA LOGISTICA (già visto dal magazzino),
+  // poi CHIUDERE, poi RNC aperta; a parità per data
+  Object.keys(byCycle).forEach(function(c){
+    byCycle[c].sort(function(a,b){
+      var pa=(a.stato==='PRESA LOGISTICA')?0:(a.stato==='CHIUDERE')?1:2;
+      var pb=(b.stato==='PRESA LOGISTICA')?0:(b.stato==='CHIUDERE')?1:2;
+      if(pa!==pb) return pa-pb;
+      return String(a.datArr||a.datElab||'').localeCompare(String(b.datArr||b.datElab||''));
+    });
+  });
+  var body='', totRows=pick.length, totPh=pick.filter(function(r){return r._photoPez||r.photoThumb||r.photo;}).length;
+  CYCLES_ORDER.forEach(function(c){
+    var list=byCycle[c]; if(!list||!list.length) return;
+    var color=CYCLES_COLOR[c]||'#3B9FD4';
+    body+='<div style="margin-bottom:10px;border:1px solid '+color+'44;border-radius:10px;overflow:hidden">'+
+            '<div onclick="var b=this.nextElementSibling;b.style.display=b.style.display===\'none\'?\'block\':\'none\'" style="background:'+color+'22;color:'+color+';padding:10px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:13px">'+
+              '<span>'+(CYCLES_ICON[c]||'')+' '+xe(c)+' <span style="color:var(--txt3);font-weight:500;font-size:11px">('+list.length+' pezzi da prelevare)</span></span>'+
+              '<span style="font-size:16px">⇅</span>'+
+            '</div>'+
+            '<div style="padding:6px;background:#111">';
+    list.forEach(function(r){
+      var _key=(typeof mkKey==='function')?mkKey(r):'';
+      var _cod=xe((r.pre?r.pre+' ':'')+(r.cod||''));
+      var _thumb = r._photoPez ? '<img src="'+xe(r._photoPez)+'" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0" title="foto pezzo">' :
+                   r.photoThumb ? '<img src="'+xe(r.photoThumb)+'" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;opacity:.7" title="foto bolla">' :
+                   '<div style="width:44px;height:44px;border-radius:6px;background:#222;color:#555;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0" title="nessuna foto">📷</div>';
+      var _stChip='<span style="background:'+color+'22;color:'+color+';padding:2px 7px;border-radius:8px;font-size:9px;font-weight:800;flex-shrink:0">'+xe(r.stato||'')+'</span>';
+      var _rmaChip=(r.rma||'').trim() ? '<span style="background:#0a3a1e;color:#3fbf6f;padding:2px 6px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px" title="RNC/RMA">'+xe(r.rma)+'</span>' : '';
+      var _colliChip=(r.colli||'').toString().trim() ? '<span style="background:#1a1a1a;color:#3B9FD4;padding:2px 6px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px" title="colli · imballo">📦 '+xe(r.colli)+(r.tipoImb?' '+xe(r.tipoImb):'')+'</span>' : '';
+      body+='<div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid #1a1a1a;cursor:pointer" '+(_key?'onclick="document.getElementById(\'pickBox\').remove();openSheet(\''+xe(_key.replace(/\\\\|\'/g,""))+'\')"':'')+'>'+
+              _thumb+
+              '<div style="flex:1;min-width:0">'+
+                '<div style="font-size:12px;font-weight:800;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_cod+' · '+xe(r.forn||'')+'</div>'+
+                '<div style="font-size:10px;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+xe(r.sogg||'')+' · '+xe(r.causale||'')+_rmaChip+_colliChip+'</div>'+
+              '</div>'+
+              _stChip+
+            '</div>';
+    });
+    body+='</div></div>';
+  });
+  if(!body) body='<div style="padding:30px;text-align:center;color:var(--txt3);font-size:12px">Nessun pezzo pronto al prelievo.</div>';
+  var html='<div id="pickBox" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1450;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto;-webkit-overflow-scrolling:touch">'+
+    '<div style="background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:14px;width:100%;max-width:640px;margin:auto">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+        '<div style="font-size:15px;font-weight:800;color:#3B9FD4">📦 Lista prelievo (per ciclo)</div>'+
+        '<button onclick="document.getElementById(\'pickBox\').remove()" style="background:none;border:none;color:#777;font-size:22px;cursor:pointer">✕</button>'+
+      '</div>'+
+      '<div style="font-size:10px;color:#999;margin-bottom:10px">'+totRows+' pezzi totali · '+totPh+' con foto pezzo/bolla — click su una riga per aprire</div>'+
+      '<div style="max-height:74vh;overflow-y:auto;-webkit-overflow-scrolling:touch">'+body+'</div>'+
+    '</div>'+
+  '</div>';
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
@@ -5311,7 +5430,30 @@ function editRow(key){
   if(ROLE==='ADM'){ faseOpts=FASI_ORDER.slice(); }
   else { var _enf=NEXT_FASE[r.fase]; if(_enf&&(p.canAdvanceTo||[]).indexOf(_enf)>=0)faseOpts.push(_enf); var _epf=PREV_FASE[r.fase]; if(_epf&&p.canSendBack)faseOpts.push(_epf); }
 
-  var html='<div class="sh-section">IDENTIFICAZIONE</div>';
+  // v35 Task 5 — ARCHIVIO PRATICA: cronologia foto per fase (RICEVIMENTO
+  // bolla reso cliente, MAGAZZINO foto pezzo chiusura, FINALE foto bolla
+  // firmata corriere). Renderizzato in cima all'edit dialog.
+  var _archPh = [
+    { fase:'RICEVIMENTO', label:'📥 Bolla reso cliente', src:(r.photoThumb||r.photo||''), color:'#3B9FD4', when:r.datArr||r.datElab||'', missing:'foto bolla non presente' },
+    { fase:'MAGAZZINO',   label:'📦 Foto pezzo chiusura', src:(r._photoPez||''),           color:'#E6B03C', when:r._photoPezTs?new Date(r._photoPezTs).toLocaleString():'', missing:'da scattare al momento della presa' },
+    { fase:'FINALE',      label:'✅ Bolla firmata corriere', src:(r._photoFin||''),          color:'#3fbf6f', when:r._photoFinTs?new Date(r._photoFinTs).toLocaleString():'', missing:'obbligatoria per chiudere' }
+  ];
+  var html='<div class="sh-section">ARCHIVIO PRATICA (cronologia foto)</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px">';
+  window._archPhCache = _archPh; // usata da _archPhOpen()
+  _archPh.forEach(function(ph, _phIdx){
+    var _has=!!ph.src;
+    html+='<div style="border:1px solid '+ph.color+(_has?'':'44')+';border-radius:8px;padding:6px;background:'+ph.color+(_has?'22':'0a')+';text-align:center;'+(_has?'cursor:pointer':'')+'" '+
+          (_has?'onclick="_archPhOpen('+_phIdx+')"':'')+'>'+
+          '<div style="font-size:9px;font-weight:800;color:'+ph.color+';margin-bottom:4px;letter-spacing:.5px">'+xe(ph.fase)+'</div>'+
+          (_has ? '<img src="'+xe(ph.src)+'" style="width:100%;height:80px;object-fit:cover;border-radius:4px;display:block">'
+                : '<div style="height:80px;background:#0a0a0a;border-radius:4px;display:flex;align-items:center;justify-content:center;color:'+ph.color+';font-size:26px;opacity:.4">📷</div>')+
+          '<div style="font-size:9px;color:var(--txt3);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+xe(ph.label)+'">'+xe(ph.label)+'</div>'+
+          '<div style="font-size:8px;color:'+ph.color+';margin-top:1px;opacity:.8">'+xe(_has?(ph.when||'foto ok'):ph.missing)+'</div>'+
+        '</div>';
+  });
+  html+='</div>';
+  html+='<div class="sh-section">IDENTIFICAZIONE</div>';
   html+='<div class="r2">'+fld('PRE',inp('pre',r.pre))+fld('CODICE',inp('cod',r.cod))+'</div>';
   html+='<div class="r2">'+fld('QTÀ',inp('qty',r.qty,'','number'))+fld('PREZZO €',inp('prc',r.prc,'','number'))+'</div>';
   html+=fld('FORNITORE',inp('forn',r.forn))+fld('SOGGETTO',inp('sogg',r.sogg));
@@ -5395,6 +5537,19 @@ function refiSt(){
   var fin=document.getElementById('ei_finFields');
   if(mag) mag.style.display = (fase==='MAGAZZINO') ? '' : 'none';
   if(fin) fin.style.display = (fase==='FINALE')    ? '' : 'none';
+}
+
+// ── Apri foto archivio-pratica a schermo intero (semplice viewer inline) ──
+function _archPhOpen(idx){
+  var ph = (window._archPhCache||[])[idx]; if(!ph || !ph.src) return;
+  var old=document.getElementById('archPhBox'); if(old) old.remove();
+  var d=document.createElement('div'); d.id='archPhBox';
+  d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:2000;display:flex;align-items:center;justify-content:center;cursor:zoom-out;padding:20px';
+  d.onclick=function(){ d.remove(); };
+  d.innerHTML='<div style="position:absolute;top:14px;left:14px;color:#fff;font-size:13px;font-weight:800">'+ph.fase+' — '+ph.label+'</div>'+
+              '<button style="position:absolute;top:12px;right:14px;background:#fff2;border:none;color:#fff;font-size:22px;width:36px;height:36px;border-radius:50%;cursor:pointer">×</button>'+
+              '<img src="'+ph.src.replace(/"/g,'&quot;')+'" style="max-width:100%;max-height:100%;border-radius:8px">';
+  document.body.appendChild(d);
 }
 
 // ── Foto pezzo (workflow chiusura) o foto bolla firmata (FINALE) ─────
