@@ -8,6 +8,46 @@
 <meta name="theme-color" content="#000">
 <link rel="manifest" href="manifest.json">
 <title>Resi Telos · Telos SPA</title>
+<!--
+════════════════════════════════════════════════════════════════════════════
+  RESI TELOS — SPA MONOLITICA
+  Per la panoramica architetturale vedi:
+    • README.md
+    • docs/ARCHITECTURE.md
+    • docs/DATA-MODEL.md
+    • CHANGELOG.md
+
+  INDICE (usa "cerca in pagina" con le stringhe "== SEZIONE:" per saltare):
+
+  === SEZIONE: STILI CSS (dark, light, componenti) ============ ~riga 12
+  === SEZIONE: HTML MARKUP + POPUP INIZIALE =================== ~riga 830
+  === SEZIONE: TASSONOMIE (STATI, CAULIST, ROLE_PERMS, ...) === ~riga 1770
+  === SEZIONE: STATO GLOBALE + BOOT ========================== ~riga 1968
+  === SEZIONE: SYNC OFFLINE + SECURITY LOG =================== ~riga 2290
+  === SEZIONE: LOGICA RESI (addRow, editRow, svEdit) ========= ~riga 2820
+  === SEZIONE: GARANZIE + NON RENDIBILE ====================== ~riga 3280
+  === SEZIONE: LISTA + FILTRI + CHIPS FASE =================== ~riga 3600
+  === SEZIONE: CICLI FORNITORI (showResiByCycle/PickingList) = ~riga 4880
+  === SEZIONE: DB PREGRESSO + TRI_OVR ======================== ~riga 4530
+  === SEZIONE: STORICO/RESOCONTO (dash, chart, export) ======= ~riga 3770
+  === SEZIONE: FIREBASE (connect, sync, killswitch, presence)= ~riga 6590
+  === SEZIONE: BACKUP AUTOMATICO ============================= ~riga 6790
+  === SEZIONE: ANOMALIE (saveAnomalia, renderAnoList) ======== ~riga 7200
+  === SEZIONE: CHAT INTERNA ================================== ~riga 8540
+  === SEZIONE: OCR AI (ocrDocument, ocrViaAI, normalize) ===== ~riga 10990
+  === SEZIONE: OCR CONFIRM DIALOG (showOcrConfirm, applyOcr) = ~riga 11440
+  === SEZIONE: MODE PICKER + PANEL SCA/RPC/MAN =============== ~riga 14230
+  === SEZIONE: BOOT AUTO (initOcrLiveAuto, restoreMode) ====== ~riga 14420
+
+  ENTRY POINTS PRINCIPALI:
+    • launchApp()              → avvio dopo il popup login
+    • setupAfterLogin()        → wiring UI, Firebase, mode picker
+    • addRow() / svEdit()      → CRUD del reso
+    • ocrDocument()            → pipeline OCR foto -> AI -> conferma
+    • _fbConnectDb()           → connessione Firebase + sync incrementale
+    • sendMsg({type,...})      → unica strada per scrivere sul DB
+════════════════════════════════════════════════════════════════════════════
+-->
 <style>
 :root{--bg:#080808;--bg1:#111111;--bg2:#1a1a1a;--bg3:#222222;--brd:#2a2a2a;--brd2:#333333;--txt:#FFFFFF;--txt2:#E0E0E0;--txt3:#999999;--grn:#3B9FD4;--grn2:#2980B9;--blu:#3B9FD4;--red:#E05555;--yel:#5BB8E0;--ora:#3B9FD4;--pur:#E0E0E0;--rad:10px;--rad2:7px}
 /* PC/tablet largo: alzo la luminosita' e il contrasto — su monitor grandi il tema mobile molto scuro risulta smorto. Sotto 900px resta come prima (mobile). */
