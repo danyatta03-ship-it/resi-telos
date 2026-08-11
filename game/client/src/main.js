@@ -9,7 +9,7 @@ import { setupUI, KILLSTREAKS } from "./ui.js";
 import { Sfx } from "./audio.js";
 
 const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || "ws://localhost:2567";
+const SERVER_URL = (typeof window !== "undefined" && window.__SERVER_URL__) || import.meta.env.VITE_SERVER_URL || "ws://localhost:2567";
 if (!TOKEN) {
   document.body.innerHTML = "<h2 style='color:#fff;padding:20px;font-family:sans-serif'>Manca VITE_MAPBOX_TOKEN in client/.env</h2>";
   throw new Error("missing token");

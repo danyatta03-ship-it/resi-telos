@@ -1,0 +1,45 @@
+{
+  "name": "city-shooter-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "City Shooter — desktop wrapper (Electron)",
+  "main": "main.js",
+  "scripts": {
+    "postinstall": "cd ../client && npm install && npm run build && cd ../server && npm install",
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist:win": "electron-builder --win --x64",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^32.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.cityshooter.app",
+    "productName": "City Shooter",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "!node_modules/electron/**",
+      "!node_modules/electron-builder/**"
+    ],
+    "extraResources": [
+      { "from": "../client/dist", "to": "client" },
+      { "from": "../server",      "to": "server", "filter": ["**/*", "!node_modules/.cache"] }
+    ],
+    "win": {
+      "target": ["nsis", "portable"],
+      "artifactName": "CityShooter-${version}-${arch}.${ext}"
+    },
+    "mac": { "target": ["dmg"] },
+    "linux": { "target": ["AppImage"] },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  }
+}
