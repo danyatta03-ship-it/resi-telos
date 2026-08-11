@@ -1071,7 +1071,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35f · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35g · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1179,7 +1179,7 @@ html[data-theme="light"] .btn-anomalia{
       <div class="cb">
         <div class="r2">
           <div class="f"><label><span>TIPO FLUSSO <span class="req">✱</span></span></label>
-            <select id="cFlu" onchange="ce(this)">
+            <select id="cFlu" onchange="ce(this);onFluChange(this)">
               <option value="">—</option><option>STANDARD</option><option>FILIALE IN</option><option>FILIALE OUT</option><option>ANOMALIA</option><option>ECCEZIONE</option>
             </select>
           </div>
@@ -1733,7 +1733,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35f</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35g</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -2557,6 +2557,9 @@ function rmem(sid,key){
 // ══════════════════════════════════════════════════
 function onSogg(val) {
   val = val.trim().toUpperCase();
+  // v35g — aggiorna la lista TIPO DOC. quando cambia il soggetto (Telos ha
+  //   un set ristretto: BL/TRA · BL/FIM · BL/FLO · CO/STD · CO/BAN · FT/ACC)
+  try{ if(typeof updDocOptions==='function') updDocOptions(); }catch(e){}
   var tip = document.getElementById('cliTip');
   if(!tip) return;
   if(val.length < 2) { tip.style.display='none'; return; }
@@ -4796,11 +4799,23 @@ function dbPg(dir){}
 // Raggruppa per (codice + causale), ordina per # occorrenze, mostra top 30
 // con fornitore piu' frequente e valore totale. Utile per individuare
 // pezzi cronicamente problematici sui quali negoziare col fornitore.
-function showKpiRecurring(){
+function showKpiRecurring(causaleFilter){
   var attuali = (typeof gra==='function') ? gra() : [];
   var storico = (typeof DB_TRI!=='undefined' && DB_TRI) ? DB_TRI : [];
   var all = attuali.concat(storico);
   if(!all.length){ toast('Nessun dato disponibile','y'); return; }
+
+  // v35g — Filtro per causale: se causaleFilter e' passato, considera solo
+  //   le righe con quella causale. Cosi' si isolano "CARCASSA", "GARANZIA",
+  //   "ERRATA SPEDIZIONE" ecc. senza rumore dalle altre. Popolata dinamicamente
+  //   dal dropdown nel popup.
+  var causaleFilterU = (causaleFilter||'').trim().toUpperCase();
+  var allCausali = {};   // per popolare il dropdown
+  for(var _ci=0;_ci<all.length;_ci++){
+    var _rc = (all[_ci].causale||'').trim();
+    if(_rc) allCausali[_rc.toUpperCase()] = _rc;
+  }
+  var causaliList = Object.keys(allCausali).sort().map(function(k){ return allCausali[k]; });
 
   var map = {};   // key = cod|causale
   for(var i=0;i<all.length;i++){
@@ -4808,6 +4823,7 @@ function showKpiRecurring(){
     var cod = (r.cod||'').trim().toUpperCase();
     var cau = (r.causale||'').trim();
     if(!cod || !cau) continue;
+    if(causaleFilterU && cau.toUpperCase() !== causaleFilterU) continue;
     var key = cod + '||' + cau;
     if(!map[key]) map[key] = { cod:cod, causale:cau, n:0, val:0, forn:{}, clienti:{}, lastDate:'' };
     map[key].n++;
@@ -4826,7 +4842,14 @@ function showKpiRecurring(){
                              .slice(0, 50);
 
   if(!list.length){
-    toast('Nessuna combinazione codice+causale ricorrente trovata','y'); return;
+    // v35g — se il filtro non produce risultati, informa e apri lo stesso il
+    //   popup vuoto ma con il dropdown, cosi' l'utente puo' cambiare filtro
+    //   senza dover riaprire.
+    if(causaleFilterU){
+      toast('Nessun risultato per causale "'+causaleFilter+'". Prova un\'altra.','y');
+    } else {
+      toast('Nessuna combinazione codice+causale ricorrente trovata','y'); return;
+    }
   }
 
   function topKey(obj){
@@ -4862,6 +4885,16 @@ function showKpiRecurring(){
         '<div style="font-size:11px;color:#999;margin-bottom:10px;line-height:1.5">' +
           'Combinazioni <b>codice articolo + causale</b> che tornano <b>≥2 volte</b> nell\'archivio + storico. ' +
           'Ordinate per frequenza. Le prime 3 in rosso: casi critici (probabile pezzo difettoso/fornitore instabile).' +
+        '</div>' +
+        // v35g — Dropdown filtro causale: al cambio chiude il popup e riapre
+        //   passando la causale scelta. "TUTTE" ripulisce il filtro.
+        '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">'+
+          '<label style="font-size:10px;color:#888;letter-spacing:.5px;font-weight:700">FILTRA PER CAUSALE:</label>'+
+          '<select onchange="document.getElementById(\'kpiBox\').remove();showKpiRecurring(this.value)" '+
+            'style="flex:1;background:#0a0a0a;color:#E6B03C;border:1px solid #6a5024;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:700;-webkit-appearance:none;font-family:inherit">'+
+            '<option value=""'+(!causaleFilterU?' selected':'')+'>— TUTTE —</option>'+
+            causaliList.map(function(c){ return '<option value="'+xe(c)+'"'+(c.toUpperCase()===causaleFilterU?' selected':'')+'>'+xe(c)+'</option>'; }).join('')+
+          '</select>'+
         '</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">' +
           '<div style="background:#0a0a0a;border:1px solid #2a2a2a;border-radius:8px;padding:10px;text-align:center">' +
@@ -8429,6 +8462,55 @@ function onFasChange(el){
   fillStato('cFas','cSta');
   setTimeout(suggestStato, 200);
 }
+// v35g — quando cambia il TIPO FLUSSO nel form manuale:
+//   1) se != ANOMALIA il select cAno viene disabilitato e svuotato (non si
+//      puo' segnalare un'anomalia se il flusso non e' ANOMALIA)
+//   2) aggiorna il set di TIPO DOC. ammesso (FILIALE IN → BL/TRA, BL/FIM,
+//      BL/RNC; bolla Telos come soggetto → set Telos)
+function onFluChange(el){
+  try{
+    var flu = ((el&&el.value)||'').toUpperCase();
+    var ano = document.getElementById('cAno');
+    var hint = document.getElementById('cAnoHint');
+    if(ano){
+      if(flu==='ANOMALIA'){
+        ano.disabled = false; ano.style.opacity = ''; ano.style.cursor = '';
+        if(hint) hint.textContent = '(scegli l\'anomalia)';
+      } else {
+        ano.value = '';
+        ano.disabled = true; ano.style.opacity = '.4'; ano.style.cursor = 'not-allowed';
+        if(hint) hint.textContent = '(disponibile solo con flusso ANOMALIA)';
+      }
+    }
+  }catch(e){}
+  try{ updDocOptions(); }catch(e){}
+}
+
+// v35g — Ricalcola la lista di opzioni per TIPO DOC. (cDoc) in base a:
+//   - flusso corrente (FILIALE IN restringe)
+//   - soggetto Telos (contiene TELOS o inizia per INTG) restringe alla lista
+//     bolle Telos
+// Preserva il valore corrente se ancora ammesso.
+var _DOC_FULL     = ['FLOTTA','SCONTRINO','FATTURA','VENDITA','ACQUISTO','VISIONE','RESO FILIALE','NOLEGGIO','BL/FIM','BL/TRA','BL/RNC','BL/FLO','CO/STD','CO/BAN','FT/ACC','NESSUNO'];
+var _DOC_FILIN    = ['BL/TRA','BL/FIM','BL/RNC'];
+var _DOC_TELOS    = ['BL/TRA','BL/FIM','BL/FLO','CO/STD','CO/BAN','FT/ACC'];
+function _docOptionsFor(flu, soggUp){
+  if(flu === 'FILIALE IN') return _DOC_FILIN;
+  if(soggUp && (soggUp.indexOf('TELOS')>=0 || /\bINTG\b/.test(soggUp) || /^INTG/.test(soggUp))) return _DOC_TELOS;
+  return _DOC_FULL;
+}
+function updDocOptions(){
+  try{
+    var doc = document.getElementById('cDoc'); if(!doc) return;
+    var flu = ((document.getElementById('cFlu')||{}).value||'').toUpperCase();
+    var sogg = ((document.getElementById('hSogg')||{}).value||'').toUpperCase();
+    var opts = _docOptionsFor(flu, sogg);
+    var cur = doc.value;
+    doc.innerHTML = '<option value="">—</option>' + opts.map(function(o){ return '<option'+(o===cur?' selected':'')+'>'+o+'</option>'; }).join('');
+    if(cur && opts.indexOf(cur)<0){ doc.value = ''; if(typeof toast==='function') toast('Tipo doc "'+cur+'" non ammesso per '+(flu==='FILIALE IN'?'FILIALE IN':'bolla Telos')+' — scegli dalla nuova lista','y'); }
+  }catch(e){}
+}
+
 function onCauChange(el){
   ce(el);
   setTimeout(suggestStato, 100);
@@ -11224,6 +11306,21 @@ function ocrCropShow(dataUrl, cb){
   img.src=dataUrl;
 }
 
+// v35g — apre in fullscreen la foto della bolla nella modal OCR confirm.
+//   Toccando la thumbnail (o l'icona zoom) la foto occupa tutto lo schermo,
+//   un tap qualsiasi (o la X) la chiude.
+function _ocrOpenPhotoFull(){
+  var url = window._ocrConfPhotoUrl; if(!url) return;
+  var box = document.createElement('div');
+  box.id = 'ocrPhotoFullBox';
+  box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:1700;display:flex;align-items:center;justify-content:center;padding:14px;cursor:zoom-out';
+  box.onclick = function(){ box.remove(); };
+  box.innerHTML = '<img src="'+url.replace(/"/g,'&quot;')+'" style="max-width:100%;max-height:100%;border-radius:8px">'+
+    '<button onclick="event.stopPropagation();document.getElementById(\'ocrPhotoFullBox\').remove()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,.15);color:#fff;border:1px solid #444;border-radius:20px;width:38px;height:38px;font-size:20px;cursor:pointer;-webkit-appearance:none">×</button>';
+  document.body.appendChild(box);
+}
+
+
 // \u2500\u2500 Overlay di caricamento OCR \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 function ocrShowLoading(msg, showCrop){
   var ov=document.getElementById('ocrLoadOv');
@@ -11645,7 +11742,11 @@ function showOcrConfirm(res, photoUrl, source){
         '<div>'+lab('NOTE')+'<input id="ocrNote" value="'+xe(res.note||(a0.desc||''))+'" placeholder="annotazioni" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block"></div>'+
         '</div>';
 
-  if(photoUrl) html+='<img src="'+photoUrl+'" style="width:100%;max-height:150px;object-fit:contain;border-radius:8px;background:#0a0a0a;margin-bottom:12px">';
+  // v35g — tap sulla thumbnail apre la foto in overlay fullscreen (zoom-out per chiudere)
+  if(photoUrl){
+    window._ocrConfPhotoUrl = photoUrl;
+    html+='<img src="'+photoUrl+'" onclick="_ocrOpenPhotoFull()" title="Tocca per ingrandire" style="width:100%;max-height:150px;object-fit:contain;border-radius:8px;background:#0a0a0a;margin-bottom:12px;cursor:zoom-in">';
+  }
 
   // v34s/v34aa: SCA (via ROLE o mode-picker) vede "Invia al PC" (skippa validazioni), gli altri "Aggiungi tutti alla lista"
   var _isScaUi = (typeof ROLE!=='undefined' && ROLE==='SCA') || (typeof _isMode==='function' && _isMode('SCA'));
@@ -11732,7 +11833,10 @@ function ocrRowHtml(i, a){
   var prc=(a.prc==='' || a.prc==null) ? '' : (parseFloat(a.prc)||0);
   var cau=(a.causale||'').toString();
   var forn=(a.fornitore||'').toString().toUpperCase();
-  var fas=(a.fase||'RICEVIMENTO').toString();
+  // v35g — Default fase per righe OCR: UFFICIO RESI (non RICEVIMENTO). Il
+  //   lettore bolla precompila cosi' quello che gia' l'auto-jump in addRow
+  //   avrebbe fatto al save. Cosi' l'utente vede subito lo stato reale.
+  var fas=(a.fase||'UFFICIO RESI').toString();
   var sta=(a.stato||'DA GESTIRE \u23f3').toString();
   var doc=(a.tipoDoc||'').toString();
   var flu=(a.flusso||'STANDARD').toString();
@@ -12008,14 +12112,24 @@ function applyOcrConfirm(allArticles){
       return;
     }
 
-    document.getElementById('ocrConfBox').remove();
-    gTab('pgIns');
+    // v35g — NON rimuoviamo il popup PRIMA del loop: se addRow rifiuta
+    //   qualche riga (data acq. fornitore mancante, coerenza doc, ecc.) il
+    //   popup deve restare aperto cosi' l'utente vede il toast e corregge
+    //   senza perdere foto+modifiche.
     var cRmaVal=(document.getElementById('cRma')||{}).value||'';
     var added=0, failed=[];
     // v34v: snapshot chiavi PRIMA dell'inserimento per undo
     var _keysBefore = {};
     try{ Object.keys(rows||{}).forEach(function(k){ _keysBefore[k]=true; }); }catch(e){}
     if(typeof loadCodeMem==='function')loadCodeMem();
+    // v35g — capturo i toast di addRow per riemetterli DENTRO il popup
+    //   (l'utente resta nel dialog OCR e legge subito quale campo manca).
+    var _capturedAddToasts = [];
+    var _origToast = window.toast;
+    window.toast = function(msg, kind){
+      _capturedAddToasts.push({msg:String(msg||''), kind:kind||'b'});
+      try{ _origToast(msg, kind); }catch(e){}
+    };
     for(var i=0;i<articoli.length;i++){
       var a=articoli[i];
       try{ if(a.cod){ CODE_MEM[a.cod]={pre:a.pre, qty:a.qty}; } }catch(e){}
@@ -12041,18 +12155,55 @@ function applyOcrConfirm(allArticles){
       else failed.push(i+1);
     }
     try{ if(typeof saveCodeMem==='function')saveCodeMem(); }catch(e){}
+    // Ripristina toast originale
+    window.toast = _origToast;
     // v34v: registra le chiavi NUOVE nel undo stack e mostra il toast con "↶ ANNULLA"
     if(added>0){
       var _newKeys = Object.keys(rows||{}).filter(function(k){ return !_keysBefore[k]; });
       try{ if(typeof pushUndoBatch==='function') pushUndoBatch(_newKeys); }catch(e){}
     }
     if(added===articoli.length){
+      // v35g — successo pieno: chiudi popup e vai in lista
+      try{ document.getElementById('ocrConfBox').remove(); }catch(e){}
+      gTab('pgIns');
       // Toast normale silenziato: mostra invece il toast UNDO (pushUndoBatch)
-      // toast('✅ '+added+'/'+articoli.length+' articoli aggiunti','g');
     } else if(added>0){
-      toast('⚠ Aggiunti '+added+'/'+articoli.length+' (fallite: '+failed.join(', ')+'). Controlla data acq. fornitore, coerenza flusso/documento e permessi.','y');
+      // Successo parziale: chiudi comunque perche' altre andranno riprocessate
+      try{ document.getElementById('ocrConfBox').remove(); }catch(e){}
+      gTab('pgIns');
+      toast('⚠ Aggiunti '+added+'/'+articoli.length+' (fallite righe: '+failed.join(', ')+'). Controlla data acq. fornitore, coerenza flusso/documento e permessi.','y');
     } else {
-      toast('⚠ Nessuna riga aggiunta. Verifica: DATA ACQUISTO FORNITORE per riga, permessi ruolo, coerenza flusso/doc.','r');
+      // v35g — NESSUNA riga aggiunta: popup RESTA APERTO. Evidenzia le righe
+      //   fallite in rosso e mostra dentro il popup un banner con l'ultimo toast
+      //   di addRow (che indica il vero motivo del blocco).
+      try{
+        var _list = document.getElementById('ocrArtList');
+        if(_list){
+          var _rowEls = _list.querySelectorAll('.ocrRow');
+          failed.forEach(function(idx){
+            var _re = _rowEls[idx-1];
+            if(_re){ _re.style.boxShadow='0 0 0 2px #E05555'; _re.style.borderColor='#E05555'; }
+          });
+        }
+      }catch(e){}
+      // Prendi l'ultimo toast informativo di addRow per il banner
+      var _lastAddToast = (_capturedAddToasts.filter(function(t){ return t.kind==='r'; }).pop() || _capturedAddToasts.pop() || {msg:'motivo non specificato'});
+      try{
+        var _box = document.getElementById('ocrConfBox');
+        if(_box){
+          var _existing = document.getElementById('ocrConfErr');
+          if(_existing) _existing.remove();
+          var _banner = document.createElement('div');
+          _banner.id = 'ocrConfErr';
+          _banner.style.cssText = 'position:sticky;top:0;background:#3a1e1e;border:2px solid #E05555;color:#ffb0b0;padding:10px 12px;border-radius:8px;margin-bottom:10px;font-size:12px;font-weight:700;z-index:10';
+          _banner.innerHTML = '⛔ Nessuna riga aggiunta.<br>Ultimo motivo: <b style="color:#fff">'+xe(_lastAddToast.msg)+'</b><br>'+
+            '<span style="font-weight:400;font-size:11px;color:#e0a0a0">Controlla le righe rosse (fornitore, causale, DATA ACQUISTO DAL FORNITORE, coerenza flusso/documento). Correggi e ripremi "Aggiungi tutti alla lista".</span>';
+          // Inserisci in cima al dialog inner
+          var _inner = _box.firstElementChild;
+          if(_inner && _inner.firstChild) _inner.insertBefore(_banner, _inner.firstChild);
+        }
+      }catch(e){}
+      toast('⛔ Nessuna riga aggiunta. Il popup resta aperto: correggi le righe rosse.','r');
     }
     return;
   }
