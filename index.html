@@ -1071,7 +1071,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35g · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35h · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1130,6 +1130,11 @@ html[data-theme="light"] .btn-anomalia{
       <div class="r2">
         <div class="f"><label><span>DATA LISTATO <span class="req">✱</span></span></label><input type="date" id="hArr" oninput="ce(this)"></div>
         <div class="f"><label><span>DATA ELABORAZIONE</span></label><input type="date" id="hElab"></div>
+      </div>
+      <!-- v35h — DATA BOLLA: campo separato per la data scritta sulla bolla
+           (OCR la legge in automatico). NON sostituisce DATA LISTATO. -->
+      <div class="f"><label><span>DATA BOLLA <span style="font-size:9px;color:var(--txt3);font-weight:400">(dalla bolla stessa)</span></span></label>
+        <input type="date" id="hBolla" oninput="ce(this)" title="Data stampata sulla bolla — precompilata dall'OCR">
       </div>
       <div class="f"><label><span>VETTORE RICEVIMENTO <span class="req">✱</span></span></label>
         <select id="hVet" onchange="ce(this);saveMem('vetRic',this.value)">
@@ -1411,6 +1416,11 @@ html[data-theme="light"] .btn-anomalia{
       <div style="font-size:10px;color:var(--txt2);line-height:1.5;margin-bottom:10px">Fotografa il pacco prima di spedirlo: la foto resta salvata come prova di spedizione, taggata con codice/cliente/data. Utile in caso di contestazioni dal fornitore.</div>
       <input id="pkgTag" placeholder="Codice / cliente / rif. (opzionale)" oninput="this.value=this.value.toUpperCase()"
         style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">
+      <!-- v35h — Select CAUSALE per raggruppare le foto pacco in galleria per sezione -->
+      <select id="pkgCau" title="Causale del reso: usata per raggruppare in galleria"
+        style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">
+        <option value="">— CAUSALE (per raggruppamento in galleria) —</option>
+      </select>
       <input type="file" id="pkgPhotoInput" accept="image/*" capture="environment" onchange="savePkgPhoto(this)" style="display:none">
       <button onclick="document.getElementById('pkgPhotoInput').click()" style="width:100%;background:#003820;color:#3B9FD4;border:2px solid #3B9FD4;padding:13px;font-size:15px;font-weight:800;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit">📷 Scatta / carica foto pacco</button>
     </div>
@@ -1733,7 +1743,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35g</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35h</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -2841,6 +2851,17 @@ function addRow() {
     if(pb)pb.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
+  // v35h — GARANZIA: se il fornitore richiede documenti (MODULO/LIBRETTO/
+  //   RICEVUTA/RELAZIONE/DIAGNOSI/FOTO ecc.), BLOCCA l'inserimento finche'
+  //   tutti i doc "reali" non sono stati caricati via popup 📷 CARICA.
+  if(String(causale||'').toUpperCase().indexOf('GARANZIA')===0){
+    var _garMissing = garanziaDocsMissing(forno);
+    if(_garMissing.length){
+      toast('⛔ GARANZIA '+forno+': mancano foto documenti richiesti: '+_garMissing.slice(0,3).join(', ')+(_garMissing.length>3?' (+'+(_garMissing.length-3)+')':'')+'. Apro il popup — carica le foto poi ripremi Aggiungi.','r');
+      try{ if(typeof showGaranziaDocsPopup==='function') showGaranziaDocsPopup(forno); }catch(e){}
+      return;
+    }
+  }
   // Permission check
   var p=ROLE_PERMS[ROLE]||ROLE_PERMS['RIC'];
   if(!p.canAdd){toast('Non autorizzato ad aggiungere articoli','r');return;}
@@ -2884,7 +2905,8 @@ function addRow() {
     _autoJumped = true;
   }
   var row={
-    datArr:datArr,vetRic:vetRic,datElab:gv('hElab'),sogg:gv('hSogg'),
+    // v35h — datBolla e' il nuovo campo separato "data bolla" (letta da OCR)
+    datArr:datArr,datBolla:gv('hBolla'),vetRic:vetRic,datElab:gv('hElab'),sogg:gv('hSogg'),
     pre:gv('cPre'),cod:cod,
     qty:parseInt(document.getElementById('cQty').value)||1,
     forn:forno,prc:parseFloat(document.getElementById('cPrc').value)||0,
@@ -3860,6 +3882,9 @@ function _pkgSaveKeys(a){ try{ localStorage.setItem(PKG_KEYS_LS, JSON.stringify(
 function savePkgPhoto(input){
   var file=input.files&&input.files[0]; if(!file) return; input.value='';
   var tag=((document.getElementById('pkgTag')||{}).value||'').trim();
+  // v35h — Salva anche la CAUSALE selezionata, cosi' la galleria puo'
+  //   raggrupparle per sezione (GARANZIA, CARCASSA, ERRATA SPEDIZIONE, ecc.).
+  var causale=((document.getElementById('pkgCau')||{}).value||'').trim();
   var rd=new FileReader();
   rd.onload=function(e){
     // riduco la foto per non riempire lo storage
@@ -3870,11 +3895,12 @@ function savePkgPhoto(input){
       cv.getContext('2d').drawImage(img,0,0,w,h);
       var dataUrl=cv.toDataURL('image/jpeg',0.72);
       var id='pkg_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
-      var rec={ id:id, ts:Date.now(), tag:tag, by:(typeof deviceName!=='undefined'?deviceName:''), dataUrl:dataUrl };
+      var rec={ id:id, ts:Date.now(), tag:tag, causale:causale, by:(typeof deviceName!=='undefined'?deviceName:''), dataUrl:dataUrl };
       idbSet('pkg:'+id, rec).then(function(){
         var keys=_pkgKeys(); keys.unshift(id); _pkgSaveKeys(keys);
         var tg=document.getElementById('pkgTag'); if(tg) tg.value='';
-        toast('📸 Foto pacco salvata'+(tag?' · '+tag:''),'b');
+        // Non resetto la causale: e' probabile che l'operatore stia caricando piu' foto della stessa causale
+        toast('📸 Foto pacco salvata'+(tag?' · '+tag:'')+(causale?' · '+causale:''),'b');
         renderPkgList();
         // Sync su Firebase se disponibile — la foto e' condivisa con tutti gli
         // altri dispositivi al primo giro di syncPkgPhotosFromFB.
@@ -3950,20 +3976,60 @@ function renderPkgList(){
   var el=document.getElementById('pkgList'); if(!el) return;
   var keys=_pkgKeys();
   var cnt=document.getElementById('pkgCount'); if(cnt) cnt.textContent=keys.length;
-  // v35f — Pannello quota storage + backup: prima della lista mostro un
-  //   riquadro con % occupata (via navigator.storage.estimate) + peso stimato
-  //   delle foto in IndexedDB, e i pulsanti Backup/Ripristina JSON.
-  //   Alert giallo >=80%, rosso >=95% + toast al primo entrata.
+  // v35h — Popola il select CAUSALE (una sola volta) da CAULIST
+  try{
+    var sel = document.getElementById('pkgCau');
+    if(sel && sel.options.length <= 1 && typeof CAULIST!=='undefined'){
+      sel.innerHTML = '<option value="">— CAUSALE (per raggruppamento in galleria) —</option>' +
+        CAULIST.map(function(c){ return '<option>'+xe(c)+'</option>'; }).join('');
+    }
+  }catch(e){}
+  // v35f — Pannello quota storage + backup
   pkgRenderQuotaBar(keys.length);
   if(!keys.length){ el.innerHTML='<div style="text-align:center;padding:22px;color:#666;font-size:12px">Nessuna foto pacco salvata.</div>'; return; }
-  el.innerHTML=keys.map(function(id){ return '<div id="pkgrow_'+id+'" style="display:flex;gap:10px;align-items:center;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:9px;padding:8px;margin-bottom:7px"><div id="pkgimg_'+id+'" style="width:60px;height:60px;border-radius:7px;background:#0a0a0a;flex-shrink:0;overflow:hidden"></div><div style="flex:1;min-width:0"><div id="pkgtag_'+id+'" style="font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div><div id="pkgts_'+id+'" style="font-size:10px;color:#666"></div></div><button onclick="dlPkgPhoto(\''+id+'\')" class="sb sg" style="padding:6px 9px;font-size:11px">📥</button><button onclick="delPkgPhoto(\''+id+'\')" class="sb sr" style="padding:6px 9px;font-size:11px">✕</button></div>'; }).join('');
-  keys.forEach(function(id){
-    idbGet('pkg:'+id).then(function(rec){
-      if(!rec) return;
-      var im=document.getElementById('pkgimg_'+id); if(im) im.innerHTML='<img src="'+rec.dataUrl+'" onclick="openPkgPhoto(\''+id+'\')" style="width:100%;height:100%;object-fit:cover;cursor:pointer">';
-      var tg=document.getElementById('pkgtag_'+id); if(tg) tg.textContent=rec.tag||'(senza rif.)';
-      var ts=document.getElementById('pkgts_'+id); if(ts) ts.textContent=new Date(rec.ts).toLocaleString('it-IT')+(rec.by?(' · '+rec.by):'');
+  // v35h — Placeholder skeleton (poi asincrono raggruppa per causale)
+  el.innerHTML = '<div style="text-align:center;padding:22px;color:#666;font-size:12px">Caricamento galleria…</div>';
+  Promise.all(keys.map(function(id){
+    return idbGet('pkg:'+id).then(function(rec){ rec = rec || {}; rec._id = id; return rec; }).catch(function(){ return { _id:id }; });
+  })).then(function(records){
+    // Raggruppa per causale (fallback "— SENZA CAUSALE —" per le vecchie foto)
+    var groups = {};
+    records.forEach(function(rec){
+      var cau = (rec.causale||'').trim() || '— SENZA CAUSALE —';
+      if(!groups[cau]) groups[cau] = [];
+      groups[cau].push(rec);
     });
+    // Ordina sezioni: prima quelle non-fallback in ordine alfabetico, poi fallback
+    var sectNames = Object.keys(groups).sort(function(a,b){
+      if(a==='— SENZA CAUSALE —') return 1;
+      if(b==='— SENZA CAUSALE —') return -1;
+      return a.localeCompare(b);
+    });
+    var html = '';
+    sectNames.forEach(function(cau){
+      var list = groups[cau];
+      html += '<div style="margin-bottom:14px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(59,159,212,.08);border-left:3px solid #3B9FD4;padding:8px 12px;border-radius:6px;margin-bottom:8px">'+
+          '<div style="font-size:12px;font-weight:800;color:#3B9FD4;letter-spacing:.3px">📁 '+xe(cau)+'</div>'+
+          '<div style="font-size:10px;color:#888;font-weight:700">'+list.length+' foto</div>'+
+        '</div>';
+      list.forEach(function(rec){
+        var id = rec._id;
+        html += '<div style="display:flex;gap:10px;align-items:center;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:9px;padding:8px;margin-bottom:6px">'+
+          '<div style="width:60px;height:60px;border-radius:7px;background:#0a0a0a;flex-shrink:0;overflow:hidden">'+
+            (rec.dataUrl ? '<img src="'+rec.dataUrl+'" onclick="openPkgPhoto(\''+id+'\')" style="width:100%;height:100%;object-fit:cover;cursor:pointer">' : '')+
+          '</div>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+xe(rec.tag||'(senza rif.)')+'</div>'+
+            '<div style="font-size:10px;color:#666">'+(rec.ts?new Date(rec.ts).toLocaleString('it-IT'):'')+(rec.by?(' · '+xe(rec.by)):'')+'</div>'+
+          '</div>'+
+          '<button onclick="dlPkgPhoto(\''+id+'\')" class="sb sg" style="padding:6px 9px;font-size:11px">📥</button>'+
+          '<button onclick="delPkgPhoto(\''+id+'\')" class="sb sr" style="padding:6px 9px;font-size:11px">✕</button>'+
+        '</div>';
+      });
+      html += '</div>';
+    });
+    el.innerHTML = html;
   });
 }
 
@@ -8582,6 +8648,38 @@ function showGaranziaDocsPopup(fornOverride){
 
 // v34r — Upload foto documenti garanzia
 window._garDocsUploaded = window._garDocsUploaded || [];
+
+// v35h — Helper: elenca i documenti "reali" mancanti per un fornitore in
+//   causale GARANZIA. Ignora note testuali lunghe (es. "SE BOSCH RICEVUTA
+//   E/O RELAZIONE", "SOLO PER HOFFER") e considera solo i token noti come
+//   documenti veri (BOLLA, MODULO, LIBRETTO, DIAGNOSI, RICEVUTA, RELAZIONE,
+//   FOTO SCATOLA/PEZZO/ETICHETTA/PARTICOLARE/IMBALLO, TARGA, CODICE DI SERIE).
+//   Ritorna [] se tutto ok, altrimenti array di doc mancanti.
+var _GAR_REAL_TOKENS = [
+  'BOLLA','MODULO','LIBRETTO','DIAGNOSI','RICEVUTA','RELAZIONE',
+  'FOTO SCATOLA','FOTO PEZZO','FOTO ETICHETTA','FOTO PARTICOLARE',
+  'FOTO IMBALLO','FOTO SE CARROZZERIA','TARGA','CODICE DI SERIE'
+];
+function _garIsRealDoc(name){
+  var U = String(name||'').toUpperCase();
+  return _GAR_REAL_TOKENS.some(function(t){ return U.indexOf(t)>=0; });
+}
+function garanziaDocsMissing(forn){
+  try{
+    if(typeof getGaranziaInfo!=='function') return [];
+    var g = getGaranziaInfo(forn||'');
+    if(!g || !g.documenti || !g.documenti.length) return [];
+    var uploaded = (window._garDocsUploaded||[]).map(function(d){ return String(d.doc||'').toUpperCase(); });
+    var missing = [];
+    g.documenti.forEach(function(d){
+      if(!_garIsRealDoc(d)) return; // salta le note ("SE BOSCH...", "SOLO PER...")
+      var U = String(d).toUpperCase();
+      var found = uploaded.some(function(u){ return u === U || u.indexOf(U)>=0 || U.indexOf(u)>=0; });
+      if(!found) missing.push(d);
+    });
+    return missing;
+  }catch(e){ return []; }
+}
 var _garDocPending = null;
 function garDocPick(docName, btn){
   _garDocPending = { doc: docName, btn: btn };
@@ -12004,7 +12102,17 @@ function applyOcrConfirm(allArticles){
   var sv=function(id,val){ var e=document.getElementById(id); if(e&&val!==''&&val!=null){ e.value=val; if(typeof ce==='function')ce(e); } };
 
   // Campi comuni: trasferisco al form principale TUTTI i campi obbligatori
-  var data=g('ocrData'); if(data&&/^\d{4}-\d{2}-\d{2}$/.test(data)) sv('hArr',data);
+  // v35h — La data letta dalla bolla va nel nuovo campo hBolla (DATA BOLLA),
+  //   NON piu' in hArr (DATA LISTATO). Se hArr e' ancora vuoto la valorizzo
+  //   con la stessa data come default, cosi' chi non ha ancora scelto un
+  //   listato differente ha comunque un valore. Se hArr e' gia' compilato
+  //   non lo sovrascrivo.
+  var data=g('ocrData');
+  if(data && /^\d{4}-\d{2}-\d{2}$/.test(data)){
+    sv('hBolla', data);
+    var _hArr = document.getElementById('hArr');
+    if(_hArr && !(_hArr.value||'').trim()) sv('hArr', data);
+  }
   // v34q: ocrForn/Cau/Flu/Doc/Fas/Sta rimossi dai comuni — vengono impostati PER RIGA nel loop sotto
   // Soggetto: aggancia codice cliente <-> nome via CLI_DATA (così l'anomalia trova il contatto)
   var soggRaw=g('ocrSogg');
