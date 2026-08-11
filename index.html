@@ -150,7 +150,7 @@ html[data-theme="light"] #mfuBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #resiCycleBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #pickBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #notifList div[style*="border-bottom:1px solid #1a1a1a"]{border-bottom-color:#000!important}
-/* v35l — Modali cicli aggiuntivi: assicura fondo bianco per box container e ricerca */
+/* v35m — Modali cicli aggiuntivi: assicura fondo bianco per box container e ricerca */
 html[data-theme="light"] #resiCycleBox>div,
 html[data-theme="light"] #pickBox>div{background:#ffffff!important;border-color:#3B9FD4!important;color:#000!important}
 html[data-theme="light"] #resiCycleSrch{background:#ffffff!important;color:#000!important}
@@ -1080,7 +1080,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35l · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35m · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1745,7 +1745,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35l</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35m</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -3625,7 +3625,7 @@ function renderList(){
     if(r._who)html+='<div class="ac-who">\ud83d\udc64 '+xe(r._who)+(r._lastEdit&&r._lastEdit!==r._who?' \u00b7 \u270e '+xe(r._lastEdit):'')+' <span style="color:var(--txt3);font-size:8px">'+xe(r.fase||'')+'</span>'+(r._log&&r._log.length?' <span style="color:var(--txt3)">·'+r._log.length+' mod.</span>':'')+'</div>';
     html+='<div style="display:flex;justify-content:space-between"><div>';
     html+='<div class="ac-sogg">'+xe(r.sogg||'\u2014')+'</div>';
-    // v35l \u2014 Foto bolla OCR: miniatura cliccabile+zoomabile.
+    // v35m \u2014 Foto bolla OCR: miniatura cliccabile+zoomabile.
     //   Priorita': bollaPhoto (salvata in OCR ricevimento) > photoThumb (foto pezzo).
     var _phBoll = r.bollaPhoto || r.photoThumb || '';
     var _phBadge = '';
@@ -4097,11 +4097,11 @@ function pkgRenderQuotaBar(nFoto){
   if(!bar){
     bar=document.createElement('div');
     bar.id='pkgQuotaBar';
-    bar.style.cssText='background:#0a0a0a;border:1px solid #2a2a2a;border-radius:10px;padding:11px 13px;margin-bottom:12px';
+    bar.style.cssText='background:var(--bg1);border:1px solid var(--brd);border-radius:10px;padding:11px 13px;margin-bottom:12px;color:var(--txt)';
     host.parentNode.insertBefore(bar, host);
   }
   // Contenuto placeholder (aggiornato dopo il calcolo asincrono)
-  bar.innerHTML='<div style="font-size:11px;color:#888">📊 Storage: calcolo in corso...</div>';
+  bar.innerHTML='<div style="font-size:11px;color:var(--txt3)">📊 Storage: calcolo in corso...</div>';
   // Stima "peso totale foto" locale (somma bytes dataUrl in IDB)
   var keys=_pkgKeys();
   var localBytesPromise = Promise.all(keys.map(function(id){
@@ -4131,12 +4131,12 @@ function pkgRenderQuotaBar(nFoto){
     var html =
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
         '<div style="font-size:12px;font-weight:800;color:#3B9FD4">📊 Storage foto pacco</div>'+
-        '<div style="font-size:11px;color:#aaa">'+nFoto+' foto · '+localMB+' MB (locali)</div>'+
+        '<div style="font-size:11px;color:var(--txt3)">'+nFoto+' foto · '+localMB+' MB (locali)</div>'+
       '</div>'+
-      '<div style="height:8px;background:#1a1a1a;border-radius:4px;overflow:hidden;margin-bottom:6px">'+
+      '<div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:6px">'+
         (pct==null ? '' : '<div style="height:100%;width:'+Math.min(100,pct)+'%;background:'+color+';transition:width .3s"></div>')+
       '</div>'+
-      '<div style="font-size:10px;color:#888;margin-bottom:8px">'+label+'</div>';
+      '<div style="font-size:10px;color:var(--txt3);margin-bottom:8px">'+label+'</div>';
     // Alert su soglia
     if(pct!=null && pct>=95){
       html+='<div style="background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.4);color:#E05555;font-size:11px;font-weight:700;border-radius:7px;padding:8px 10px;margin-bottom:8px">🔴 Storage quasi esaurito. Fai un BACKUP e libera spazio (svuota foto vecchie).</div>';
@@ -4147,7 +4147,7 @@ function pkgRenderQuotaBar(nFoto){
     html+='<div style="display:flex;gap:6px">'+
       '<button onclick="pkgBackup()" style="flex:1;background:rgba(59,159,212,.15);color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:7px;padding:8px 10px;font-size:11px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">💾 Backup foto (.json)</button>'+
       '<input type="file" id="pkgRestoreInput" accept="application/json,.json" style="display:none" onchange="pkgRestore(this)">'+
-      '<button onclick="document.getElementById(\'pkgRestoreInput\').click()" style="flex:1;background:rgba(224,224,224,.06);color:#e0e0e0;border:1.5px solid #444;border-radius:7px;padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">📥 Ripristina backup</button>'+
+      '<button onclick="document.getElementById(\'pkgRestoreInput\').click()" style="flex:1;background:rgba(59,159,212,.10);color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:7px;padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">📥 Ripristina backup</button>'+
     '</div>';
     bar.innerHTML=html;
     // Toast una volta per sessione se >=80%
@@ -5204,7 +5204,7 @@ function showResiByCycle(cicloName, fase){
       var _hasPh = !!(r.photoThumb||r.photo);
       var _thumb = r.photoThumb ? '<img src="'+xe(r.photoThumb)+'" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0">' :
                                    '<div style="width:44px;height:44px;border-radius:6px;background:var(--bg3);color:var(--txt3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0" title="Nessuna foto">📷</div>';
-      // v35l — attributo data-srch usato dalla search dedicata dentro il modale ciclo
+      // v35m — attributo data-srch usato dalla search dedicata dentro il modale ciclo
       var _srch = xe([r.cod, r.pre, r.forn, r.sogg, r.causale, r.stato, r.rma, r.note, r.ubic]
                       .filter(function(x){return x!=null && x!=='';})
                       .join(' ').toLowerCase());
@@ -5220,7 +5220,7 @@ function showResiByCycle(cicloName, fase){
     });
   }
   var totPh = flt.filter(function(r){return r.photoThumb||r.photo;}).length;
-  // v35l — barra di ricerca dedicata al modale del ciclo: filtra le righe visibili
+  // v35m — barra di ricerca dedicata al modale del ciclo: filtra le righe visibili
   //         mantenendo attivo il filtro ciclo+fase.
   var searchBar =
     '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;background:var(--bg2);border:1px solid '+color+'55;border-radius:10px;padding:6px 10px">'+
@@ -5246,7 +5246,7 @@ function showResiByCycle(cicloName, fase){
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
-// v35l — Filtro in-place delle righe dentro il modale ciclo: nasconde/mostra
+// v35m — Filtro in-place delle righe dentro il modale ciclo: nasconde/mostra
 //         via style.display senza rebuild della lista (mantiene lo scroll).
 function _resiCycleFilter(q){
   var box = document.getElementById('resiCycleList'); if(!box) return;
@@ -5826,7 +5826,7 @@ function editRow(key){
   }
   html+='<div class="r2">'+fld('VETTORE USCITA',sl('vetUsc',['CIPI/PIEMME','CITYLINE','MITTENTE/DESTINATARIO','INTERCOMPANY','NAZ/INT','CATI','UPS','GLS','BRT','DHL'],r.vetUsc))+fld('DATA STATO',inp('datSta',r.datSta,'','date'))+'</div>';
   // ── MAGAZZINO: N. colli + tipologia imballo + foto pacco chiuso + bolla firmata
-  // v35l — Aggiunta foto BOLLA FIRMATA anche in MAGAZZINO (riusa _photoFin,
+  // v35m — Aggiunta foto BOLLA FIRMATA anche in MAGAZZINO (riusa _photoFin,
   //   lo stesso campo usato in FINALE, cosi' persiste tra le fasi).
   html += '<div id="ei_magFields" style="'+(r.fase==='MAGAZZINO'?'':'display:none')+';margin-top:6px">'+
     '<div class="r2">'+
@@ -5837,7 +5837,7 @@ function editRow(key){
       (r._photoPez ? '✓ Foto pacco chiuso (tocca per sostituire) — imposta PRESA LOGISTICA' : '📦 Foto pacco chiuso → PRESA LOGISTICA')+
     '</button>'+
     (r._photoPez ? '<img src="'+xe(r._photoPez)+'" onclick="openPhotoZoom(this.src,\'Pacco chiuso — '+xe((r.cod||'').replace(/\'/g,""))+'\')" style="max-width:100%;border-radius:8px;border:1px solid #3fbf6f;margin-top:6px;display:block;cursor:zoom-in">' : '')+
-    // v35l — Foto bolla firmata anche in MAGAZZINO (utile prima di passare a FINALE).
+    // v35m — Foto bolla firmata anche in MAGAZZINO (utile prima di passare a FINALE).
     '<button type="button" onclick="_pickFotoWorkflow(\''+key+'\',\'fin\')" style="width:100%;background:var(--bg2);color:'+(r._photoFin?'#3fbf6f':'#3B9FD4')+';border:1.5px solid '+(r._photoFin?'#3fbf6f':'#3B9FD4')+';padding:10px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:6px">'+
       (r._photoFin ? '✓ Foto bolla firmata (tocca per sostituire)' : '📝 Foto bolla firmata corriere')+
     '</button>'+
@@ -5864,7 +5864,7 @@ function editRow(key){
   html+=fld('VETTORE RIC.',sl('vetRic',['PIEMME','CIPI','AGENTE','COLLEGA','AD','DIEMME','GLS','VINCA','BANCO','PIENNE','BRT','UPS','DHL','TNT','LGT','CITYLINE','NUOVA DEMOS'],r.vetRic));
   html+='<div class="sh-section">NOTE</div>';
   html+=fld('NOTE','<textarea id="ei_note" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:var(--rad2);outline:none;resize:none;min-height:52px;font-family:inherit;margin-bottom:7px">'+xe(r.note||'')+'</textarea>');
-  // v35l — Foto bolla (OCR ricevimento): visibile + zoomable nella sheet di edit.
+  // v35m — Foto bolla (OCR ricevimento): visibile + zoomable nella sheet di edit.
   var _bImg = r.bollaPhoto || r.photoThumb || '';
   if(_bImg) html+='<div style="font-size:9px;color:var(--txt3);letter-spacing:.5px;margin:6px 0 3px;font-weight:700">📄 FOTO BOLLA</div>'+
                    '<img src="'+xe(_bImg)+'" onclick="openPhotoZoom(this.src,\'Bolla — '+xe((r.cod||'').replace(/\'/g,""))+'\')" style="max-width:100%;border-radius:8px;border:1px solid #3B9FD4;margin-bottom:7px;display:block;cursor:zoom-in">';
@@ -5929,7 +5929,7 @@ function _pickFotoWorkflow(key, kind){
       // Ridimensiono a max 1024px lato lungo per non gonfiare il record
       var img = new Image();
       img.onload = function(){
-        // v35l — compressione aggressiva (Firebase-friendly): 800px lato lungo, JPEG 0.55.
+        // v35m — compressione aggressiva (Firebase-friendly): 800px lato lungo, JPEG 0.55.
         var mx=800, w=img.width, h=img.height;
         if(w>mx||h>mx){ if(w>h){ h=Math.round(h*mx/w); w=mx; } else { w=Math.round(w*mx/h); h=mx; } }
         var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
@@ -5993,7 +5993,7 @@ function svEdit(key){
   var _cur = rows[key] || {};
   if(_cur._photoPez){ ch._photoPez=_cur._photoPez; ch._photoPezTs=_cur._photoPezTs||Date.now(); }
   if(_cur._photoFin){ ch._photoFin=_cur._photoFin; ch._photoFinTs=_cur._photoFinTs||Date.now(); }
-  // v35l — preserva anche la foto della bolla OCR (ricevimento) tra le modifiche
+  // v35m — preserva anche la foto della bolla OCR (ricevimento) tra le modifiche
   if(_cur.bollaPhoto){ ch.bollaPhoto=_cur.bollaPhoto; ch.bollaPhotoTs=_cur.bollaPhotoTs||Date.now(); }
   // ── BLOCCO: passaggio a FINALE richiede foto bolla firmata corriere.
   //   Eccezione: vettore uscita = GLS (foto senza firma tollerata, ma comunque foto).
@@ -11506,7 +11506,7 @@ function ocrCropShow(dataUrl, cb){
   img.src=dataUrl;
 }
 
-// v35l — Helper universale di compressione immagine.
+// v35m — Helper universale di compressione immagine.
 //   Ridimensiona a maxW lato lungo (default 800px, come Firebase-friendly),
 //   ricomprime a JPEG con qualita' data (default 0.55 ~ ottima resa e piccolo)
 //   e risolve una dataUrl. Fallback: ritorna la dataUrl originale se qualcosa
@@ -11535,7 +11535,7 @@ function _imgCompress(dataUrl, maxW, quality){
   });
 }
 
-// v35l — Viewer fullscreen zoomabile universale per una singola foto.
+// v35m — Viewer fullscreen zoomabile universale per una singola foto.
 //   Usa pinch/tap-to-zoom nativo. Un tap sul fondo chiude; tap sull'immagine
 //   zoomma (scala 2x). Riutilizzato dalla LISTA per la bolla salvata.
 function openPhotoZoom(url, caption){
@@ -11993,7 +11993,7 @@ function showOcrConfirm(res, photoUrl, source){
         '</div>';
 
   // v35g — tap sulla thumbnail apre la foto in overlay fullscreen (zoom-out per chiudere)
-  // v35l — Prepara SUBITO la thumbnail compressa che verra' salvata su ogni riga
+  // v35m — Prepara SUBITO la thumbnail compressa che verra' salvata su ogni riga
   //        (~800px JPEG 0.55) cosi' e' pronta quando l'utente conferma.
   if(photoUrl){
     window._ocrConfPhotoUrl = photoUrl;
@@ -12429,7 +12429,7 @@ function applyOcrConfirm(allArticles){
     if(added>0){
       var _newKeys = Object.keys(rows||{}).filter(function(k){ return !_keysBefore[k]; });
       try{ if(typeof pushUndoBatch==='function') pushUndoBatch(_newKeys); }catch(e){}
-      // v35l — Allega la foto bolla (compressa ~800px JPEG 0.55) a ogni riga
+      // v35m — Allega la foto bolla (compressa ~800px JPEG 0.55) a ogni riga
       //   appena inserita. Salvata come campo bollaPhoto per la thumbnail in
       //   LISTA e per il viewer zoomabile. Fallback silenzioso se non pronta.
       try{
