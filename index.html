@@ -1071,7 +1071,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35h · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35i · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1288,11 +1288,14 @@ html[data-theme="light"] .btn-anomalia{
 
 <!-- ═══ LISTA ═══ -->
 <div class="pg" id="pgList" style="display:none">
+  <!-- v35i — Tessere fasi cliccabili: toccando "2 RIC." filtro la lista per
+       fase RICEVIMENTO; toccando di nuovo (o "TUTTE") tolgo il filtro.
+       toggleFaseTile() sincronizza il select FASE e re-renderizza. -->
   <div class="sgr">
-    <div class="sc" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15)"><div class="sc-n" style="color:var(--grn)" id="sRic">0</div><div class="sc-l" style="color:rgba(59,159,212,.5)">RIC.</div></div>
-    <div class="sc" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15)"><div class="sc-n" style="color:var(--blu)" id="sUff">0</div><div class="sc-l" style="color:rgba(59,159,212,.5)">UFF.</div></div>
-    <div class="sc" style="background:rgba(91,184,224,.04);border-color:rgba(91,184,224,.15)"><div class="sc-n" style="color:var(--yel)" id="sMag">0</div><div class="sc-l" style="color:rgba(91,184,224,.5)">MAG.</div></div>
-    <div class="sc" style="background:rgba(224,85,85,.04);border-color:rgba(224,85,85,.15)"><div class="sc-n" style="color:var(--red)" id="sFin">0</div><div class="sc-l" style="color:rgba(224,85,85,.5)">FIN.</div></div>
+    <div class="sc sc-tile" data-fase="RICEVIMENTO"  onclick="toggleFaseTile('RICEVIMENTO')" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15);cursor:pointer;transition:transform .08s,background .15s,border-color .15s" title="Filtra: solo articoli in RICEVIMENTO"><div class="sc-n" style="color:var(--grn)" id="sRic">0</div><div class="sc-l" style="color:rgba(59,159,212,.5)">RIC.</div></div>
+    <div class="sc sc-tile" data-fase="UFFICIO RESI" onclick="toggleFaseTile('UFFICIO RESI')" style="background:rgba(59,159,212,.04);border-color:rgba(59,159,212,.15);cursor:pointer;transition:transform .08s,background .15s,border-color .15s" title="Filtra: solo articoli in UFFICIO RESI"><div class="sc-n" style="color:var(--blu)" id="sUff">0</div><div class="sc-l" style="color:rgba(59,159,212,.5)">UFF.</div></div>
+    <div class="sc sc-tile" data-fase="MAGAZZINO"    onclick="toggleFaseTile('MAGAZZINO')"    style="background:rgba(91,184,224,.04);border-color:rgba(91,184,224,.15);cursor:pointer;transition:transform .08s,background .15s,border-color .15s" title="Filtra: solo articoli in MAGAZZINO"><div class="sc-n" style="color:var(--yel)" id="sMag">0</div><div class="sc-l" style="color:rgba(91,184,224,.5)">MAG.</div></div>
+    <div class="sc sc-tile" data-fase="FINALE"       onclick="toggleFaseTile('FINALE')"       style="background:rgba(224,85,85,.04);border-color:rgba(224,85,85,.15);cursor:pointer;transition:transform .08s,background .15s,border-color .15s" title="Filtra: solo articoli in FINALE"><div class="sc-n" style="color:var(--red)" id="sFin">0</div><div class="sc-l" style="color:rgba(224,85,85,.5)">FIN.</div></div>
   </div>
 
   <!-- FILTRO FASE (tendina sempre visibile) -->
@@ -1743,7 +1746,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35h</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35i</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -3051,7 +3054,42 @@ function quickFaseFilter(fase){
   }
   listShown=LIST_PAGE;
   syncFaseChips();
+  syncFaseTiles();
   renderList();
+}
+
+// v35i — Tap sulla tessera fase in cima alla LISTA: filtra per quella fase.
+//   Se la fase e' gia' selezionata, disattiva (torna a "Tutte le fasi").
+function toggleFaseTile(fase){
+  var cur = (filterState && filterState.fase) || '';
+  var next = (cur === fase) ? '' : fase;
+  quickFaseFilter(next);
+  try{ if(typeof toast==='function') toast(next ? ('Filtro: '+next) : 'Filtro rimosso — Tutte le fasi', 'b'); }catch(e){}
+}
+
+// v35i — Aggiorna il feedback visivo delle tessere fase: la attiva ha bordo
+//   e sfondo evidenziati.
+function syncFaseTiles(){
+  var cur = (filterState && filterState.fase) || '';
+  var tiles = document.querySelectorAll('#pgList .sc-tile');
+  tiles.forEach(function(t){
+    var isActive = (t.getAttribute('data-fase') === cur);
+    if(isActive){
+      t.style.background = 'rgba(59,159,212,.20)';
+      t.style.borderColor = '#3B9FD4';
+      t.style.transform = 'scale(1.03)';
+      t.style.boxShadow = '0 0 0 2px rgba(59,159,212,.35)';
+    } else {
+      // ripristina lo stile base per data-fase
+      var f = t.getAttribute('data-fase');
+      var bg = (f==='MAGAZZINO')?'rgba(91,184,224,.04)': (f==='FINALE')?'rgba(224,85,85,.04)':'rgba(59,159,212,.04)';
+      var br = (f==='MAGAZZINO')?'rgba(91,184,224,.15)': (f==='FINALE')?'rgba(224,85,85,.15)':'rgba(59,159,212,.15)';
+      t.style.background = bg;
+      t.style.borderColor = br;
+      t.style.transform = '';
+      t.style.boxShadow = '';
+    }
+  });
 }
 
 // Mantiene la tendina "FASE" allineata con il filtro corrente (utile quando il
