@@ -5,7 +5,8 @@ import { BuildingsCache } from "./world.js";
 import { connect } from "./net.js";
 import { Viewmodel, WEAPONS } from "./weapons.js";
 import { Effects } from "./effects.js";
-import { setupUI } from "./ui.js";
+import { setupUI, KILLSTREAKS } from "./ui.js";
+import { Sfx } from "./audio.js";
 
 const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || "ws://localhost:2567";
@@ -22,15 +23,17 @@ const CITIES = [
   { name: "Parigi",    lng: 2.3522,   lat: 48.8566 },
   { name: "Londra",    lng: -0.1276,  lat: 51.5074 },
   { name: "San Fran",  lng: -122.42,  lat: 37.7749 },
+  { name: "Berlino",   lng: 13.4050,  lat: 52.5200 },
+  { name: "Roma",      lng: 12.4964,  lat: 41.9028 },
 ];
 let cityIdx = 0;
 let playerName = "player";
 
+const sfx = new Sfx();
+
 const map = new mapboxgl.Map({
-  container: "map",
-  style: "mapbox://styles/mapbox/dark-v11",
-  center: [CITIES[0].lng, CITIES[0].lat],
-  zoom: 17, pitch: 75, bearing: 0, antialias: true,
+  container: "map", style: "mapbox://styles/mapbox/dark-v11",
+  center: [CITIES[0].lng, CITIES[0].lat], zoom: 17, pitch: 75, bearing: 0, antialias: true,
 });
 
 const scene = new THREE.Scene();
@@ -38,7 +41,7 @@ scene.background = null;
 scene.add(new THREE.AmbientLight(0xffffff, 0.55));
 const sun = new THREE.DirectionalLight(0xffffff, 0.9);
 sun.position.set(60, 120, 40); scene.add(sun);
-const hemi = new THREE.HemisphereLight(0x88aaff, 0x223344, 0.4); scene.add(hemi);
+scene.add(new THREE.HemisphereLight(0x88aaff, 0x223344, 0.4));
 
 const effects = new Effects(scene);
 
@@ -47,11 +50,12 @@ const ui = setupUI({
   cities: CITIES,
   onName: (n) => { playerName = n; },
   onCityPick: (i) => { cityIdx = i; switchCity(i); },
+  onChat: (msg) => room?.send("chat", { msg }),
 });
 
-// Remote avatars
-const remotes = new Map(); // sessionId -> { mesh, state }
-function makeAvatar() {
+// Remotes
+const remotes = new Map();
+function makeAvatar(name) {
   const grp = new THREE.Group();
   const body = new THREE.Mesh(
     new THREE.CapsuleGeometry(0.4, 1.0, 4, 10),
@@ -62,14 +66,50 @@ function makeAvatar() {
     new THREE.MeshLambertMaterial({ color: 0xffd2a8 })
   );
   head.position.y = 0.95;
-  grp.add(body, head);
+  const gun = new THREE.Mesh(
+    new THREE.BoxGeometry(0.1, 0.1, 0.4),
+    new THREE.MeshLambertMaterial({ color: 0x222222 })
+  );
+  gun.position.set(0.3, 0.3, -0.15);
+  grp.add(body, head, gun);
+  grp.userData = { body, head, gun, bob: 0, lastPos: new THREE.Vector3(), name };
   scene.add(grp);
   return grp;
 }
 
-// Local player + input
+// Pickup visuals
+const pickupMeshes = new Map();
+function makePickup(id, x, z) {
+  const grp = new THREE.Group();
+  const box = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.MeshLambertMaterial({ color: 0x22d3ee, emissive: 0x004466, emissiveIntensity: 0.5 })
+  );
+  const cross = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, 0.55, 0.05),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
+  );
+  const cross2 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.55, 0.2, 0.05),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
+  );
+  cross.position.z = 0.26; cross2.position.z = 0.26;
+  grp.add(box, cross, cross2);
+  grp.position.set(x, 0.9, z);
+  scene.add(grp);
+  pickupMeshes.set(id, grp);
+}
+function updatePickupActive(id, active) {
+  const m = pickupMeshes.get(id);
+  if (m) m.visible = active;
+}
+
+// Local player
 const canvas = map.getCanvas();
-const player = new Player(canvas);
+const player = new Player(canvas, (evt) => {
+  if (evt === "jump") sfx.jump();
+  else if (evt === "step") sfx.footstep();
+});
 let buildings;
 
 // Weapons
@@ -78,8 +118,9 @@ const ammo = { pistol: WEAPONS.pistol.mag, rifle: WEAPONS.rifle.mag };
 let lastShotAt = 0;
 let reloadingUntil = 0;
 let mouseDown = false;
+let lastGrenadeAt = -Infinity;
+const GRENADE_COOLDOWN = 3000;
 
-// Custom Three renderer sharing Mapbox GL context
 let viewmodel = null;
 let renderer = null;
 const customLayer = {
@@ -136,64 +177,149 @@ function switchCity(i) {
 
 // Colyseus
 let room;
-let myHp = 100;
+const pings = new Map();
 (async () => {
   try {
     room = await connect(SERVER_URL, playerName);
     room.state.players.onAdd = (p, id) => {
       if (id === room.sessionId) return;
-      remotes.set(id, { mesh: makeAvatar(), state: p, name: p.name });
+      remotes.set(id, { mesh: makeAvatar(p.name), state: p });
     };
     room.state.players.onRemove = (_p, id) => {
       const r = remotes.get(id);
-      if (r) { scene.remove(r.mesh); }
+      if (r) scene.remove(r.mesh);
       ui.removeRemoteMarker(id);
       ui.removeNametag(id);
       remotes.delete(id);
     };
-    room.onMessage("hit", ({ target, hp, by }) => {
+    room.state.pickups.onAdd = (pk, id) => {
+      makePickup(id, pk.x, pk.z);
+    };
+    room.state.pickups.onChange = () => {};
+    room.onMessage("hit", ({ target, hp, by, weapon }) => {
       if (target === room.sessionId) {
-        myHp = hp;
-        document.getElementById("hp").textContent = hp;
+        document.getElementById("hp").textContent = Math.round(hp);
         ui.flashDamage(1);
+        sfx.hit(0);
+      }
+      if (by === room.sessionId && target !== room.sessionId) {
+        ui.showHitmarker();
+        sfx.hitmarker();
+      }
+      // Play hit sound for nearby players (best effort by distance from local)
+      const t = room.state.players.get(target);
+      if (t && target !== room.sessionId) {
+        const d = Math.hypot(t.x - player.pos.x, t.z - player.pos.z);
+        if (d < 40) sfx.hit(d);
       }
     });
-    room.onMessage("kill", ({ by, target }) => {
+    room.onMessage("shot", ({ by, weapon, x, y, z }) => {
+      if (by === room.sessionId) return;
+      const d = Math.hypot(x - player.pos.x, y - player.pos.y, z - player.pos.z);
+      sfx.shot(d, weapon);
+    });
+    room.onMessage("kill", ({ by, target, weapon, streak }) => {
       const byName = room.state.players.get(by)?.name || by.slice(0, 4);
       const tgtName = room.state.players.get(target)?.name || target.slice(0, 4);
-      ui.addKill(byName, tgtName);
-      if (target === room.sessionId) ui.showDeath(true);
+      ui.addKill(byName, tgtName, weapon);
+      if (target === room.sessionId) { ui.showDeath(true); sfx.death(); }
+      if (by === room.sessionId && streak >= 2) {
+        ui.showStreak(KILLSTREAKS[streak] || `${streak}x STREAK`);
+        sfx.streak(streak);
+      }
     });
     room.onMessage("respawn", ({ id }) => {
       if (id === room.sessionId) {
         player.pos.set(0, 1.7, 0); player.vel.set(0, 0, 0);
-        myHp = 100;
         document.getElementById("hp").textContent = 100;
         ui.showDeath(false);
+        for (const k of Object.keys(ammo)) ammo[k] = WEAPONS[k].mag;
+        refreshAmmoHUD();
       }
+    });
+    room.onMessage("grenade", ({ id, by, x, y, z, vx, vy, vz }) => {
+      effects.spawnGrenade(id, new THREE.Vector3(x, y, z), new THREE.Vector3(vx, vy, vz));
+    });
+    room.onMessage("explosion", ({ id, x, y, z }) => {
+      effects.removeGrenade(id);
+      effects.explosion(new THREE.Vector3(x, y, z));
+      const d = Math.hypot(x - player.pos.x, y - player.pos.y, z - player.pos.z);
+      sfx.explosion(d);
+    });
+    room.onMessage("pickup", ({ id, by, kind }) => {
+      updatePickupActive(id, false);
+      if (by === room.sessionId && kind === "hp") sfx.pickup();
+    });
+    room.onMessage("pickupSpawn", ({ id, x, z }) => {
+      let m = pickupMeshes.get(id);
+      if (!m) { makePickup(id, x, z); m = pickupMeshes.get(id); }
+      m.position.set(x, 0.9, z);
+      updatePickupActive(id, true);
+    });
+    room.onMessage("chat", ({ from, msg }) => ui.appendChat(from, msg));
+
+    // Ping heartbeat
+    setInterval(() => {
+      if (!room) return;
+      const t = performance.now();
+      room.send("ping", { t });
+    }, 2000);
+    room.onMessage("pong", ({ t }) => {
+      const rtt = performance.now() - t;
+      pings.set(room.sessionId, Math.round(rtt));
     });
   } catch (e) {
     console.warn("Colyseus non raggiungibile — single-player.", e);
   }
 })();
 
-// Weapon input
+// Weapon + grenade + scoreboard + chat input
 window.addEventListener("keydown", (e) => {
+  if (ui.isChatOpen()) return;
   if (e.code === "Digit1") { currentWeapon = "pistol"; viewmodel?.setWeapon("pistol"); refreshAmmoHUD(); }
   if (e.code === "Digit2") { currentWeapon = "rifle";  viewmodel?.setWeapon("rifle");  refreshAmmoHUD(); }
   if (e.code === "KeyR") tryReload();
+  if (e.code === "KeyG") throwGrenade();
+  if (e.code === "KeyM") { cityIdx = (cityIdx + 1) % CITIES.length; switchCity(cityIdx); }
+  if (e.code === "Tab") { e.preventDefault(); ui.toggleScoreboard(true); }
+  if (e.code === "Enter" && !ui.isChatOpen()) { e.preventDefault(); ui.openChat(); }
 });
-canvas.addEventListener("mousedown", (e) => { if (e.button === 0) mouseDown = true; });
-canvas.addEventListener("mouseup",   (e) => { if (e.button === 0) mouseDown = false; });
+window.addEventListener("keyup", (e) => {
+  if (e.code === "Tab") { e.preventDefault(); ui.toggleScoreboard(false); }
+});
+canvas.addEventListener("mousedown", (e) => {
+  if (e.button === 0) mouseDown = true;
+  if (e.button === 2) player.setAds(true);
+});
+canvas.addEventListener("mouseup", (e) => {
+  if (e.button === 0) mouseDown = false;
+  if (e.button === 2) player.setAds(false);
+});
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
 function refreshAmmoHUD() { ui.setAmmo(ammo[currentWeapon], WEAPONS[currentWeapon].mag); }
 function tryReload() {
-  if (reloadingUntil > performance.now()) return;
+  const now = performance.now();
+  if (reloadingUntil > now) return;
   const w = WEAPONS[currentWeapon];
   if (ammo[currentWeapon] === w.mag) return;
-  reloadingUntil = performance.now() + w.reload * 1000;
+  reloadingUntil = now + w.reload * 1000;
   viewmodel?.startReload(w.reload);
-  setTimeout(() => { ammo[currentWeapon] = w.mag; refreshAmmoHUD(); }, w.reload * 1000);
+  sfx.reload();
+  ui.setReloading(true);
+  setTimeout(() => { ammo[currentWeapon] = w.mag; refreshAmmoHUD(); ui.setReloading(false); }, w.reload * 1000);
+}
+
+function throwGrenade() {
+  const now = performance.now();
+  if (now - lastGrenadeAt < GRENADE_COOLDOWN) return;
+  if (!room) return;
+  lastGrenadeAt = now;
+  const dir = player.lookDir().clone();
+  const throwSpeed = 18;
+  const v = dir.multiplyScalar(throwSpeed);
+  v.y += 3; // upward arc
+  room.send("grenade", { vx: v.x, vy: v.y, vz: v.z });
 }
 
 function tryShoot(now) {
@@ -207,17 +333,17 @@ function tryShoot(now) {
   ammo[currentWeapon] -= 1;
   refreshAmmoHUD();
   viewmodel?.shoot();
-  player.addRecoil(w.recoil);
+  const spreadScale = player.ads ? 0.35 : 1.0;
+  player.addRecoil(w.recoil * (player.ads ? 0.6 : 1));
+  sfx.shot(0, currentWeapon);
 
-  // Aim with spread
   const dir = player.lookDir().clone();
-  dir.x += (Math.random() - 0.5) * w.spread;
-  dir.y += (Math.random() - 0.5) * w.spread;
-  dir.z += (Math.random() - 0.5) * w.spread;
+  dir.x += (Math.random() - 0.5) * w.spread * spreadScale;
+  dir.y += (Math.random() - 0.5) * w.spread * spreadScale;
+  dir.z += (Math.random() - 0.5) * w.spread * spreadScale;
   dir.normalize();
   const eye = player.pos.clone();
 
-  // Hitscan against remotes (sphere-capsule approx: sphere around body center)
   let bestT = w.range, bestId = null, bestPoint = null;
   const tmp = new THREE.Vector3();
   const R = 0.55;
@@ -232,7 +358,6 @@ function tryShoot(now) {
     bestT = t; bestId = id;
     bestPoint = eye.clone().addScaledVector(dir, t);
   }
-  // Building occlusion
   const bldHit = buildings?.raycast(eye, dir, bestT);
   if (bldHit && bldHit.distance < bestT) {
     bestT = bldHit.distance; bestId = null; bestPoint = bldHit.point;
@@ -244,36 +369,46 @@ function tryShoot(now) {
   if (bestId && room) room.send("shoot", { targetId: bestId, weapon: currentWeapon });
 }
 
-// Game loop
 let last = performance.now();
 function frame() {
   const now = performance.now();
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
 
-  if (buildings && player.locked) {
-    player.update(
-      dt,
+  if (buildings && player.locked && !ui.isChatOpen()) {
+    player.update(dt,
       (x, z) => buildings.groundY(x, z),
-      (pos, delta, radius) => buildings.collideMove(pos, delta, radius),
-    );
-
+      (pos, delta, radius) => buildings.collideMove(pos, delta, radius));
     if (mouseDown) tryShoot(now);
+  }
 
-    // Remotes
-    if (room) {
-      for (const [id, r] of remotes) {
-        const s = r.state;
-        r.mesh.position.set(s.x, s.y - 0.85, s.z);
-        r.mesh.rotation.y = s.yaw;
-        // Minimap marker
-        const lngLat = localToLngLat(buildings.origin, s.x, s.z);
-        ui.updateRemoteMarker(id, lngLat);
-      }
-      publishThrottled(now);
+  // Remotes animation
+  if (room && buildings) {
+    for (const [id, r] of remotes) {
+      const s = r.state;
+      const u = r.mesh.userData;
+      const moved = Math.hypot(s.x - u.lastPos.x, s.z - u.lastPos.z);
+      u.bob += dt * (moved > 0.02 ? 10 : 0);
+      const bobY = Math.sin(u.bob) * 0.08 * (moved > 0.02 ? 1 : 0);
+      r.mesh.position.set(s.x, s.y - 0.85 + bobY - (s.crouch ? 0.35 : 0), s.z);
+      r.mesh.rotation.y = s.yaw;
+      u.head.rotation.x = -s.pitch * 0.7;
+      u.lastPos.set(s.x, s.y, s.z);
+      // Minimap
+      const lngLat = localToLngLat(buildings.origin, s.x, s.z);
+      ui.updateRemoteMarker(id, lngLat);
     }
+    // Pickups spin + minimap
+    for (const [id, m] of pickupMeshes) {
+      m.rotation.y += dt * 2;
+      m.position.y = 0.9 + Math.sin(now * 0.003 + m.position.x) * 0.1;
+      const lngLat = localToLngLat(buildings.origin, m.position.x, m.position.z);
+      ui.updatePickupMarker(id, lngLat, m.visible);
+    }
+    publishThrottled(now);
+  }
 
-    // First-person Mapbox camera
+  if (buildings && player.locked) {
     const lngLat = localToLngLat(buildings.origin, player.pos.x, player.pos.z);
     const camOpts = new mapboxgl.FreeCameraOptions(
       mapboxgl.MercatorCoordinate.fromLngLat(lngLat, player.pos.y),
@@ -283,57 +418,52 @@ function frame() {
     const lookLngLat = localToLngLat(buildings.origin, look.x, look.z);
     camOpts.lookAtPoint(lookLngLat, look.y);
     map.setFreeCameraOptions(camOpts);
-    // FOV kick applied to Mapbox transform
-    map.transform.fov = 60 + player.fovKick + (player.running ? 5 : 0);
-
-    // Minimap
+    const baseFov = player.ads ? 40 : 60;
+    map.transform.fov = baseFov + player.fovKick + (player.running ? 5 : 0);
     ui.setMinimapCenter(lngLat, THREE.MathUtils.radToDeg(-player.yaw));
-
-    // Viewmodel state
     const moving = Math.abs(player.vel.x) + Math.abs(player.vel.z) > 0.1;
     viewmodel?.update(dt, moving, player.running);
   }
-  effects.update(dt);
 
-  // Project remote positions to screen for nametags
+  effects.update(dt, (x, z) => buildings ? buildings.groundY(x, z) : 0);
+
+  // Nametags
   if (buildings && room && customLayer.camera && renderer) {
     const w = renderer.domElement.clientWidth;
     const h = renderer.domElement.clientHeight;
     const projMat = customLayer.camera.projectionMatrix;
-    const origin = buildings.origin;
-    const merc = mapboxgl.MercatorCoordinate.fromLngLat({ lng: origin.lng, lat: origin.lat }, 0);
-    const scale = merc.meterInMercatorCoordinateUnits();
-    const localToClip = new THREE.Matrix4()
-      .makeTranslation(merc.x, merc.y, merc.z)
-      .scale(new THREE.Vector3(scale, -scale, scale))
-      .multiply(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
-    // camera.projectionMatrix already includes localToClip; recompute worldPos * projection directly:
     const v = new THREE.Vector4();
     for (const [id, r] of remotes) {
       const s = r.state;
       v.set(s.x, s.y + 0.6, s.z, 1).applyMatrix4(projMat);
-      if (v.w <= 0) { ui.setNametag(id, r.state.name, 0, 0, r.state.hp, false); continue; }
+      if (v.w <= 0) { ui.setNametag(id, s.name, 0, 0, s.hp, false); continue; }
       const sx = ( v.x / v.w * 0.5 + 0.5) * w;
       const sy = (-v.y / v.w * 0.5 + 0.5) * h;
       const visible = v.z / v.w < 1 && sx > -50 && sx < w + 50 && sy > -50 && sy < h + 50;
-      ui.setNametag(id, r.state.name, sx, sy, r.state.hp, visible);
+      ui.setNametag(id, s.name, sx, sy, s.hp, visible);
     }
   }
 
-  // HUD stats
+  // HUD
   if (room) {
     const me = room.state.players.get(room.sessionId);
     if (me) {
       document.getElementById("kd").textContent = `${me.kills}/${me.deaths}`;
-      document.getElementById("hp").textContent = me.hp;
+      document.getElementById("hp").textContent = Math.round(me.hp);
     }
-    const board = [...room.state.players.entries()]
+    const rows = [...room.state.players.entries()]
       .sort((a, b) => b[1].kills - a[1].kills)
-      .slice(0, 6)
-      .map(([id, p]) => `${id === room.sessionId ? "* " : ""}${p.name} — ${p.kills}/${p.deaths}`)
+      .map(([id, p]) => ({ id, name: p.name, kills: p.kills, deaths: p.deaths, streak: p.streak, ping: pings.get(id) }));
+    ui.setScoreboard(rows, room.sessionId);
+    const board = rows.slice(0, 6)
+      .map(r => `${r.id === room.sessionId ? "* " : ""}${r.name} ${r.kills}/${r.deaths}`)
       .join("<br>");
     document.getElementById("board").innerHTML = board;
   }
+
+  // Grenade cooldown display
+  const cd = Math.max(0, (GRENADE_COOLDOWN - (now - lastGrenadeAt)) / 1000);
+  ui.setGrenadeCooldown(cd);
 
   requestAnimationFrame(frame);
 }
@@ -354,5 +484,6 @@ function publishThrottled(now) {
   room.send("move", {
     x: player.pos.x, y: player.pos.y, z: player.pos.z,
     yaw: player.yaw, pitch: player.pitch,
+    crouch: player.crouching ? 1 : 0,
   });
 }
