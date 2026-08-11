@@ -85,4 +85,40 @@ export class BuildingsCache {
     const hit = this.raycaster.intersectObject(this.mesh, false);
     return hit.length ? hit[0].point.y : 0;
   }
+
+  // Move `pos` by `delta` in the horizontal plane, pushing back on wall hits.
+  // Naive but effective: raycast in the delta direction from a few heights around eye.
+  collideMove(pos, delta, radius = 0.5) {
+    this.rebuildIfNeeded();
+    if (!this.mesh.geometry.attributes.position) { pos.x += delta.x; pos.z += delta.z; return; }
+    const attempts = [
+      { x: delta.x, z: delta.z },
+      { x: delta.x, z: 0 },
+      { x: 0,       z: delta.z },
+    ];
+    for (const d of attempts) {
+      const len = Math.hypot(d.x, d.z);
+      if (len < 1e-6) continue;
+      const dir = new THREE.Vector3(d.x / len, 0, d.z / len);
+      let blocked = false;
+      for (const yOff of [-1.2, -0.4, 0.2]) {
+        const from = new THREE.Vector3(pos.x, pos.y + yOff, pos.z);
+        this.raycaster.set(from, dir);
+        this.raycaster.far = len + radius;
+        const hit = this.raycaster.intersectObject(this.mesh, false);
+        if (hit.length) { blocked = true; break; }
+      }
+      if (!blocked) { pos.x += d.x; pos.z += d.z; return; }
+    }
+  }
+
+  // Hitscan against buildings. Returns hit point or null.
+  raycast(origin, dir, far = 500) {
+    this.rebuildIfNeeded();
+    if (!this.mesh.geometry.attributes.position) return null;
+    this.raycaster.set(origin, dir);
+    this.raycaster.far = far;
+    const hit = this.raycaster.intersectObject(this.mesh, false);
+    return hit.length ? hit[0] : null;
+  }
 }

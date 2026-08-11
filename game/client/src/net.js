@@ -1,7 +1,6 @@
 import { Client } from "colyseus.js";
 
-export async function connect(serverUrl) {
+export async function connect(serverUrl, name = "player") {
   const client = new Client(serverUrl);
-  const room = await client.joinOrCreate("arena", { name: "player" });
-  return room;
+  return client.joinOrCreate("arena", { name });
 }
