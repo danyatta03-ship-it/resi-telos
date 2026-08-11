@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>City Shooter</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet" />
+    <style>
+      html,body,#map { margin:0; height:100%; background:#000; overflow:hidden; font-family:system-ui,sans-serif; color:#fff; }
+      #hud { position:fixed; inset:0; pointer-events:none; z-index:5; }
+      #crosshair { position:absolute; top:50%; left:50%; width:16px; height:16px; margin:-8px 0 0 -8px; border:2px solid #fff; border-radius:50%; opacity:.8; }
+      #stats { position:absolute; top:8px; left:8px; background:rgba(0,0,0,.5); padding:6px 10px; border-radius:6px; font-size:13px; }
+      #board { position:absolute; top:8px; right:8px; background:rgba(0,0,0,.5); padding:6px 10px; border-radius:6px; font-size:12px; min-width:180px; }
+      #hint { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.6); padding:8px 14px; border-radius:8px; font-size:13px; }
+      .mapboxgl-ctrl-bottom-left, .mapboxgl-ctrl-bottom-right { display:none; }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="hud">
+      <div id="crosshair"></div>
+      <div id="stats">HP <span id="hp">100</span>  •  K/D <span id="kd">0/0</span></div>
+      <div id="board"></div>
+      <div id="hint">Click per giocare  •  WASD muovi  •  Shift corri  •  Space salta  •  M cambia citta  •  Esc rilascia</div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
