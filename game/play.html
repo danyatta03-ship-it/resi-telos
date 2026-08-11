@@ -11,76 +11,121 @@
   #crosshair { position:absolute; top:50%; left:50%; width:14px; height:14px; margin:-7px 0 0 -7px; border:2px solid #fff; border-radius:50%; opacity:.85; }
   #hit { position:absolute; top:50%; left:50%; width:22px; height:22px; margin:-11px 0 0 -11px; opacity:0; transition:opacity .1s;
     background: linear-gradient(45deg, transparent 45%, #ff5 45% 55%, transparent 55%), linear-gradient(-45deg, transparent 45%, #ff5 45% 55%, transparent 55%); }
-  #stats { position:absolute; top:10px; left:10px; background:rgba(0,0,0,.5); padding:8px 12px; border-radius:6px; font-size:14px; line-height:1.5; min-width:150px; }
-  #ammo { position:absolute; bottom:14px; right:14px; background:rgba(0,0,0,.55); padding:8px 16px; border-radius:8px; font:600 22px system-ui; }
+  #stats { position:absolute; top:10px; left:10px; background:rgba(0,0,0,.55); padding:10px 14px; border-radius:8px; font-size:14px; line-height:1.5; min-width:170px; backdrop-filter:blur(4px); }
+  #ammo { position:absolute; bottom:14px; right:14px; background:rgba(0,0,0,.55); padding:8px 16px; border-radius:8px; font:600 22px system-ui; backdrop-filter:blur(4px); }
   #weap { position:absolute; bottom:60px; right:14px; font:12px system-ui; color:#9db; text-align:right; }
-  #grenCd { position:absolute; bottom:14px; right:150px; background:rgba(0,0,0,.5); padding:8px 12px; border-radius:8px; font:12px system-ui; }
+  #grenCd { position:absolute; bottom:14px; right:150px; background:rgba(0,0,0,.55); padding:8px 12px; border-radius:8px; font:12px system-ui; }
+  #compass { position:absolute; top:14px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.55); padding:6px 14px; border-radius:20px; font:12px system-ui; backdrop-filter:blur(4px); }
   #reloading { position:absolute; top:55%; left:50%; transform:translateX(-50%); color:#fff; font:600 14px system-ui; opacity:0; text-shadow:0 1px 2px #000; }
-  #killfeed { position:absolute; top:8px; right:200px; font:12px system-ui; text-align:right; text-shadow:0 1px 2px #000; }
-  #killfeed div { background:rgba(0,0,0,.4); padding:3px 8px; border-radius:4px; margin-bottom:4px; display:inline-block; }
-  #streak { position:absolute; top:130px; left:50%; transform:translateX(-50%);
-    font:800 26px system-ui; color:#ffdd66; text-shadow:0 2px 6px #000, 0 0 20px rgba(255,180,0,.5);
-    opacity:0; transition:opacity .2s; }
-  #minimap { position:absolute; bottom:12px; left:12px; width:180px; height:180px; border-radius:12px;
-    background:rgba(0,0,0,.5); border:2px solid rgba(255,255,255,.2); overflow:hidden; }
+  #killfeed { position:absolute; top:60px; right:14px; font:12px system-ui; text-align:right; text-shadow:0 1px 2px #000; }
+  #killfeed div { background:rgba(0,0,0,.5); padding:4px 10px; border-radius:4px; margin-bottom:4px; display:inline-block; }
+  #streak { position:absolute; top:150px; left:50%; transform:translateX(-50%);
+    font:800 32px system-ui; color:#ffdd66; text-shadow:0 2px 6px #000, 0 0 20px rgba(255,180,0,.6);
+    opacity:0; transition:opacity .2s; letter-spacing:2px; }
+  #minimap { position:absolute; bottom:12px; left:12px; width:190px; height:190px; border-radius:12px;
+    background:rgba(0,0,0,.55); border:2px solid rgba(255,255,255,.2); overflow:hidden; }
   #minimap canvas { width:100%; height:100%; }
-  #scoreboard { position:fixed; inset:8% 20%; background:rgba(0,10,20,.85); border-radius:12px; z-index:12;
-    display:none; color:#fff; font:14px system-ui; padding:20px; overflow:auto; pointer-events:auto; }
-  #scoreboard h2 { margin:0 0 12px; } #scoreboard table { width:100%; border-collapse:collapse; }
-  #scoreboard td, #scoreboard th { padding:6px 10px; text-align:left; border-bottom:1px solid #234; }
-  #scoreboard tr.me { background:rgba(80,140,255,.15); }
+  #scoreboard { position:fixed; inset:8% 20%; background:rgba(0,10,20,.9); border-radius:14px; z-index:12;
+    display:none; color:#fff; font:14px system-ui; padding:24px; overflow:auto; pointer-events:auto; backdrop-filter:blur(10px); }
+  #scoreboard h2 { margin:0 0 14px; color:#c8843e; }
+  #scoreboard table { width:100%; border-collapse:collapse; }
+  #scoreboard td, #scoreboard th { padding:8px 12px; text-align:left; border-bottom:1px solid #234; }
+  #scoreboard tr.me { background:rgba(80,140,255,.2); }
   #vignette { position:fixed; inset:0; pointer-events:none; z-index:6; box-shadow: inset 0 0 200px 40px rgba(255,0,0,0); transition:box-shadow .12s; }
-  #dead { position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:7; display:none; align-items:center; justify-content:center; font:600 32px system-ui; pointer-events:none; }
-  .tag { position:fixed; pointer-events:none; z-index:6; transform:translate(-50%,-100%); text-align:center; font:12px system-ui; text-shadow:0 1px 2px #000; }
-  .tag .bar { width:70px; height:5px; background:rgba(255,255,255,.15); border-radius:3px; margin:2px auto 0; overflow:hidden; }
-  .tag .bar span { display:block; height:100%; background:#4ade80; transition:width .15s; }
-  #menu { position:fixed; inset:0; z-index:10; background:linear-gradient(180deg,#1a1108,#3a2515); display:flex; align-items:center; justify-content:center; }
-  #menu .card { background:rgba(0,0,0,.65); padding:26px 30px; border-radius:14px; text-align:center; min-width:340px; max-width:420px; }
-  #menu h1 { margin:0 0 4px; font-size:28px; }
-  #menu .sub { color:#e8c896; margin:0 0 14px; font-size:13px; font-style:italic; }
-  #menu label { display:block; text-align:left; font-size:12px; color:#9db; margin-top:8px; }
-  #menu input, #menu select { width:100%; padding:9px 12px; border-radius:8px; border:1px solid #543; background:#1a1108; color:#fff; font-size:14px; box-sizing:border-box; }
-  #menu button { width:100%; padding:12px 30px; background:#c8843e; color:#fff; border:none; border-radius:8px; font:600 15px system-ui; cursor:pointer; margin-top:14px; }
-  #menu button:disabled { background:#555; cursor:wait; }
-  #menu .k { color:#9d8a75; font-size:11px; margin-top:16px; line-height:1.6; text-align:left; }
-  #loading { color:#e8c896; font-size:13px; margin-top:8px; min-height:16px; }
+  #dead { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:7; display:none; align-items:center; justify-content:center;
+    font:600 34px system-ui; pointer-events:none; letter-spacing:1px; color:#f87171; text-shadow:0 2px 8px #000; }
+
+  .tag { position:fixed; pointer-events:none; z-index:6; transform:translate(-50%,-100%); text-align:center; font:11px system-ui; text-shadow:0 1px 2px #000; }
+  .tag .who { background:rgba(0,0,0,.5); padding:1px 6px; border-radius:3px; display:inline-block; }
+  .tag .bar { width:70px; height:5px; background:rgba(0,0,0,.6); border-radius:3px; margin:2px auto 0; overflow:hidden; }
+  .tag .bar span { display:block; height:100%; background:linear-gradient(90deg,#4ade80,#84e070); transition:width .15s; }
+
+  /* -------- MENU -------- */
+  #menu { position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(180deg, #0a0d18 0%, #1f1108 40%, #4a2a12 80%, #7a4818 100%); }
+  #menuBg { position:absolute; inset:0; opacity:.45; pointer-events:none; }
+  #menuBg canvas { width:100%; height:100%; display:block; }
+  #menuInner { position:relative; display:flex; gap:32px; align-items:stretch; z-index:1; max-width:920px; padding:20px;
+    animation: fadeIn .5s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+  .card { background:rgba(10,8,4,.7); border:1px solid rgba(200,132,62,.25); padding:28px 32px; border-radius:16px;
+    backdrop-filter:blur(12px); box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 40px rgba(200,132,62,.1); }
+  .hero { width:340px; text-align:left; }
+  .hero .logo { font:800 46px/1 "Georgia", serif; color:#e8c896; letter-spacing:-1px; margin:0 0 4px;
+    text-shadow: 0 4px 20px rgba(200,132,62,.4); }
+  .hero .tag2 { color:#c8843e; font:italic 400 14px "Georgia", serif; margin:0 0 20px; }
+  .hero .desc { color:#c0a888; font-size:13px; line-height:1.6; margin:0 0 22px; }
+  .hero .k { color:#8a7860; font-size:11px; line-height:1.8; padding:14px 16px; background:rgba(200,132,62,.06);
+    border-left:2px solid #c8843e; border-radius:0 8px 8px 0; }
+  .hero .k b { color:#e8c896; }
+  .form { width:320px; display:flex; flex-direction:column; }
+  .form h3 { margin:0 0 4px; font:600 15px system-ui; color:#e8c896; letter-spacing:.5px; text-transform:uppercase; font-size:11px; }
+  .form label { display:block; text-align:left; font-size:11px; color:#8a7860; margin:14px 0 6px; text-transform:uppercase; letter-spacing:.5px; }
+  .form input, .form select { width:100%; padding:11px 14px; border-radius:9px; border:1px solid rgba(200,132,62,.3);
+    background:rgba(0,0,0,.4); color:#fff; font-size:14px; box-sizing:border-box; outline:none; transition:border .15s; }
+  .form input:focus, .form select:focus { border-color:#c8843e; }
+  .zoneGrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px; }
+  .zoneOpt { padding:12px 10px; background:rgba(0,0,0,.35); border:1px solid rgba(200,132,62,.2); border-radius:8px;
+    cursor:pointer; text-align:left; transition:all .15s; }
+  .zoneOpt:hover { background:rgba(200,132,62,.15); border-color:#c8843e; }
+  .zoneOpt.sel { background:rgba(200,132,62,.25); border-color:#e8c896; }
+  .zoneOpt .zn { color:#e8c896; font-weight:600; font-size:13px; }
+  .zoneOpt .zd { color:#8a7860; font-size:10px; margin-top:2px; }
+  #play { margin-top:20px; padding:14px 30px; background:linear-gradient(180deg,#e8a856,#c8843e);
+    color:#1a0a02; border:none; border-radius:9px; font:700 15px system-ui; cursor:pointer;
+    letter-spacing:1px; text-transform:uppercase; transition:all .15s; box-shadow: 0 6px 18px rgba(200,132,62,.4); }
+  #play:hover:not(:disabled) { transform:translateY(-1px); box-shadow: 0 8px 24px rgba(200,132,62,.55); }
+  #play:disabled { background:#4a3020; color:#8a7860; cursor:wait; box-shadow:none; }
+  #loading { color:#c8843e; font-size:12px; margin-top:10px; min-height:16px; text-align:center; font-style:italic; }
+  #loadBar { height:3px; background:rgba(200,132,62,.15); border-radius:2px; margin-top:8px; overflow:hidden; }
+  #loadBar span { display:block; height:100%; width:0; background:linear-gradient(90deg,#c8843e,#e8c896); transition:width .3s; }
+  @media (max-width:760px) { #menuInner { flex-direction:column; padding:12px; gap:16px; } .hero, .form { width:auto; } }
 </style>
 </head>
 <body>
-<div id="menu"><div class="card">
-  <h1>City Shooter</h1>
-  <div class="sub">Roma — dal Colosseo al Circo Massimo</div>
-  <label>Nome</label><input id="name" maxlength="14" value="player" />
-  <label>Zona</label>
-  <select id="zone">
-    <option value="colosseo">Colosseo &amp; Foro Romano</option>
-    <option value="vaticano">Piazza San Pietro</option>
-    <option value="pantheon">Pantheon &amp; Centro Storico</option>
-    <option value="trastevere">Trastevere</option>
-  </select>
-  <button id="play" disabled>Caricamento citta...</button>
-  <div id="loading">Scarico i palazzi da OpenStreetMap</div>
-  <div class="k">
-    WASD muovi &bull; Shift corri &bull; Space salta &bull; C accovacciati<br>
-    Click sx spara &bull; Click dx mira (ADS) &bull; R ricarica<br>
-    1/2 cambia arma &bull; G granata &bull; Tab classifica &bull; Esc rilascia
+<div id="menu">
+  <div id="menuBg"><canvas></canvas></div>
+  <div id="menuInner">
+    <div class="card hero">
+      <h1 class="logo">City Shooter</h1>
+      <div class="tag2">Roma Caput Mundi &mdash; ora con proiettili</div>
+      <p class="desc">FPS ambientato nel cuore di Roma. Edifici veri scaricati da OpenStreetMap, monumenti modellati a mano. Colosseo, San Pietro, Pantheon, Trastevere.</p>
+      <div class="k">
+        <b>Movimento</b> WASD &bull; Shift corri &bull; Space salta &bull; C accovacciati<br>
+        <b>Combattimento</b> Click sx spara &bull; Click dx mira &bull; R ricarica<br>
+        <b>Armi</b> 1 = Pistol &bull; 2 = Rifle &bull; G = granata<br>
+        <b>UI</b> Tab classifica &bull; Esc rilascia mouse
+      </div>
+    </div>
+    <div class="card form">
+      <h3>Setup partita</h3>
+      <label>Il tuo nome</label>
+      <input id="name" maxlength="14" value="player" />
+      <label>Zona di Roma</label>
+      <div class="zoneGrid" id="zoneGrid"></div>
+      <button id="play" disabled>Caricamento...</button>
+      <div id="loading">In attesa</div>
+      <div id="loadBar"><span></span></div>
+    </div>
   </div>
-</div></div>
+</div>
+
 <div id="hud">
   <div id="crosshair"></div>
   <div id="hit"></div>
   <div id="stats"></div>
+  <div id="compass">N</div>
   <div id="killfeed"></div>
   <div id="streak"></div>
   <div id="weap"></div>
   <div id="ammo">30 / 30</div>
   <div id="grenCd">G 0.0s</div>
   <div id="reloading">RICARICA...</div>
-  <div id="minimap"><canvas width="180" height="180"></canvas></div>
+  <div id="minimap"><canvas width="190" height="190"></canvas></div>
 </div>
 <div id="scoreboard"><h2>Classifica</h2><table id="scoreTable"></table></div>
 <div id="vignette"></div>
-<div id="dead">SEI MORTO — respawn tra 2s</div>
+<div id="dead">SEI MORTO</div>
 
 <script type="importmap">
 { "imports": { "three": "https://unpkg.com/three@0.169.0/build/three.module.js" } }
@@ -89,48 +134,152 @@
 import * as THREE from "three";
 
 // ======================================================================
-// ZONES: real Rome coordinates
+// ZONES
 // ======================================================================
 const ZONES = {
-  colosseo:    { name: "Colosseo",      lat: 41.8902, lng: 12.4922, radius: 500 },
-  vaticano:    { name: "Vaticano",      lat: 41.9022, lng: 12.4539, radius: 500 },
-  pantheon:    { name: "Pantheon",      lat: 41.8986, lng: 12.4769, radius: 400 },
-  trastevere:  { name: "Trastevere",    lat: 41.8894, lng: 12.4691, radius: 500 },
+  colosseo:   { name: "Colosseo",   sub: "Arena imperiale", lat: 41.8902, lng: 12.4922, radius: 500, landmark: "colosseum" },
+  vaticano:   { name: "Vaticano",   sub: "Basilica di San Pietro", lat: 41.9022, lng: 12.4539, radius: 500, landmark: "stpeters" },
+  pantheon:   { name: "Pantheon",   sub: "Centro storico", lat: 41.8986, lng: 12.4769, radius: 400, landmark: "pantheon" },
+  trastevere: { name: "Trastevere", sub: "Vicoli medievali", lat: 41.8894, lng: 12.4691, radius: 500, landmark: null },
 };
+let currentZoneKey = "colosseo";
 
 // ======================================================================
-// OVERPASS FETCH
+// PROCEDURAL TEXTURES (canvas)
 // ======================================================================
-// Try multiple Overpass endpoints; use the first that responds.
-const OVERPASS_ENDPOINTS = [
-  "https://overpass-api.de/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter",
-  "https://overpass.openstreetmap.ru/api/interpreter",
-];
-
-async function fetchBuildings(zone, onProgress) {
-  const R = 6378137;
-  const latRad = zone.lat * Math.PI / 180;
-  const dLat = (zone.radius / R) * 180 / Math.PI;
-  const dLng = (zone.radius / (R * Math.cos(latRad))) * 180 / Math.PI;
-  const s = zone.lat - dLat, n = zone.lat + dLat;
-  const w = zone.lng - dLng, e = zone.lng + dLng;
-  const query = `[out:json][timeout:25];
-    (way["building"](${s},${w},${n},${e});
-     relation["building"](${s},${w},${n},${e}););
-    out body geom;`;
-  for (const url of OVERPASS_ENDPOINTS) {
-    try {
-      onProgress(`Contatto ${new URL(url).hostname}...`);
-      const res = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(query) });
-      if (!res.ok) continue;
-      const data = await res.json();
-      onProgress(`Ricevuti ${data.elements?.length ?? 0} edifici, li disegno...`);
-      return data.elements || [];
-    } catch (err) { console.warn("overpass fail", url, err); }
+function makeFacadeTexture(baseColor, seed = 0) {
+  const c = document.createElement("canvas");
+  c.width = 256; c.height = 512;
+  const ctx = c.getContext("2d");
+  // Plaster background with subtle noise
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(0, 0, c.width, c.height);
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 20;
+    img.data[i] = Math.max(0, Math.min(255, img.data[i] + n));
+    img.data[i+1] = Math.max(0, Math.min(255, img.data[i+1] + n));
+    img.data[i+2] = Math.max(0, Math.min(255, img.data[i+2] + n));
   }
-  throw new Error("Nessun server Overpass ha risposto");
+  ctx.putImageData(img, 0, 0);
+  // Cornice at top
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillRect(0, 0, c.width, 8);
+  ctx.fillRect(0, c.height - 8, c.width, 8);
+  // Windows: 4 cols x 8 rows
+  const cols = 4, rows = 8;
+  const winW = 36, winH = 44;
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const wx = 20 + x * ((c.width - 40) / cols) + ((c.width - 40)/cols - winW) / 2;
+      const wy = 30 + y * ((c.height - 60) / rows);
+      // Shutter/frame
+      ctx.fillStyle = "#2a1a0f";
+      ctx.fillRect(wx - 3, wy - 3, winW + 6, winH + 6);
+      // Glass (some lit)
+      const lit = (Math.random() + seed*0.1) % 1 < 0.35;
+      ctx.fillStyle = lit ? "#ffe082" : "#2f4356";
+      ctx.fillRect(wx, wy, winW, winH);
+      // Window cross
+      ctx.fillStyle = "#1a1108";
+      ctx.fillRect(wx + winW/2 - 1, wy, 2, winH);
+      ctx.fillRect(wx, wy + winH/2 - 1, winW, 2);
+      // Windowsill
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      ctx.fillRect(wx - 5, wy + winH + 3, winW + 10, 3);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
 }
+function makeRoofTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#8b4a1c";
+  ctx.fillRect(0, 0, 128, 128);
+  // Terracotta tiles pattern
+  for (let y = 0; y < 128; y += 8) {
+    for (let x = 0; x < 128; x += 12) {
+      const off = (y / 8) % 2 === 0 ? 0 : 6;
+      ctx.fillStyle = `rgb(${140 + Math.random()*40}, ${70 + Math.random()*20}, ${30 + Math.random()*15})`;
+      ctx.fillRect(x + off, y, 10, 7);
+      ctx.strokeStyle = "rgba(0,0,0,0.25)";
+      ctx.strokeRect(x + off, y, 10, 7);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+function makeGroundTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const ctx = c.getContext("2d");
+  // Base asphalt
+  ctx.fillStyle = "#3a3a40";
+  ctx.fillRect(0, 0, 256, 256);
+  // Noise
+  const img = ctx.getImageData(0, 0, 256, 256);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 35;
+    img.data[i] = Math.max(0, Math.min(255, 58 + n));
+    img.data[i+1] = Math.max(0, Math.min(255, 58 + n));
+    img.data[i+2] = Math.max(0, Math.min(255, 64 + n));
+  }
+  ctx.putImageData(img, 0, 0);
+  // Cracks
+  ctx.strokeStyle = "rgba(0,0,0,0.4)"; ctx.lineWidth = 1;
+  for (let i = 0; i < 8; i++) {
+    ctx.beginPath();
+    ctx.moveTo(Math.random()*256, Math.random()*256);
+    for (let j = 0; j < 6; j++) ctx.lineTo(Math.random()*256, Math.random()*256);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(80, 80);
+  return tex;
+}
+function makeTravertineTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#c8a877";
+  ctx.fillRect(0, 0, 256, 256);
+  const img = ctx.getImageData(0, 0, 256, 256);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 30;
+    img.data[i]   = Math.max(0, Math.min(255, 200 + n));
+    img.data[i+1] = Math.max(0, Math.min(255, 168 + n));
+    img.data[i+2] = Math.max(0, Math.min(255, 119 + n));
+  }
+  ctx.putImageData(img, 0, 0);
+  // Stone block lines
+  ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = 1;
+  for (let y = 0; y < 256; y += 32) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke();
+  }
+  for (let y = 0; y < 256; y += 32) {
+    const off = (y / 32) % 2 === 0 ? 0 : 32;
+    for (let x = off; x < 256; x += 64) {
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 32); ctx.stroke();
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+// Pre-generate texture pool for facades (4 variants)
+const facadePalette = [
+  "#c4a075", "#b08c60", "#a87e55", "#caa87e", "#b59268", "#d0a97a", "#9d7852", "#bfa085",
+];
+const facadeTextures = facadePalette.map((c, i) => makeFacadeTexture(c, i));
+const roofTexture = makeRoofTexture();
+const travertineTexture = makeTravertineTexture();
+const groundTexture = makeGroundTexture();
 
 // ======================================================================
 // SCENE
@@ -144,19 +293,19 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
 addEventListener("resize", () => { camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
-scene.add(new THREE.HemisphereLight(0xffffff, 0x776655, 0.7));
+scene.add(new THREE.HemisphereLight(0xffffff, 0x776655, 0.75));
 const sun = new THREE.DirectionalLight(0xfff2d5, 1.0); sun.position.set(60, 100, 40); scene.add(sun);
 
-// Ground = large tan plane like Roman travertine
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000),
-  new THREE.MeshLambertMaterial({ color: 0x4a4438 }));
+  new THREE.MeshLambertMaterial({ map: groundTexture, color: 0x888890 }));
 ground.rotation.x = -Math.PI / 2; scene.add(ground);
 
 // ======================================================================
-// BUILDINGS (from OSM)
+// BUILDINGS from OSM
 // ======================================================================
-const buildings = []; // { mesh, bbMin, bbMax }
+const buildings = [];
 let originLat = 0, originLng = 0;
+let landmarkPos = new THREE.Vector3(0, 0, 0);
 
 function projectLL(lng, lat) {
   const R = 6378137;
@@ -166,14 +315,6 @@ function projectLL(lng, lat) {
   const z = -dLat * R;
   return [x, z];
 }
-function unprojectLL(x, z) {
-  const R = 6378137;
-  const lat = originLat + (-z / R) * 180 / Math.PI;
-  const lng = originLng + (x / (R * Math.cos(originLat * Math.PI / 180))) * 180 / Math.PI;
-  return { lng, lat };
-}
-
-// Parse OSM `height` / `building:levels` tags into meters
 function osmHeight(tags) {
   if (!tags) return 8 + Math.random() * 6;
   const h = parseFloat(tags.height || tags["building:height"]);
@@ -182,17 +323,10 @@ function osmHeight(tags) {
   if (Number.isFinite(lv) && lv > 0) return lv * 3.2 + 2;
   return 7 + Math.random() * 8;
 }
-function osmColor(tags) {
-  const c = tags?.["building:colour"] || tags?.["building:color"];
-  if (c && /^#[0-9a-f]{6}$/i.test(c)) return new THREE.Color(c);
-  // Warm palette that reads as Roman old-town
-  const pal = [0xc4a075, 0xb08c60, 0xa87e55, 0xcaa87e, 0xb59268, 0xd0a97a, 0x9d7852, 0xbfa085];
-  return new THREE.Color(pal[(Math.random() * pal.length) | 0]);
-}
+function pickFacadeIndex() { return (Math.random() * facadeTextures.length) | 0; }
 
-function buildBuildingMesh(ring, height, color) {
+function buildBuildingMesh(ring, height, facadeIdx) {
   if (!ring || ring.length < 4) return null;
-  // Close ring if not closed
   const shape = new THREE.Shape();
   shape.moveTo(ring[0][0], ring[0][1]);
   for (let i = 1; i < ring.length; i++) shape.lineTo(ring[i][0], ring[i][1]);
@@ -201,15 +335,39 @@ function buildBuildingMesh(ring, height, color) {
   try {
     geo = new THREE.ExtrudeGeometry(shape, { depth: height, bevelEnabled: false, curveSegments: 4 });
   } catch (e) { return null; }
-  // Extrude default: shape in XY, extrudes along +Z. We want Y up.
   geo.rotateX(-Math.PI / 2);
-  // After rotate: shape's Y becomes -Z, extrude Z becomes Y (going up correctly)
-  const mat = new THREE.MeshLambertMaterial({ color });
-  const mesh = new THREE.Mesh(geo, mat);
-  scene.add(mesh);
-  // Compute bounding box for collision AABB
+
+  // Regenerate UVs on walls so they tile based on wall length/height
+  // ExtrudeGeometry produces groups: 0=caps, 1=sides
+  const pos = geo.attributes.position;
+  const uv = geo.attributes.uv;
+  // Rebuild wall UVs: for group idx 1
   geo.computeBoundingBox();
   const bb = geo.boundingBox;
+  const H = bb.max.y - bb.min.y;
+  const groups = geo.groups;
+  for (const g of groups) {
+    if (g.materialIndex !== 1) continue;
+    for (let i = g.start; i < g.start + g.count; i++) {
+      const vi = geo.index ? geo.index.array[i] : i;
+      const x = pos.getX(vi), y = pos.getY(vi), z = pos.getZ(vi);
+      // Approximate: use xz distance from some corner as U, y/3.2 as V (window ~= 3.2m tall)
+      const u = (x + z) / 3.5;
+      const v = y / 3.5;
+      uv.setXY(vi, u, v);
+    }
+  }
+  uv.needsUpdate = true;
+
+  const wallTex = facadeTextures[facadeIdx];
+  const wallMat = new THREE.MeshLambertMaterial({ map: wallTex });
+  const roofTex = roofTexture.clone();
+  roofTex.needsUpdate = true;
+  roofTex.wrapS = roofTex.wrapT = THREE.RepeatWrapping;
+  roofTex.repeat.set(Math.max(1, (bb.max.x - bb.min.x) / 4), Math.max(1, (bb.max.z - bb.min.z) / 4));
+  const capMat = new THREE.MeshLambertMaterial({ map: roofTex, color: 0xa06a3a });
+  const mesh = new THREE.Mesh(geo, [capMat, wallMat]);
+  scene.add(mesh);
   buildings.push({
     mesh,
     min: new THREE.Vector3(bb.min.x, bb.min.y, bb.min.z),
@@ -224,108 +382,115 @@ function osmToBuildings(elements, zone) {
   for (const el of elements) {
     let rings = [];
     if (el.type === "way" && el.geometry) {
-      const pts = el.geometry.map(g => projectLL(g.lon, g.lat));
-      rings.push(pts);
+      rings.push(el.geometry.map(g => projectLL(g.lon, g.lat)));
     } else if (el.type === "relation" && el.members) {
-      // Multipolygon: take outer ways
       for (const m of el.members) {
-        if (m.role === "outer" && m.geometry) {
-          rings.push(m.geometry.map(g => projectLL(g.lon, g.lat)));
-        }
+        if (m.role === "outer" && m.geometry) rings.push(m.geometry.map(g => projectLL(g.lon, g.lat)));
       }
     }
     const h = osmHeight(el.tags);
-    const color = osmColor(el.tags);
-    for (const r of rings) {
-      if (buildBuildingMesh(r, h, color)) count++;
-    }
+    const fi = pickFacadeIndex();
+    for (const r of rings) if (buildBuildingMesh(r, h, fi)) count++;
   }
   return count;
 }
 
 // ======================================================================
-// LANDMARKS (hand-modelled)
+// LANDMARKS
 // ======================================================================
-function addColosseum(lngLat) {
-  // Simplified Colosseum: outer ring (ellipse annulus), inner ring lower, brick-ochre color
-  const [x, z] = projectLL(lngLat.lng, lngLat.lat);
-  const A = 94, B = 78; // outer semi-axes (m)
-  const a = 74, b = 58; // inner semi-axes (m)
-  const H = 48;
+function addColosseum(atX = 0, atZ = 0) {
+  const A = 94, B = 78, a = 74, b = 58, H = 48;
   const shape = new THREE.Shape();
-  const seg = 48;
+  const seg = 60;
   shape.moveTo(A, 0);
-  for (let i = 1; i <= seg; i++) {
-    const t = (i / seg) * Math.PI * 2;
-    shape.lineTo(A * Math.cos(t), B * Math.sin(t));
-  }
+  for (let i = 1; i <= seg; i++) { const t = (i / seg) * Math.PI * 2; shape.lineTo(A * Math.cos(t), B * Math.sin(t)); }
   const hole = new THREE.Path();
   hole.moveTo(a, 0);
-  for (let i = 1; i <= seg; i++) {
-    const t = (i / seg) * Math.PI * 2;
-    hole.lineTo(a * Math.cos(t), b * Math.sin(t));
-  }
+  for (let i = 1; i <= seg; i++) { const t = (i / seg) * Math.PI * 2; hole.lineTo(a * Math.cos(t), b * Math.sin(t)); }
   shape.holes.push(hole);
   const geo = new THREE.ExtrudeGeometry(shape, { depth: H, bevelEnabled: false, curveSegments: 6 });
   geo.rotateX(-Math.PI / 2);
-  geo.translate(x, 0, z);
-  const mat = new THREE.MeshLambertMaterial({ color: 0xc8a877 });
-  const mesh = new THREE.Mesh(geo, mat);
-  scene.add(mesh);
+  geo.translate(atX, 0, atZ);
+  const tex = travertineTexture.clone(); tex.needsUpdate = true;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(30, 6);
+  const mat = new THREE.MeshLambertMaterial({ map: tex });
+  const mesh = new THREE.Mesh(geo, mat); scene.add(mesh);
   geo.computeBoundingBox();
   buildings.push({ mesh, min: geo.boundingBox.min.clone(), max: geo.boundingBox.max.clone() });
-
-  // Arena floor (inside the ring)
-  const arena = new THREE.Mesh(new THREE.CircleGeometry(a - 2, 32),
+  // Arena floor
+  const arena = new THREE.Mesh(new THREE.CircleGeometry(a - 2, 40),
     new THREE.MeshLambertMaterial({ color: 0x8b6b3f }));
   arena.rotation.x = -Math.PI / 2;
-  arena.position.set(x, 0.05, z);
+  arena.position.set(atX, 0.05, atZ);
   scene.add(arena);
+  landmarkPos.set(atX, H, atZ);
 }
-function addStPeters(lngLat) {
-  // Basilica di San Pietro (very simplified: rectangular nave + big dome)
-  const [x, z] = projectLL(lngLat.lng, lngLat.lat);
+function addStPeters(atX = 0, atZ = 0) {
+  const tex = travertineTexture.clone(); tex.needsUpdate = true;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(6, 3);
   const nave = new THREE.Mesh(new THREE.BoxGeometry(120, 45, 60),
-    new THREE.MeshLambertMaterial({ color: 0xe8dcc0 }));
-  nave.position.set(x, 22.5, z);
-  scene.add(nave);
-  const geoN = new THREE.BoxGeometry(120, 45, 60);
-  geoN.computeBoundingBox();
-  buildings.push({ mesh: nave,
-    min: new THREE.Vector3(x - 60, 0, z - 30),
-    max: new THREE.Vector3(x + 60, 45, z + 30) });
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(30, 24, 16, 0, Math.PI*2, 0, Math.PI/2),
+    new THREE.MeshLambertMaterial({ map: tex, color: 0xefe0c4 }));
+  nave.position.set(atX, 22.5, atZ); scene.add(nave);
+  buildings.push({ mesh: nave, min: new THREE.Vector3(atX-60, 0, atZ-30), max: new THREE.Vector3(atX+60, 45, atZ+30) });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(30, 32, 20, 0, Math.PI*2, 0, Math.PI/2),
     new THREE.MeshLambertMaterial({ color: 0xd0c4a8 }));
-  dome.position.set(x, 45, z);
-  scene.add(dome);
-  buildings.push({ mesh: dome,
-    min: new THREE.Vector3(x - 30, 45, z - 30),
-    max: new THREE.Vector3(x + 30, 75, z + 30) });
+  dome.position.set(atX, 45, atZ); scene.add(dome);
+  buildings.push({ mesh: dome, min: new THREE.Vector3(atX-30, 45, atZ-30), max: new THREE.Vector3(atX+30, 75, atZ+30) });
   const lantern = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 12, 12),
     new THREE.MeshLambertMaterial({ color: 0xd0c4a8 }));
-  lantern.position.set(x, 82, z); scene.add(lantern);
+  lantern.position.set(atX, 82, atZ); scene.add(lantern);
+  landmarkPos.set(atX, 82, atZ);
 }
-function addPantheon(lngLat) {
-  const [x, z] = projectLL(lngLat.lng, lngLat.lat);
-  const cyl = new THREE.Mesh(new THREE.CylinderGeometry(22, 22, 30, 24),
-    new THREE.MeshLambertMaterial({ color: 0xb59268 }));
-  cyl.position.set(x, 15, z); scene.add(cyl);
-  buildings.push({ mesh: cyl,
-    min: new THREE.Vector3(x - 22, 0, z - 22),
-    max: new THREE.Vector3(x + 22, 30, z + 22) });
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(22, 20, 12, 0, Math.PI*2, 0, Math.PI/2),
+function addPantheon(atX = 0, atZ = 0) {
+  const tex = travertineTexture.clone(); tex.needsUpdate = true;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(8, 3);
+  const cyl = new THREE.Mesh(new THREE.CylinderGeometry(22, 22, 30, 32),
+    new THREE.MeshLambertMaterial({ map: tex, color: 0xb59268 }));
+  cyl.position.set(atX, 15, atZ); scene.add(cyl);
+  buildings.push({ mesh: cyl, min: new THREE.Vector3(atX-22, 0, atZ-22), max: new THREE.Vector3(atX+22, 30, atZ+22) });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(22, 24, 14, 0, Math.PI*2, 0, Math.PI/2),
     new THREE.MeshLambertMaterial({ color: 0xa88860 }));
-  dome.position.set(x, 30, z); scene.add(dome);
-  buildings.push({ mesh: dome,
-    min: new THREE.Vector3(x - 22, 30, z - 22),
-    max: new THREE.Vector3(x + 22, 52, z + 22) });
+  dome.position.set(atX, 30, atZ); scene.add(dome);
+  buildings.push({ mesh: dome, min: new THREE.Vector3(atX-22, 30, atZ-22), max: new THREE.Vector3(atX+22, 52, atZ+22) });
+  landmarkPos.set(atX, 52, atZ);
+}
+function addLandmark(zoneKey) {
+  landmarkPos.set(0, 0, 0);
+  if (zoneKey === "colosseo") addColosseum(0, 0);
+  if (zoneKey === "vaticano") addStPeters(0, 0);
+  if (zoneKey === "pantheon") addPantheon(0, 0);
 }
 
-// Adds landmark for the current zone based on real coordinates
-function addLandmarks(zoneKey) {
-  if (zoneKey === "colosseo") addColosseum({ lng: 12.4922, lat: 41.8902 });
-  if (zoneKey === "vaticano") addStPeters({ lng: 12.4539, lat: 41.9022 });
-  if (zoneKey === "pantheon") addPantheon({ lng: 12.4769, lat: 41.8986 });
+// ======================================================================
+// OVERPASS
+// ======================================================================
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.openstreetmap.ru/api/interpreter",
+];
+async function fetchBuildings(zone, onProgress) {
+  const R = 6378137;
+  const latRad = zone.lat * Math.PI / 180;
+  const dLat = (zone.radius / R) * 180 / Math.PI;
+  const dLng = (zone.radius / (R * Math.cos(latRad))) * 180 / Math.PI;
+  const s = zone.lat - dLat, n = zone.lat + dLat;
+  const w = zone.lng - dLng, e = zone.lng + dLng;
+  const query = `[out:json][timeout:25];
+    (way["building"](${s},${w},${n},${e});
+     relation["building"](${s},${w},${n},${e}););
+    out body geom;`;
+  for (const url of OVERPASS_ENDPOINTS) {
+    try {
+      onProgress(`Contatto ${new URL(url).hostname}...`, 20);
+      const res = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(query) });
+      if (!res.ok) continue;
+      onProgress("Ricevo i palazzi...", 60);
+      const data = await res.json();
+      return data.elements || [];
+    } catch (err) { console.warn("overpass fail", url, err); }
+  }
+  throw new Error("Nessun server Overpass ha risposto");
 }
 
 // ======================================================================
@@ -374,10 +539,9 @@ const player = {
 };
 const keys = new Set();
 let locked = false, mouseDown = false;
-const canvas = renderer.domElement;
-
-canvas.addEventListener("click", () => { if (!locked && !player.dead) canvas.requestPointerLock(); });
-document.addEventListener("pointerlockchange", () => { locked = document.pointerLockElement === canvas; });
+const canvas3d = renderer.domElement;
+canvas3d.addEventListener("click", () => { if (!locked && !player.dead) canvas3d.requestPointerLock(); });
+document.addEventListener("pointerlockchange", () => { locked = document.pointerLockElement === canvas3d; });
 document.addEventListener("mousemove", (e) => {
   if (!locked) return;
   const s = player.ads ? 0.0012 : 0.0025;
@@ -399,15 +563,15 @@ addEventListener("keyup", (e) => {
   keys.delete(e.code);
   if (e.code === "Tab") { e.preventDefault(); document.getElementById("scoreboard").style.display = "none"; }
 });
-canvas.addEventListener("mousedown", (e) => {
+canvas3d.addEventListener("mousedown", (e) => {
   if (e.button === 0) mouseDown = true;
   if (e.button === 2) player.ads = true;
 });
-canvas.addEventListener("mouseup", (e) => {
+canvas3d.addEventListener("mouseup", (e) => {
   if (e.button === 0) mouseDown = false;
   if (e.button === 2) player.ads = false;
 });
-canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+canvas3d.addEventListener("contextmenu", (e) => e.preventDefault());
 
 function forward(v = new THREE.Vector3()) { v.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw)); return v; }
 function rightV(v = new THREE.Vector3())  { v.set( Math.cos(player.yaw), 0, -Math.sin(player.yaw)); return v; }
@@ -433,15 +597,15 @@ vmScene.add(new THREE.AmbientLight(0xffffff, 0.9));
 const vmDL = new THREE.DirectionalLight(0xffffff, 0.5); vmDL.position.set(1,2,1); vmScene.add(vmDL);
 const vmCam = new THREE.PerspectiveCamera(55, 1, 0.01, 5);
 const gun = new THREE.Group();
-const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.35), new THREE.MeshLambertMaterial({ color: 0x1a1a1a }));
-gunBody.position.set(0.15, -0.14, -0.32);
+gun.add(
+  Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.35), new THREE.MeshLambertMaterial({ color: 0x1a1a1a })), { position: new THREE.Vector3(0.15, -0.14, -0.32) }),
+);
 const gunBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.28, 10), new THREE.MeshLambertMaterial({ color: 0x333333 }));
-gunBarrel.rotation.x = Math.PI/2; gunBarrel.position.set(0.15, -0.11, -0.5);
+gunBarrel.rotation.x = Math.PI/2; gunBarrel.position.set(0.15, -0.11, -0.5); gun.add(gunBarrel);
 const gunGrip = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.08), new THREE.MeshLambertMaterial({ color: 0x0f0f0f }));
-gunGrip.position.set(0.15, -0.22, -0.2);
+gunGrip.position.set(0.15, -0.22, -0.2); gun.add(gunGrip);
 const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.35, 8), new THREE.MeshLambertMaterial({ color: 0xd7b48f }));
-arm.rotation.z = Math.PI / 2.2; arm.position.set(0.05, -0.22, -0.15);
-gun.add(gunBody, gunBarrel, gunGrip, arm);
+arm.rotation.z = Math.PI / 2.2; arm.position.set(0.05, -0.22, -0.15); gun.add(arm);
 const flash = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2),
   new THREE.MeshBasicMaterial({ color: 0xfff1a8, transparent: true, opacity: 0, depthWrite: false }));
 flash.position.set(0.15, -0.10, -0.66); gun.add(flash);
@@ -660,19 +824,19 @@ function makeBot(i) {
     dead: false, respawnAt: 0, bob: 0,
   };
 }
-function randomSpawnPoint() {
-  // Find open ground within map bounds
-  for (let tries = 0; tries < 40; tries++) {
-    const x = (Math.random() - 0.5) * 400;
-    const z = (Math.random() - 0.5) * 400;
-    if (groundY(x, z) === 0) return { x, z };
+function randomOpenPoint(minR = 30, maxR = 180) {
+  for (let tries = 0; tries < 60; tries++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = minR + Math.random() * (maxR - minR);
+    const x = Math.cos(angle) * r, z = Math.sin(angle) * r;
+    if (groundY(x, z) < 0.2) return { x, z };
   }
   return { x: 0, z: 0 };
 }
 function spawnBots() {
   for (let i = 0; i < BOT_COUNT; i++) {
     const b = makeBot(i);
-    const sp = randomSpawnPoint();
+    const sp = randomOpenPoint(30, 150);
     b.pos.set(sp.x, 0.85, sp.z);
     b.group.position.copy(b.pos);
     bots.push(b);
@@ -693,7 +857,7 @@ function damageBot(bot, dmg, byPlayer) {
 }
 function respawnBot(bot) {
   bot.dead = false; bot.hp = 100;
-  const sp = randomSpawnPoint();
+  const sp = randomOpenPoint(40, 160);
   bot.pos.set(sp.x, 0.85, sp.z);
   bot.group.visible = true;
 }
@@ -751,7 +915,7 @@ function makePickup() {
   const c2 = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.2, 0.05), new THREE.MeshBasicMaterial({ color: 0xffffff }));
   c1.position.z = 0.26; c2.position.z = 0.26;
   grp.add(box, c1, c2);
-  const sp = randomSpawnPoint();
+  const sp = randomOpenPoint(25, 160);
   grp.position.set(sp.x, 0.9, sp.z);
   scene.add(grp);
   return { group: grp, active: true };
@@ -769,7 +933,7 @@ function updatePickups(dt, now) {
         p.active = false; p.group.visible = false;
         sfxPickup();
         setTimeout(() => {
-          const sp = randomSpawnPoint();
+          const sp = randomOpenPoint(25, 160);
           p.group.position.set(sp.x, 0.9, sp.z);
           p.active = true; p.group.visible = true;
         }, 12000);
@@ -856,8 +1020,10 @@ function damagePlayer(dmg) {
     document.getElementById("dead").style.display = "flex";
     setTimeout(() => {
       player.dead = false; player.hp = 100;
-      const sp = randomSpawnPoint();
-      player.pos.set(sp.x, EYE, sp.z); player.vel.set(0,0,0);
+      const sp = randomOpenPoint(30, 100);
+      player.pos.set(sp.x, EYE, sp.z);
+      player.yaw = Math.atan2(-sp.x, -sp.z); // face center
+      player.vel.set(0,0,0);
       for (const k of Object.keys(ammo)) ammo[k] = WEAPONS[k].mag;
       updateAmmoHUD();
       document.getElementById("dead").style.display = "none";
@@ -930,20 +1096,37 @@ function drawMinimap() {
   mmCtx.translate(W/2, H/2);
   mmCtx.rotate(player.yaw);
   mmCtx.translate(-player.pos.x * SCALE, -player.pos.z * SCALE);
+  // buildings
   mmCtx.fillStyle = "#3a4453";
   for (const b of buildings) {
     mmCtx.fillRect(b.min.x*SCALE, b.min.z*SCALE, (b.max.x-b.min.x)*SCALE, (b.max.z-b.min.z)*SCALE);
   }
+  // landmark (gold star at origin)
+  if (ZONES[currentZoneKey].landmark) {
+    mmCtx.fillStyle = "#ffdd66";
+    const lx = landmarkPos.x * SCALE, lz = landmarkPos.z * SCALE;
+    mmCtx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? 7 : 3;
+      const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+      const px = lx + Math.cos(a) * r, py = lz + Math.sin(a) * r;
+      if (i === 0) mmCtx.moveTo(px, py); else mmCtx.lineTo(px, py);
+    }
+    mmCtx.closePath(); mmCtx.fill();
+  }
+  // pickups
   for (const p of pickups) {
     if (!p.active) continue;
     mmCtx.fillStyle = "#22d3ee";
     mmCtx.fillRect(p.group.position.x*SCALE - 2, p.group.position.z*SCALE - 2, 4, 4);
   }
+  // bots
   for (const b of bots) {
     if (b.dead) continue;
     mmCtx.fillStyle = "#f87171";
     mmCtx.beginPath(); mmCtx.arc(b.pos.x*SCALE, b.pos.z*SCALE, 3, 0, Math.PI*2); mmCtx.fill();
   }
+  // player
   mmCtx.fillStyle = "#4ade80";
   mmCtx.beginPath(); mmCtx.arc(player.pos.x*SCALE, player.pos.z*SCALE, 4, 0, Math.PI*2); mmCtx.fill();
   mmCtx.restore();
@@ -951,13 +1134,36 @@ function drawMinimap() {
 }
 function updateStats() {
   document.getElementById("stats").innerHTML =
-    `<b>${player.name}</b><br>HP <b>${Math.round(player.hp)}</b><br>K/D <b>${player.kills}/${player.deaths}</b><br>Streak <b>${player.streak}</b>`;
+    `<b>${player.name}</b><br>HP <b>${Math.round(player.hp)}</b>&nbsp;&nbsp;K/D <b>${player.kills}/${player.deaths}</b><br>Streak <b>${player.streak}</b>&nbsp;&nbsp;<span style="color:#c8843e">${ZONES[currentZoneKey].name}</span>`;
 }
 function updateGrenCd(now) {
   const cd = Math.max(0, (GREN_CD - (now - lastGrenAt)) / 1000);
   const el = document.getElementById("grenCd");
   el.textContent = `G ${cd.toFixed(1)}s`;
   el.style.color = cd <= 0 ? "#4ade80" : "#fff";
+}
+function updateCompass() {
+  const el = document.getElementById("compass");
+  if (ZONES[currentZoneKey].landmark) {
+    const dx = landmarkPos.x - player.pos.x;
+    const dz = landmarkPos.z - player.pos.z;
+    const dist = Math.hypot(dx, dz);
+    const angle = Math.atan2(dx, dz) - player.yaw;
+    // Arrow character
+    const deg = ((angle * 180 / Math.PI) + 360) % 360;
+    let arrow = "^"; // N
+    if (deg > 337.5 || deg <= 22.5) arrow = "&uarr;";
+    else if (deg <= 67.5) arrow = "&#x2197;";
+    else if (deg <= 112.5) arrow = "&rarr;";
+    else if (deg <= 157.5) arrow = "&#x2198;";
+    else if (deg <= 202.5) arrow = "&darr;";
+    else if (deg <= 247.5) arrow = "&#x2199;";
+    else if (deg <= 292.5) arrow = "&larr;";
+    else if (deg <= 337.5) arrow = "&#x2196;";
+    el.innerHTML = `${arrow}&nbsp; ${ZONES[currentZoneKey].name} &bull; ${Math.round(dist)}m`;
+  } else {
+    el.textContent = ZONES[currentZoneKey].name;
+  }
 }
 function updateScoreboard() {
   const rows = [{ name: player.name, kills: player.kills, deaths: player.deaths, streak: player.streak, me: true }]
@@ -969,65 +1175,148 @@ function updateScoreboard() {
 }
 
 // ======================================================================
-// BOOTSTRAP
+// MENU (zone grid + hero art)
+// ======================================================================
+const zoneGrid = document.getElementById("zoneGrid");
+for (const [k, z] of Object.entries(ZONES)) {
+  const el = document.createElement("div");
+  el.className = "zoneOpt" + (k === currentZoneKey ? " sel" : "");
+  el.dataset.zone = k;
+  el.innerHTML = `<div class="zn">${z.name}</div><div class="zd">${z.sub}</div>`;
+  el.onclick = () => {
+    currentZoneKey = k;
+    for (const o of zoneGrid.children) o.classList.toggle("sel", o.dataset.zone === k);
+    resetAndLoad();
+  };
+  zoneGrid.appendChild(el);
+}
+
+// Hero art: paint a stylized Rome silhouette (Colosseum + domes) on canvas
+(function paintHero() {
+  const c = document.querySelector("#menuBg canvas");
+  const ctx = c.getContext("2d");
+  const W = c.width = innerWidth;
+  const H = c.height = innerHeight;
+  // Gradient sky
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#2a1810"); g.addColorStop(0.6, "#5a3218"); g.addColorStop(1, "#8a5828");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // Sun disc
+  const cx = W * 0.75, cy = H * 0.35;
+  const sunG = ctx.createRadialGradient(cx, cy, 20, cx, cy, 220);
+  sunG.addColorStop(0, "rgba(255,220,140,0.8)"); sunG.addColorStop(1, "rgba(255,150,50,0)");
+  ctx.fillStyle = sunG; ctx.beginPath(); ctx.arc(cx, cy, 220, 0, Math.PI*2); ctx.fill();
+  // Silhouette buildings (far layer)
+  ctx.fillStyle = "#1a0a04";
+  for (let x = 0; x < W; x += 40) {
+    const h = 80 + Math.random() * 100;
+    ctx.fillRect(x, H - h, 38, h);
+  }
+  // Domes (Rome skyline hints)
+  ctx.fillStyle = "#0f0602";
+  function dome(x, y, r) {
+    ctx.beginPath(); ctx.arc(x, y, r, Math.PI, 0); ctx.fill();
+    ctx.fillRect(x - r * 0.15, y - r * 0.05, r * 0.3, r * 0.6);
+  }
+  dome(W * 0.2, H * 0.72, 50);
+  dome(W * 0.55, H * 0.68, 65);
+  // Colosseum silhouette
+  ctx.fillStyle = "#0a0501";
+  const cxC = W * 0.4, cyC = H * 0.85, cw = 260, ch = 90;
+  ctx.beginPath();
+  ctx.ellipse(cxC, cyC, cw / 2, ch / 2, 0, Math.PI, 0);
+  ctx.rect(cxC - cw/2, cyC, cw, ch/2);
+  ctx.fill();
+  // Arches (small windows on Colosseum)
+  ctx.fillStyle = "#5a3218";
+  for (let i = 0; i < 12; i++) {
+    const t = (i + 0.5) / 12;
+    const ax = cxC - cw/2 + t * cw;
+    const ay = cyC - Math.sin((1-t)*Math.PI) * ch/2 + 10;
+    ctx.beginPath(); ctx.arc(ax, ay, 5, 0, Math.PI); ctx.fill();
+  }
+})();
+addEventListener("resize", () => {
+  const c = document.querySelector("#menuBg canvas");
+  if (c && document.getElementById("menu").style.display !== "none") {
+    c.width = innerWidth; c.height = innerHeight;
+    // Re-paint could go here; skip for simplicity — the fixed image is fine
+  }
+});
+
+// ======================================================================
+// BOOTSTRAP / LOAD
 // ======================================================================
 const playBtn = document.getElementById("play");
 const loadEl = document.getElementById("loading");
+const loadBar = document.querySelector("#loadBar span");
 async function bootstrap() {
-  const zoneKey = document.getElementById("zone").value;
-  const zone = ZONES[zoneKey];
-  loadEl.textContent = `Scarico ${zone.name} da OSM...`;
+  const zone = ZONES[currentZoneKey];
+  loadEl.textContent = `Preparo ${zone.name}...`;
+  loadBar.style.width = "10%";
   playBtn.disabled = true;
+  playBtn.textContent = "Caricamento...";
   try {
-    const elements = await fetchBuildings(zone, (msg) => loadEl.textContent = msg);
+    const elements = await fetchBuildings(zone, (msg, pct) => {
+      loadEl.textContent = msg;
+      loadBar.style.width = pct + "%";
+    });
+    loadBar.style.width = "80%";
+    loadEl.textContent = `Costruisco ${elements.length} palazzi...`;
+    await new Promise(r => setTimeout(r, 30));
     const n = osmToBuildings(elements, zone);
-    addLandmarks(zoneKey);
+    addLandmark(currentZoneKey);
     collidableMeshes = buildings.map(b => b.mesh);
     spawnBots(); spawnPickups();
+    loadBar.style.width = "100%";
     loadEl.textContent = `Pronti: ${n} palazzi caricati.`;
     playBtn.disabled = false;
-    playBtn.textContent = "GIOCA";
-    // Auto-position player at street level
-    const sp = randomSpawnPoint();
-    player.pos.set(sp.x, EYE, sp.z);
+    playBtn.textContent = zone.landmark ? `Entra a ${zone.name}` : "Entra";
   } catch (e) {
-    loadEl.textContent = "Impossibile scaricare da OSM. Genero citta di fallback.";
-    // Fallback procedural
+    loadEl.textContent = "OSM non raggiungibile — genero mappa procedurale";
+    loadBar.style.width = "100%";
     buildFallbackCity();
+    addLandmark(currentZoneKey);
     collidableMeshes = buildings.map(b => b.mesh);
     spawnBots(); spawnPickups();
     playBtn.disabled = false;
-    playBtn.textContent = "GIOCA (fallback)";
+    playBtn.textContent = "Entra (fallback)";
   }
 }
 function buildFallbackCity() {
   originLat = 41.9; originLng = 12.49;
   for (let ix = -6; ix <= 6; ix++)
     for (let iz = -6; iz <= 6; iz++) {
-      if (ix === 0 && iz === 0) continue;
+      if (Math.abs(ix) < 2 && Math.abs(iz) < 2) continue;
       const w = 5 + Math.random()*8, d = 5 + Math.random()*8, h = 6 + Math.random()*30;
-      const x = ix*20 + (Math.random()-0.5)*4, z = iz*20 + (Math.random()-0.5)*4;
-      const color = osmColor(null).getHex();
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color }));
-      mesh.position.set(x, h/2, z); scene.add(mesh);
-      buildings.push({ mesh, min: new THREE.Vector3(x-w/2, 0, z-d/2), max: new THREE.Vector3(x+w/2, h, z+d/2) });
+      const x = ix*22 + (Math.random()-0.5)*4, z = iz*22 + (Math.random()-0.5)*4;
+      const shape = new THREE.Shape();
+      shape.moveTo(x-w/2, z-d/2); shape.lineTo(x+w/2, z-d/2); shape.lineTo(x+w/2, z+d/2); shape.lineTo(x-w/2, z+d/2); shape.closePath();
+      buildBuildingMesh([[x-w/2,z-d/2],[x+w/2,z-d/2],[x+w/2,z+d/2],[x-w/2,z+d/2],[x-w/2,z-d/2]], h, pickFacadeIndex());
     }
 }
-playBtn.onclick = () => {
-  player.name = (document.getElementById("name").value.trim() || "player").slice(0, 14);
-  document.getElementById("menu").style.display = "none";
-  canvas.requestPointerLock();
-};
-// Reload buildings when zone changes
-document.getElementById("zone").onchange = () => {
-  // Clear old buildings
-  for (const b of buildings) { scene.remove(b.mesh); b.mesh.geometry.dispose(); b.mesh.material.dispose?.(); }
+function resetAndLoad() {
+  // wipe
+  for (const b of buildings) { scene.remove(b.mesh); b.mesh.geometry.dispose(); }
   buildings.length = 0;
   for (const p of pickups) scene.remove(p.group);
   pickups.length = 0;
   for (const b of bots) scene.remove(b.group);
   bots.length = 0;
+  for (const [_, el] of tagCache) el.remove();
+  tagCache.clear();
   bootstrap();
+}
+playBtn.onclick = () => {
+  player.name = (document.getElementById("name").value.trim() || "player").slice(0, 14);
+  // Spawn near landmark (80m out) facing it
+  const spawnR = 80;
+  const angle = Math.random() * Math.PI * 2;
+  const sx = Math.cos(angle) * spawnR, sz = Math.sin(angle) * spawnR;
+  player.pos.set(sx, EYE, sz);
+  player.yaw = Math.atan2(-sx, -sz);
+  document.getElementById("menu").style.display = "none";
+  canvas3d.requestPointerLock();
 };
 bootstrap();
 
@@ -1056,18 +1345,14 @@ function frame() {
     if (player.onGround && keys.has("Space") && !player.crouching) {
       player.vel.y = JUMP; player.onGround = false; sfxJump();
     }
-
     const delta = new THREE.Vector3(player.vel.x*dt, 0, player.vel.z*dt);
     collideHoriz(player.pos, delta, player.pos.y - player.eyeH + 0.3, player.pos.y - 0.1);
     player.pos.y += player.vel.y * dt;
-
     const targetEye = player.crouching ? CROUCH_EYE : EYE;
     player.eyeH += (targetEye - player.eyeH) * Math.min(1, dt * 10);
-
     const gy = groundY(player.pos.x, player.pos.z) + player.eyeH;
     if (player.pos.y <= gy) { player.pos.y = gy; player.vel.y = 0; player.onGround = true; }
     else player.onGround = false;
-
     const horizSpeed = Math.hypot(player.vel.x, player.vel.z);
     if (player.onGround && horizSpeed > 0.5) {
       player.footAcc += dt * horizSpeed * 0.5;
@@ -1112,6 +1397,7 @@ function frame() {
   drawTags();
   drawMinimap();
   updateStats();
+  updateCompass();
   updateGrenCd(now);
   updateScoreboard();
 
