@@ -9,62 +9,63 @@ on:
       - ".github/workflows/build-desktop.yml"
 
 jobs:
-  windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows
+            build: dist:win
+            pattern: "game/desktop/dist/*.exe"
+          - os: ubuntu-latest
+            name: Linux
+            build: dist:linux
+            pattern: "game/desktop/dist/*.AppImage"
+          - os: macos-latest
+            name: macOS
+            build: dist:mac
+            pattern: "game/desktop/dist/*.dmg"
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
-        with: { node-version: "20" }
-      - name: Install desktop deps (builds client + installs server)
+        with:
+          node-version: "20"
+
+      - name: Install client deps
+        working-directory: game/client
+        run: npm install --no-audit --no-fund
+
+      - name: Build client bundle
+        working-directory: game/client
+        run: npm run build
+
+      - name: Install server deps
+        working-directory: game/server
+        run: npm install --no-audit --no-fund --omit=dev
+
+      - name: Install desktop deps (Electron + builder)
         working-directory: game/desktop
-        run: npm install
-      - name: Build Windows installer + portable
+        run: npm install --no-audit --no-fund
+
+      - name: Build ${{ matrix.name }} artifact
         working-directory: game/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist:win
-      - uses: actions/upload-artifact@v4
-        with:
-          name: CityShooter-Windows
-          path: |
-            game/desktop/dist/*.exe
-            game/desktop/dist/*.blockmap
-          if-no-files-found: error
-
-  linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: "20" }
-      - name: Install desktop deps
-        working-directory: game/desktop
-        run: npm install
-      - name: Build AppImage
-        working-directory: game/desktop
-        run: npm run dist:linux
-      - uses: actions/upload-artifact@v4
-        with:
-          name: CityShooter-Linux
-          path: game/desktop/dist/*.AppImage
-          if-no-files-found: error
-
-  macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: "20" }
-      - name: Install desktop deps
-        working-directory: game/desktop
-        run: npm install
-      - name: Build DMG (unsigned)
-        working-directory: game/desktop
-        env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npm run dist:mac
+        run: npm run ${{ matrix.build }}
+
+      - name: List dist/ (debug)
+        if: always()
+        working-directory: game/desktop
+        shell: bash
+        run: ls -la dist || true
+
       - uses: actions/upload-artifact@v4
+        if: success()
         with:
-          name: CityShooter-macOS
-          path: game/desktop/dist/*.dmg
+          name: CityShooter-${{ matrix.name }}
+          path: ${{ matrix.pattern }}
           if-no-files-found: error

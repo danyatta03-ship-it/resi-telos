@@ -5,7 +5,6 @@
   "description": "City Shooter — desktop wrapper (Electron)",
   "main": "main.js",
   "scripts": {
-    "postinstall": "cd ../client && npm install && npm run build && cd ../server && npm install",
     "start": "electron .",
     "pack": "electron-builder --dir",
     "dist:win": "electron-builder --win --x64",

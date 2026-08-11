@@ -1,12 +1,12 @@
 {
   "name": "city-shooter",
   "private": true,
-  "workspaces": ["client", "server"],
   "scripts": {
-    "dev": "npm-run-all -p dev:server dev:client",
-    "dev:client": "npm --workspace client run dev",
-    "dev:server": "npm --workspace server run dev",
-    "build": "npm --workspace client run build"
+    "dev": "npx npm-run-all -p dev:server dev:client",
+    "dev:client": "npm --prefix client run dev",
+    "dev:server": "npm --prefix server run dev",
+    "build": "npm --prefix client run build",
+    "install:all": "npm --prefix client install && npm --prefix server install"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5"
