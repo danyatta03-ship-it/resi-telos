@@ -145,141 +145,132 @@ const ZONES = {
 let currentZoneKey = "colosseo";
 
 // ======================================================================
-// PROCEDURAL TEXTURES (canvas)
+// PHOTOGRAPHIC TEXTURES (loaded from jsdelivr CDN, CORS-enabled)
+// Fallback to solid color if load fails.
 // ======================================================================
-function makeFacadeTexture(baseColor, seed = 0) {
-  const c = document.createElement("canvas");
-  c.width = 256; c.height = 512;
-  const ctx = c.getContext("2d");
-  // Plaster background with subtle noise
-  ctx.fillStyle = baseColor;
-  ctx.fillRect(0, 0, c.width, c.height);
-  const img = ctx.getImageData(0, 0, c.width, c.height);
-  for (let i = 0; i < img.data.length; i += 4) {
-    const n = (Math.random() - 0.5) * 20;
-    img.data[i] = Math.max(0, Math.min(255, img.data[i] + n));
-    img.data[i+1] = Math.max(0, Math.min(255, img.data[i+1] + n));
-    img.data[i+2] = Math.max(0, Math.min(255, img.data[i+2] + n));
-  }
-  ctx.putImageData(img, 0, 0);
-  // Cornice at top
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
-  ctx.fillRect(0, 0, c.width, 8);
-  ctx.fillRect(0, c.height - 8, c.width, 8);
-  // Windows: 4 cols x 8 rows
-  const cols = 4, rows = 8;
-  const winW = 36, winH = 44;
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      const wx = 20 + x * ((c.width - 40) / cols) + ((c.width - 40)/cols - winW) / 2;
-      const wy = 30 + y * ((c.height - 60) / rows);
-      // Shutter/frame
-      ctx.fillStyle = "#2a1a0f";
-      ctx.fillRect(wx - 3, wy - 3, winW + 6, winH + 6);
-      // Glass (some lit)
-      const lit = (Math.random() + seed*0.1) % 1 < 0.35;
-      ctx.fillStyle = lit ? "#ffe082" : "#2f4356";
-      ctx.fillRect(wx, wy, winW, winH);
-      // Window cross
-      ctx.fillStyle = "#1a1108";
-      ctx.fillRect(wx + winW/2 - 1, wy, 2, winH);
-      ctx.fillRect(wx, wy + winH/2 - 1, winW, 2);
-      // Windowsill
-      ctx.fillStyle = "rgba(0,0,0,0.25)";
-      ctx.fillRect(wx - 5, wy + winH + 3, winW + 10, 3);
-    }
-  }
-  const tex = new THREE.CanvasTexture(c);
+const loader = new THREE.TextureLoader();
+loader.setCrossOrigin("anonymous");
+function loadTex(urls, onLoad) {
+  // Try urls in order until one loads
+  let i = 0;
+  const tex = new THREE.Texture();
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  return tex;
-}
-function makeRoofTexture() {
-  const c = document.createElement("canvas");
-  c.width = c.height = 128;
-  const ctx = c.getContext("2d");
-  ctx.fillStyle = "#8b4a1c";
-  ctx.fillRect(0, 0, 128, 128);
-  // Terracotta tiles pattern
-  for (let y = 0; y < 128; y += 8) {
-    for (let x = 0; x < 128; x += 12) {
-      const off = (y / 8) % 2 === 0 ? 0 : 6;
-      ctx.fillStyle = `rgb(${140 + Math.random()*40}, ${70 + Math.random()*20}, ${30 + Math.random()*15})`;
-      ctx.fillRect(x + off, y, 10, 7);
-      ctx.strokeStyle = "rgba(0,0,0,0.25)";
-      ctx.strokeRect(x + off, y, 10, 7);
-    }
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  return tex;
-}
-function makeGroundTexture() {
-  const c = document.createElement("canvas");
-  c.width = c.height = 256;
-  const ctx = c.getContext("2d");
-  // Base asphalt
-  ctx.fillStyle = "#3a3a40";
-  ctx.fillRect(0, 0, 256, 256);
-  // Noise
-  const img = ctx.getImageData(0, 0, 256, 256);
-  for (let i = 0; i < img.data.length; i += 4) {
-    const n = (Math.random() - 0.5) * 35;
-    img.data[i] = Math.max(0, Math.min(255, 58 + n));
-    img.data[i+1] = Math.max(0, Math.min(255, 58 + n));
-    img.data[i+2] = Math.max(0, Math.min(255, 64 + n));
-  }
-  ctx.putImageData(img, 0, 0);
-  // Cracks
-  ctx.strokeStyle = "rgba(0,0,0,0.4)"; ctx.lineWidth = 1;
-  for (let i = 0; i < 8; i++) {
-    ctx.beginPath();
-    ctx.moveTo(Math.random()*256, Math.random()*256);
-    for (let j = 0; j < 6; j++) ctx.lineTo(Math.random()*256, Math.random()*256);
-    ctx.stroke();
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(80, 80);
-  return tex;
-}
-function makeTravertineTexture() {
-  const c = document.createElement("canvas");
-  c.width = c.height = 256;
-  const ctx = c.getContext("2d");
-  ctx.fillStyle = "#c8a877";
-  ctx.fillRect(0, 0, 256, 256);
-  const img = ctx.getImageData(0, 0, 256, 256);
-  for (let i = 0; i < img.data.length; i += 4) {
-    const n = (Math.random() - 0.5) * 30;
-    img.data[i]   = Math.max(0, Math.min(255, 200 + n));
-    img.data[i+1] = Math.max(0, Math.min(255, 168 + n));
-    img.data[i+2] = Math.max(0, Math.min(255, 119 + n));
-  }
-  ctx.putImageData(img, 0, 0);
-  // Stone block lines
-  ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = 1;
-  for (let y = 0; y < 256; y += 32) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke();
-  }
-  for (let y = 0; y < 256; y += 32) {
-    const off = (y / 32) % 2 === 0 ? 0 : 32;
-    for (let x = off; x < 256; x += 64) {
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 32); ctx.stroke();
-    }
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  const tryNext = () => {
+    if (i >= urls.length) { console.warn("texture failed all sources:", urls[0]); return; }
+    const url = urls[i++];
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      tex.image = img; tex.needsUpdate = true;
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      if (onLoad) onLoad(tex);
+    };
+    img.onerror = tryNext;
+    img.src = url;
+  };
+  tryNext();
   return tex;
 }
 
-// Pre-generate texture pool for facades (4 variants)
-const facadePalette = [
-  "#c4a075", "#b08c60", "#a87e55", "#caa87e", "#b59268", "#d0a97a", "#9d7852", "#bfa085",
+// Facade: real brick photo from three.js official examples (via jsdelivr CDN).
+const brickDiffuse = loadTex([
+  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r169/examples/textures/brick_diffuse.jpg",
+  "https://threejs.org/examples/textures/brick_diffuse.jpg",
+]);
+const brickBump = loadTex([
+  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r169/examples/textures/brick_bump.jpg",
+  "https://threejs.org/examples/textures/brick_bump.jpg",
+]);
+// Warm color palette to tint the shared brick photo per building.
+// Rome facades: cream, ochre, warm terra cotta, sienna, plaster peach.
+const facadeTints = [
+  0xe6cfa8, 0xd4b088, 0xc89870, 0xb87850, 0xd8b494,
+  0xc09068, 0xa87858, 0xe0c090, 0xc8a878, 0xb08858,
 ];
-const facadeTextures = facadePalette.map((c, i) => makeFacadeTexture(c, i));
+function pickFacadeTint() { return facadeTints[(Math.random() * facadeTints.length) | 0]; }
+
+// Real photo travertine for landmarks: use the marble-like stone from three's arm example
+const travertineTex = loadTex([
+  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r169/examples/textures/planets/moon_1024.jpg",
+  "https://threejs.org/examples/textures/planets/moon_1024.jpg",
+]);
+
+// Ground: procedural cobblestone (works better than a single tiled photo at this scale)
+function makeGroundTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 512;
+  const ctx = c.getContext("2d");
+  // Dark asphalt base
+  ctx.fillStyle = "#3a3a3f";
+  ctx.fillRect(0, 0, 512, 512);
+  // Fine gravel via noise
+  const img = ctx.getImageData(0, 0, 512, 512);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 50;
+    img.data[i]   = Math.max(0, Math.min(255, 58 + n));
+    img.data[i+1] = Math.max(0, Math.min(255, 58 + n));
+    img.data[i+2] = Math.max(0, Math.min(255, 62 + n));
+  }
+  ctx.putImageData(img, 0, 0);
+  // Cobblestone irregular grid (sanpietrini)
+  ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.lineWidth = 1.5;
+  for (let y = 0; y < 512; y += 18) {
+    for (let x = 0; x < 512; x += 18) {
+      const off = (y / 18) % 2 === 0 ? 0 : 9;
+      const jx = (Math.random() - 0.5) * 3;
+      const jy = (Math.random() - 0.5) * 3;
+      const shade = 30 + Math.random() * 40;
+      ctx.fillStyle = `rgb(${shade},${shade},${shade+3})`;
+      ctx.fillRect(x + off + jx, y + jy, 16, 16);
+      ctx.strokeRect(x + off + jx, y + jy, 16, 16);
+      // Highlight
+      ctx.fillStyle = `rgba(255,255,255,0.06)`;
+      ctx.fillRect(x + off + jx + 2, y + jy + 2, 3, 12);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(60, 60);
+  return tex;
+}
+const groundDiffuse = makeGroundTexture();
+
+// Terracotta roof: still procedural but improved (small pattern, works well tiled)
+function makeRoofTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#8b4a1c";
+  ctx.fillRect(0, 0, 256, 256);
+  // Long curved tiles
+  for (let y = 0; y < 256; y += 14) {
+    for (let x = 0; x < 256; x += 20) {
+      const off = (y / 14) % 2 === 0 ? 0 : 10;
+      const r = 130 + Math.random() * 60;
+      const g = 60 + Math.random() * 30;
+      const b = 25 + Math.random() * 20;
+      // Tile body
+      const grd = ctx.createLinearGradient(x + off, y, x + off + 18, y);
+      grd.addColorStop(0, `rgba(${r*0.7},${g*0.7},${b*0.7},1)`);
+      grd.addColorStop(0.4, `rgb(${r},${g},${b})`);
+      grd.addColorStop(1, `rgba(${r*0.6},${g*0.6},${b*0.6},1)`);
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.roundRect(x + off, y, 18, 12, 3);
+      ctx.fill();
+      // Dark seam
+      ctx.strokeStyle = "rgba(0,0,0,0.5)";
+      ctx.strokeRect(x + off, y, 18, 12);
+      // Highlight
+      ctx.fillStyle = "rgba(255,220,180,0.15)";
+      ctx.fillRect(x + off + 8, y + 1, 2, 10);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
 const roofTexture = makeRoofTexture();
-const travertineTexture = makeTravertineTexture();
-const groundTexture = makeGroundTexture();
 
 // ======================================================================
 // SCENE
@@ -297,7 +288,7 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0x776655, 0.75));
 const sun = new THREE.DirectionalLight(0xfff2d5, 1.0); sun.position.set(60, 100, 40); scene.add(sun);
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000),
-  new THREE.MeshLambertMaterial({ map: groundTexture, color: 0x888890 }));
+  new THREE.MeshLambertMaterial({ map: groundDiffuse, color: 0x808088 }));
 ground.rotation.x = -Math.PI / 2; scene.add(ground);
 
 // ======================================================================
@@ -323,9 +314,9 @@ function osmHeight(tags) {
   if (Number.isFinite(lv) && lv > 0) return lv * 3.2 + 2;
   return 7 + Math.random() * 8;
 }
-function pickFacadeIndex() { return (Math.random() * facadeTextures.length) | 0; }
+function pickFacadeIndex() { return pickFacadeTint(); }
 
-function buildBuildingMesh(ring, height, facadeIdx) {
+function buildBuildingMesh(ring, height, facadeTint) {
   if (!ring || ring.length < 4) return null;
   const shape = new THREE.Shape();
   shape.moveTo(ring[0][0], ring[0][1]);
@@ -359,13 +350,17 @@ function buildBuildingMesh(ring, height, facadeIdx) {
   }
   uv.needsUpdate = true;
 
-  const wallTex = facadeTextures[facadeIdx];
-  const wallMat = new THREE.MeshLambertMaterial({ map: wallTex });
+  // Wall: shared brick photo, tinted per-building via color multiplier + bump map
+  const wallMat = new THREE.MeshLambertMaterial({
+    map: brickDiffuse, bumpMap: brickBump, bumpScale: 0.6,
+    color: facadeTint,
+  });
+  // Roof: procedural terracotta tiles, per-building UV repeat
   const roofTex = roofTexture.clone();
   roofTex.needsUpdate = true;
   roofTex.wrapS = roofTex.wrapT = THREE.RepeatWrapping;
   roofTex.repeat.set(Math.max(1, (bb.max.x - bb.min.x) / 4), Math.max(1, (bb.max.z - bb.min.z) / 4));
-  const capMat = new THREE.MeshLambertMaterial({ map: roofTex, color: 0xa06a3a });
+  const capMat = new THREE.MeshLambertMaterial({ map: roofTex });
   const mesh = new THREE.Mesh(geo, [capMat, wallMat]);
   scene.add(mesh);
   buildings.push({
@@ -411,9 +406,9 @@ function addColosseum(atX = 0, atZ = 0) {
   const geo = new THREE.ExtrudeGeometry(shape, { depth: H, bevelEnabled: false, curveSegments: 6 });
   geo.rotateX(-Math.PI / 2);
   geo.translate(atX, 0, atZ);
-  const tex = travertineTexture.clone(); tex.needsUpdate = true;
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(30, 6);
-  const mat = new THREE.MeshLambertMaterial({ map: tex });
+  travertineTex.wrapS = travertineTex.wrapT = THREE.RepeatWrapping;
+  travertineTex.repeat.set(30, 6);
+  const mat = new THREE.MeshLambertMaterial({ map: travertineTex, color: 0xc8a877 });
   const mesh = new THREE.Mesh(geo, mat); scene.add(mesh);
   geo.computeBoundingBox();
   buildings.push({ mesh, min: geo.boundingBox.min.clone(), max: geo.boundingBox.max.clone() });
@@ -426,10 +421,10 @@ function addColosseum(atX = 0, atZ = 0) {
   landmarkPos.set(atX, H, atZ);
 }
 function addStPeters(atX = 0, atZ = 0) {
-  const tex = travertineTexture.clone(); tex.needsUpdate = true;
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(6, 3);
+  travertineTex.wrapS = travertineTex.wrapT = THREE.RepeatWrapping;
+  travertineTex.repeat.set(6, 3);
   const nave = new THREE.Mesh(new THREE.BoxGeometry(120, 45, 60),
-    new THREE.MeshLambertMaterial({ map: tex, color: 0xefe0c4 }));
+    new THREE.MeshLambertMaterial({ map: travertineTex, color: 0xefe0c4 }));
   nave.position.set(atX, 22.5, atZ); scene.add(nave);
   buildings.push({ mesh: nave, min: new THREE.Vector3(atX-60, 0, atZ-30), max: new THREE.Vector3(atX+60, 45, atZ+30) });
   const dome = new THREE.Mesh(new THREE.SphereGeometry(30, 32, 20, 0, Math.PI*2, 0, Math.PI/2),
@@ -442,10 +437,10 @@ function addStPeters(atX = 0, atZ = 0) {
   landmarkPos.set(atX, 82, atZ);
 }
 function addPantheon(atX = 0, atZ = 0) {
-  const tex = travertineTexture.clone(); tex.needsUpdate = true;
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(8, 3);
+  travertineTex.wrapS = travertineTex.wrapT = THREE.RepeatWrapping;
+  travertineTex.repeat.set(8, 3);
   const cyl = new THREE.Mesh(new THREE.CylinderGeometry(22, 22, 30, 32),
-    new THREE.MeshLambertMaterial({ map: tex, color: 0xb59268 }));
+    new THREE.MeshLambertMaterial({ map: travertineTex, color: 0xb59268 }));
   cyl.position.set(atX, 15, atZ); scene.add(cyl);
   buildings.push({ mesh: cyl, min: new THREE.Vector3(atX-22, 0, atZ-22), max: new THREE.Vector3(atX+22, 30, atZ+22) });
   const dome = new THREE.Mesh(new THREE.SphereGeometry(22, 24, 14, 0, Math.PI*2, 0, Math.PI/2),
