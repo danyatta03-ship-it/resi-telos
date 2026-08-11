@@ -1071,7 +1071,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35i · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35j · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1298,17 +1298,7 @@ html[data-theme="light"] .btn-anomalia{
     <div class="sc sc-tile" data-fase="FINALE"       onclick="toggleFaseTile('FINALE')"       style="background:rgba(224,85,85,.04);border-color:rgba(224,85,85,.15);cursor:pointer;transition:transform .08s,background .15s,border-color .15s" title="Filtra: solo articoli in FINALE"><div class="sc-n" style="color:var(--red)" id="sFin">0</div><div class="sc-l" style="color:rgba(224,85,85,.5)">FIN.</div></div>
   </div>
 
-  <!-- FILTRO FASE (tendina sempre visibile) -->
-  <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
-    <label for="fFaseQuick" style="font-size:11px;font-weight:700;color:var(--txt2);letter-spacing:.5px;flex-shrink:0">FASE:</label>
-    <select id="fFaseQuick" onchange="quickFaseFilter(this.value)" style="flex:1;background:#111;color:#fff;border:1px solid #333;padding:8px 10px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;background-image:url(&quot;data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='%233B9FD4' d='M6 8L2 4h8z'/></svg>&quot;);background-repeat:no-repeat;background-position:right 10px center;padding-right:30px">
-      <option value="">Tutte le fasi</option>
-      <option value="RICEVIMENTO">📥 RICEVIMENTO</option>
-      <option value="UFFICIO RESI">🏢 UFFICIO RESI</option>
-      <option value="MAGAZZINO">📦 MAGAZZINO</option>
-      <option value="FINALE">✅ FINALE</option>
-    </select>
-  </div>
+  <!-- v35j — Tendina FASE rimossa: le 4 tessere sopra sono cliccabili come filtro toggle -->
 
   <!-- FILTER BAR -->
   <div id="fltBar" style="display:none">
@@ -1746,7 +1736,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35i</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35j</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
