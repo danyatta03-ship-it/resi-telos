@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import mapboxgl from "mapbox-gl";
+import mapboxgl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { Player } from "./player.js";
 import { BuildingsCache } from "./world.js";
 import { connect } from "./net.js";
@@ -8,13 +9,9 @@ import { Effects } from "./effects.js";
 import { setupUI, KILLSTREAKS } from "./ui.js";
 import { Sfx } from "./audio.js";
 
-const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 const SERVER_URL = (typeof window !== "undefined" && window.__SERVER_URL__) || import.meta.env.VITE_SERVER_URL || "ws://localhost:2567";
-if (!TOKEN) {
-  document.body.innerHTML = "<h2 style='color:#fff;padding:20px;font-family:sans-serif'>Manca VITE_MAPBOX_TOKEN in client/.env</h2>";
-  throw new Error("missing token");
-}
-mapboxgl.accessToken = TOKEN;
+// MapLibre + OpenFreeMap: no token, no signup.
+const STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
 const CITIES = [
   { name: "Milano",    lng: 9.19,     lat: 45.4642 },
@@ -32,7 +29,7 @@ let playerName = "player";
 const sfx = new Sfx();
 
 const map = new mapboxgl.Map({
-  container: "map", style: "mapbox://styles/mapbox/dark-v11",
+  container: "map", style: STYLE_URL,
   center: [CITIES[0].lng, CITIES[0].lat], zoom: 17, pitch: 75, bearing: 0, antialias: true,
 });
 
@@ -152,13 +149,14 @@ map.on("style.load", () => {
   const layers = map.getStyle().layers;
   const firstSymbol = layers.find(l => l.type === "symbol")?.id;
   if (!map.getLayer("3d-buildings")) {
+    // OpenFreeMap 'liberty' style uses source 'openmaptiles' with 'building' source layer.
     map.addLayer({
-      id: "3d-buildings", source: "composite", "source-layer": "building",
-      filter: ["==", "extrude", "true"], type: "fill-extrusion", minzoom: 15,
+      id: "3d-buildings", source: "openmaptiles", "source-layer": "building",
+      type: "fill-extrusion", minzoom: 14,
       paint: {
-        "fill-extrusion-color": ["interpolate", ["linear"], ["get", "height"], 0, "#6a7180", 60, "#9aa4b2"],
-        "fill-extrusion-height": ["get", "height"],
-        "fill-extrusion-base": ["get", "min_height"],
+        "fill-extrusion-color": ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], ["get", "height"], 5], 0, "#6a7180", 60, "#9aa4b2"],
+        "fill-extrusion-height": ["coalesce", ["get", "render_height"], ["get", "height"], 8],
+        "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0],
         "fill-extrusion-opacity": 0.95,
       },
     }, firstSymbol);

@@ -1,4 +1,4 @@
-import mapboxgl from "mapbox-gl";
+import mapboxgl from "maplibre-gl";
 
 export function setupUI({ onName, onCityPick, cities, onChat }) {
   const root = document.createElement("div");
@@ -81,7 +81,7 @@ export function setupUI({ onName, onCityPick, cities, onChat }) {
   };
 
   const minimap = new mapboxgl.Map({
-    container: "minimap", style: "mapbox://styles/mapbox/dark-v11",
+    container: "minimap", style: "https://tiles.openfreemap.org/styles/liberty",
     center: [cities[0].lng, cities[0].lat], zoom: 15.5, interactive: false, attributionControl: false,
   });
   const meMarkerEl = document.createElement("div");

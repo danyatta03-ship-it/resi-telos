@@ -7,9 +7,9 @@ Prototipo di FPS multiplayer browser-based (stile krunker.io) su citta reali. Ma
 ```bash
 cd game
 npm install
-cp client/.env.example client/.env    # metti VITE_MAPBOX_TOKEN
 npm run dev
 ```
+Zero token, zero registrazione — usa MapLibre GL + tile gratuiti da OpenFreeMap.
 
 Client su http://localhost:5173 • Server Colyseus su ws://localhost:2567.
 

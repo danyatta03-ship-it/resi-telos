@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import mapboxgl from "mapbox-gl";
+import mapboxgl from "maplibre-gl";
 
 // Build a Three.js mesh from Mapbox 'building' features currently loaded,
 // projected into local meters relative to `origin` (a LngLat).
@@ -12,7 +12,7 @@ export class BuildingsCache {
     this.raycaster = new THREE.Raycaster();
     this.down = new THREE.Vector3(0, -1, 0);
     this.dirty = true;
-    map.on("sourcedata", (e) => { if (e.sourceId === "composite") this.dirty = true; });
+    map.on("sourcedata", (e) => { if (e.sourceId === "openmaptiles") this.dirty = true; });
   }
 
   setOrigin(lngLat) { this.origin = lngLat; this.dirty = true; }
@@ -29,15 +29,15 @@ export class BuildingsCache {
 
   rebuildIfNeeded() {
     if (!this.dirty) return;
-    const feats = this.map.querySourceFeatures("composite", { sourceLayer: "building" });
+    const feats = this.map.querySourceFeatures("openmaptiles", { sourceLayer: "building" });
     const positions = [];
     const indices = [];
     let base = 0;
     const push = (x, y, z) => positions.push(x, y, z);
 
     for (const f of feats) {
-      const h = (f.properties?.height ?? f.properties?.render_height ?? 8);
-      const minH = f.properties?.min_height ?? 0;
+      const h = (f.properties?.render_height ?? f.properties?.height ?? 8);
+      const minH = f.properties?.render_min_height ?? f.properties?.min_height ?? 0;
       const geom = f.geometry;
       const polys = geom.type === "Polygon" ? [geom.coordinates] :
                     geom.type === "MultiPolygon" ? geom.coordinates : [];

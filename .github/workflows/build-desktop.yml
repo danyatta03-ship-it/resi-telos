@@ -13,33 +13,17 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Write client .env with Mapbox token
-        working-directory: game/client
-        shell: bash
-        run: |
-          if [ -z "${{ secrets.VITE_MAPBOX_TOKEN }}" ]; then
-            echo "::error::Missing repo secret VITE_MAPBOX_TOKEN. Add it in Settings -> Secrets and variables -> Actions."
-            exit 1
-          fi
-          echo "VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }}" > .env
-
-      - name: Install desktop deps (triggers client build + server install)
+        with: { node-version: "20" }
+      - name: Install desktop deps (builds client + installs server)
         working-directory: game/desktop
         run: npm install
-
       - name: Build Windows installer + portable
         working-directory: game/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run dist:win
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: CityShooter-Windows
           path: |
@@ -52,24 +36,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - name: Write client .env
-        working-directory: game/client
-        run: |
-          if [ -z "${{ secrets.VITE_MAPBOX_TOKEN }}" ]; then
-            echo "::error::Missing repo secret VITE_MAPBOX_TOKEN."
-            exit 1
-          fi
-          echo "VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }}" > .env
+        with: { node-version: "20" }
       - name: Install desktop deps
         working-directory: game/desktop
         run: npm install
       - name: Build AppImage
         working-directory: game/desktop
         run: npm run dist:linux
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: CityShooter-Linux
           path: game/desktop/dist/*.AppImage
@@ -80,17 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - name: Write client .env
-        working-directory: game/client
-        shell: bash
-        run: |
-          if [ -z "${{ secrets.VITE_MAPBOX_TOKEN }}" ]; then
-            echo "::error::Missing repo secret VITE_MAPBOX_TOKEN."
-            exit 1
-          fi
-          echo "VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }}" > .env
+        with: { node-version: "20" }
       - name: Install desktop deps
         working-directory: game/desktop
         run: npm install
@@ -99,8 +63,7 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npm run dist:mac
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: CityShooter-macOS
           path: game/desktop/dist/*.dmg

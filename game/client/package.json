@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "colyseus.js": "^0.15.24",
-    "mapbox-gl": "^3.7.0",
+    "maplibre-gl": "^4.7.1",
     "three": "^0.169.0"
   },
   "devDependencies": {
