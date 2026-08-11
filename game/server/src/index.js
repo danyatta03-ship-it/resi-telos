@@ -1,8 +1,10 @@
 import http from "http";
 import express from "express";
-import { Server, Room } from "colyseus";
-import { WebSocketTransport } from "@colyseus/ws-transport";
+import colyseus from "colyseus";
+import wsTransport from "@colyseus/ws-transport";
 import { GameState, Player, Pickup } from "./schema.js";
+const { Server, Room } = colyseus;
+const { WebSocketTransport } = wsTransport;
 
 const RESPAWN_MS = 2500;
 const WEAPONS = {
