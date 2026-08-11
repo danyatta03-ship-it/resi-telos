@@ -1071,7 +1071,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35j · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35k · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1736,7 +1736,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35j</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35k</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -5182,7 +5182,11 @@ function showResiByCycle(cicloName, fase){
       var _hasPh = !!(r.photoThumb||r.photo);
       var _thumb = r.photoThumb ? '<img src="'+xe(r.photoThumb)+'" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0">' :
                                    '<div style="width:44px;height:44px;border-radius:6px;background:#222;color:#555;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0" title="Nessuna foto">📷</div>';
-      body += '<div style="display:flex;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid #1a1a1a;cursor:pointer" '+
+      // v35k — attributo data-srch usato dalla search dedicata dentro il modale ciclo
+      var _srch = xe([r.cod, r.pre, r.forn, r.sogg, r.causale, r.stato, r.rma, r.note, r.ubic]
+                      .filter(function(x){return x!=null && x!=='';})
+                      .join(' ').toLowerCase());
+      body += '<div class="resiCycleRow" data-srch="'+_srch+'" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid #1a1a1a;cursor:pointer" '+
                 (_key?'onclick="document.getElementById(\'resiCycleBox\').remove();editRow(\''+xe(_key.replace(/\\\\|\'/g,""))+'\')"':'')+'>'+
                 _thumb +
                 '<div style="flex:1;min-width:0">'+
@@ -5194,6 +5198,17 @@ function showResiByCycle(cicloName, fase){
     });
   }
   var totPh = flt.filter(function(r){return r.photoThumb||r.photo;}).length;
+  // v35k — barra di ricerca dedicata al modale del ciclo: filtra le righe visibili
+  //         mantenendo attivo il filtro ciclo+fase.
+  var searchBar =
+    '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;background:#1a1a1a;border:1px solid '+color+'55;border-radius:10px;padding:6px 10px">'+
+      '<span style="font-size:14px;opacity:.7">🔎</span>'+
+      '<input id="resiCycleSrch" type="text" oninput="_resiCycleFilter(this.value)" '+
+        'placeholder="Cerca codice, cliente, RMA in '+xe(cicloName)+'…" '+
+        'style="flex:1;background:transparent;border:none;color:var(--txt);font-size:13px;outline:none;font-family:inherit">'+
+      '<button type="button" onclick="var i=document.getElementById(\'resiCycleSrch\');if(i){i.value=\'\';_resiCycleFilter(\'\');i.focus();}" '+
+        'style="background:none;border:none;color:#777;font-size:16px;cursor:pointer;padding:0 4px">✕</button>'+
+    '</div>';
   var html =
     '<div id="resiCycleBox" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1500;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto;-webkit-overflow-scrolling:touch">'+
       '<div style="background:#111;border:2px solid '+color+';border-radius:14px;padding:14px;width:100%;max-width:600px;margin:auto">'+
@@ -5201,11 +5216,35 @@ function showResiByCycle(cicloName, fase){
           '<div style="font-size:15px;font-weight:800;color:'+color+'">'+icon+' '+xe(cicloName)+' · '+xe(fase)+'</div>'+
           '<button onclick="document.getElementById(\'resiCycleBox\').remove()" style="background:none;border:none;color:#777;font-size:22px;cursor:pointer">✕</button>'+
         '</div>'+
-        '<div style="font-size:10px;color:#999;margin-bottom:10px">'+flt.length+' resi in '+xe(fase)+' · '+totPh+' con foto — click su una riga per aprire</div>'+
-        '<div style="max-height:74vh;overflow-y:auto;-webkit-overflow-scrolling:touch">'+body+'</div>'+
+        '<div id="resiCycleCount" style="font-size:10px;color:#999;margin-bottom:10px">'+flt.length+' resi in '+xe(fase)+' · '+totPh+' con foto — click su una riga per aprire</div>'+
+        searchBar +
+        '<div id="resiCycleList" style="max-height:66vh;overflow-y:auto;-webkit-overflow-scrolling:touch">'+body+'</div>'+
       '</div>'+
     '</div>';
   document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// v35k — Filtro in-place delle righe dentro il modale ciclo: nasconde/mostra
+//         via style.display senza rebuild della lista (mantiene lo scroll).
+function _resiCycleFilter(q){
+  var box = document.getElementById('resiCycleList'); if(!box) return;
+  var rows = box.querySelectorAll('.resiCycleRow');
+  var qq = String(q||'').trim().toLowerCase();
+  var shown = 0, tot = rows.length;
+  rows.forEach(function(el){
+    var s = el.getAttribute('data-srch')||'';
+    var visible = !qq || s.indexOf(qq)>=0;
+    el.style.display = visible ? '' : 'none';
+    if(visible) shown++;
+  });
+  var cnt = document.getElementById('resiCycleCount');
+  if(cnt){
+    if(qq){
+      cnt.innerHTML = shown+' su '+tot+' — filtro: <b style="color:#3B9FD4">'+xe(qq)+'</b>';
+    } else {
+      cnt.textContent = tot+' resi — click su una riga per aprire';
+    }
+  }
 }
 
 // ── LISTA PRELIEVO (v35 Task 3) ────────────────────────────────────────
