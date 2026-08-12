@@ -962,16 +962,22 @@ function chunkBounds(i, j) {
   return { s: toLat(z1), n: toLat(z0), w: toLng(x0), e: toLng(x1) };
 }
 
-async function overpassQuery(query) {
+async function overpassQuery(query, timeoutMs = 15000) {
   for (const url of OVERPASS_ENDPOINTS) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), timeoutMs);
     try {
-      const res = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(query) });
-      if (!res.ok) continue;
+      const res = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(query), signal: ac.signal });
+      clearTimeout(timer);
+      if (!res.ok) { console.warn("overpass status", url, res.status); continue; }
       const data = await res.json();
       return data.elements || [];
-    } catch (err) { console.warn("overpass fail", url, err); }
+    } catch (err) {
+      clearTimeout(timer);
+      console.warn("overpass fail", url, err.message || err);
+    }
   }
-  throw new Error("Overpass down");
+  throw new Error("Overpass down / timeout");
 }
 
 // Road widths in meters based on OSM highway type
@@ -1142,14 +1148,39 @@ function unloadChunk(i, j) {
   collidableMeshes = buildings.map(b => b.mesh);
 }
 
+// Rate-limited chunk loader: max 2 in-flight to keep Overpass happy
+let _inFlight = 0;
+const MAX_INFLIGHT = 2;
+const _queue = [];
+function enqueueChunk(i, j) {
+  const key = chunkKey(i, j);
+  if (chunks.has(key)) return;
+  if (_queue.some(([qi, qj]) => qi === i && qj === j)) return;
+  _queue.push([i, j]);
+  drainQueue();
+}
+function drainQueue() {
+  while (_inFlight < MAX_INFLIGHT && _queue.length) {
+    const [i, j] = _queue.shift();
+    if (chunks.has(chunkKey(i, j))) continue;
+    _inFlight++;
+    loadChunk(i, j).finally(() => { _inFlight--; drainQueue(); });
+  }
+}
+
 function updateChunkStreaming() {
   const { i: pi, j: pj } = chunkAt(player.pos.x, player.pos.z);
-  // Load close chunks (async, no await — fire and forget)
+  // Load close chunks in priority order (nearest first)
+  const toLoad = [];
   for (let di = -CHUNK_RADIUS; di <= CHUNK_RADIUS; di++) {
     for (let dj = -CHUNK_RADIUS; dj <= CHUNK_RADIUS; dj++) {
-      loadChunk(pi + di, pj + dj);
+      if (!chunks.has(chunkKey(pi + di, pj + dj))) {
+        toLoad.push([pi + di, pj + dj, di*di + dj*dj]);
+      }
     }
   }
+  toLoad.sort((a, b) => a[2] - b[2]);
+  for (const [i, j] of toLoad) enqueueChunk(i, j);
   // Unload far chunks
   const keep = CHUNK_RADIUS + 1;
   for (const key of [...chunks.keys()]) {
@@ -2190,33 +2221,47 @@ async function bootstrap() {
   loadBar.style.width = "10%";
   playBtn.disabled = true;
   playBtn.innerHTML = `<span class="plabel">Caricamento...</span>`;
-  // Random spawn anywhere in Rome bbox
   currentSpawn = randomRomeSpawn();
   originLat = currentSpawn.lat; originLng = currentSpawn.lng;
-  landmarkPos.set(0, 0, 0); // no landmark focus, just wherever we spawn
+  landmarkPos.set(0, 0, 0);
 
-  // Load the 3x3 chunks around origin (blocks until initial loaded)
   loadEl.textContent = `Scarico Roma da OpenStreetMap...`;
-  loadBar.style.width = "30%";
+  loadBar.style.width = "20%";
+
+  // Load ONLY the center chunk sync, unlock game as soon as it's ready.
+  // Then load the ring of 8 around it in background.
   try {
-    const initial = [];
-    for (let di = -1; di <= 1; di++)
-      for (let dj = -1; dj <= 1; dj++)
-        initial.push(loadChunk(di, dj));
-    await Promise.all(initial);
-    loadBar.style.width = "80%";
-    loadEl.textContent = `Costruisco strade e palazzi...`;
+    await Promise.race([
+      loadChunk(0, 0),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("Timeout centrale (20s)")), 20000)),
+    ]);
+    loadBar.style.width = "70%";
+    loadEl.textContent = `Chunk centrale ok. Genero bot e props...`;
     scatterProps();
     spawnBots();
     loadBar.style.width = "100%";
-    loadEl.textContent = `Pronti. Buon divertimento.`;
+    loadEl.textContent = `Pronti. Il resto della citta si carica mentre giochi.`;
     playBtn.disabled = false;
     playBtn.innerHTML = `<div><div class="plabel">Gioca ora</div><div class="ptxt">Entra in battaglia</div></div>`;
+
+    // Restore normal play click handler (may have been overwritten by retry path)
+    playBtn.onclick = playHandler;
+    // Fire-and-forget: load surrounding chunks in background (1 at a time to avoid rate limit)
+    (async () => {
+      const around = [];
+      for (let di = -1; di <= 1; di++)
+        for (let dj = -1; dj <= 1; dj++)
+          if (!(di === 0 && dj === 0)) around.push([di, dj]);
+      for (const [di, dj] of around) {
+        try { await loadChunk(di, dj); } catch {}
+      }
+    })();
   } catch (e) {
-    console.error(e);
-    loadEl.textContent = "OSM non raggiungibile. Riprova.";
+    console.error("bootstrap failed:", e);
+    loadEl.textContent = `OSM lento/non raggiungibile. Clicca RIPROVA.`;
     playBtn.disabled = false;
     playBtn.innerHTML = `<div><div class="plabel">Riprova</div></div>`;
+    playBtn.onclick = () => resetAndLoad();
   }
 }
 
@@ -2238,10 +2283,9 @@ function resetAndLoad() {
   bootstrap();
 }
 
-playBtn.onclick = () => {
+const playHandler = () => {
   player.name = (document.getElementById("nameInput").value.trim() || "player").slice(0, 14);
   switchWeapon(CLASSES[currentClass].weapon);
-  // Spawn at world origin (which is our random Rome point)
   player.pos.set(0, EYE, 0);
   player.yaw = Math.random() * Math.PI * 2;
   document.getElementById("clName").textContent = "ROMA";
@@ -2251,6 +2295,7 @@ playBtn.onclick = () => {
   document.getElementById("menu").style.display = "none";
   canvas3d.requestPointerLock();
 };
+playBtn.onclick = playHandler;
 
 document.getElementById("resetBtn").onclick = () => resetAndLoad();
 
