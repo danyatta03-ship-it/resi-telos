@@ -2561,51 +2561,84 @@ setInterval(() => {
 const playBtn = document.getElementById("playBtn");
 const loadEl = document.getElementById("loading");
 const loadBar = document.querySelector("#loadBar span");
+// ---- COLOSSEO ONLY: fixed spawn + 400m walkable radius, single OSM fetch ----
+const COLOSSEO = { lat: 41.8902, lng: 12.4922 };
+const WALK_RADIUS = 400; // meters
+
+async function fetchColosseoBbox(onProgress) {
+  const R = 6378137;
+  const cosLat = Math.cos(COLOSSEO.lat * Math.PI / 180);
+  const dLat = (WALK_RADIUS / R) * 180 / Math.PI;
+  const dLng = (WALK_RADIUS / (R * cosLat)) * 180 / Math.PI;
+  const s = COLOSSEO.lat - dLat, n = COLOSSEO.lat + dLat;
+  const w = COLOSSEO.lng - dLng, e = COLOSSEO.lng + dLng;
+  const q = `[out:json][timeout:25];
+    (way["building"](${s},${w},${n},${e});
+     way["highway"](${s},${w},${n},${e});
+     relation["building"](${s},${w},${n},${e}););
+    out body geom;`;
+  onProgress?.(`Scarico Colosseo + 400m di raggio...`, 30);
+  const els = await overpassQuery(q, 30000);
+  onProgress?.(`Costruisco ${els.length} elementi...`, 70);
+  return els;
+}
+
 let currentSpawn = null;
 async function bootstrap() {
-  loadEl.textContent = `Scelgo un posto casuale a Roma...`;
+  loadEl.textContent = `Preparo il Colosseo...`;
   loadBar.style.width = "10%";
   playBtn.disabled = true;
   playBtn.innerHTML = `<span class="plabel">Caricamento...</span>`;
-  // Random spawn anywhere in Rome bbox
-  currentSpawn = randomRomeSpawn();
-  originLat = currentSpawn.lat; originLng = currentSpawn.lng;
-  landmarkPos.set(0, 0, 0); // no landmark focus, just wherever we spawn
+  originLat = COLOSSEO.lat; originLng = COLOSSEO.lng;
+  currentSpawn = { ...COLOSSEO };
+  landmarkPos.set(0, 0, 0);
 
-  // Load the 3x3 chunks around origin (blocks until initial loaded)
-  loadEl.textContent = `Scarico Roma da OpenStreetMap...`;
-  loadBar.style.width = "30%";
   try {
-    const initial = [];
-    for (let di = -1; di <= 1; di++)
-      for (let dj = -1; dj <= 1; dj++)
-        initial.push(loadChunk(di, dj));
-    await Promise.all(initial);
-    loadBar.style.width = "80%";
-    loadEl.textContent = `Costruisco strade e palazzi...`;
+    const elements = await fetchColosseoBbox((msg, pct) => {
+      loadEl.textContent = msg; loadBar.style.width = pct + "%";
+    });
+    // Build buildings + roads directly from elements
+    for (const el of elements) {
+      if (el.tags?.building) {
+        const rings = [];
+        if (el.type === "way" && el.geometry) rings.push(el.geometry.map(g => projectLL(g.lon, g.lat)));
+        else if (el.type === "relation" && el.members) {
+          for (const m of el.members) if (m.role === "outer" && m.geometry) rings.push(m.geometry.map(g => projectLL(g.lon, g.lat)));
+        }
+        const h = osmHeight(el.tags);
+        for (const r of rings) buildBuildingMesh(r, h, pickFacadeTint());
+      } else if (el.tags?.highway && el.geometry) {
+        const width = ROAD_WIDTHS[el.tags.highway] || 5;
+        const pts = el.geometry.map(g => projectLL(g.lon, g.lat));
+        if (pts.length >= 2) {
+          const mesh = buildRoadMesh(pts, width, null);
+          if (mesh && el.tags.name) allRoads.push({ name: el.tags.name, points: pts, width });
+        }
+      }
+    }
+    addColosseum(0, 0);
     scatterProps();
+    collidableMeshes = buildings.map(b => b.mesh);
     spawnBots();
     loadBar.style.width = "100%";
-    loadEl.textContent = `Pronti. Buon divertimento.`;
+    loadEl.textContent = `Pronti. Colosseo + 400m attorno.`;
     playBtn.disabled = false;
     playBtn.innerHTML = `<div><div class="plabel">Gioca ora</div><div class="ptxt">Entra in battaglia</div></div>`;
+    playBtn.onclick = playHandler;
   } catch (e) {
-    console.error(e);
-    loadEl.textContent = "OSM non raggiungibile. Riprova.";
+    console.error("bootstrap failed:", e);
+    loadEl.textContent = `OSM lento/non raggiungibile. Clicca RIPROVA.`;
     playBtn.disabled = false;
     playBtn.innerHTML = `<div><div class="plabel">Riprova</div></div>`;
+    playBtn.onclick = () => resetAndLoad();
   }
 }
 
 function resetAndLoad() {
-  // Wipe all loaded chunks + bots
-  for (const key of [...chunks.keys()]) {
-    const [i, j] = key.split(',').map(Number);
-    unloadChunk(i, j);
-  }
   for (const b of buildings) { scene.remove(b.mesh); b.mesh.geometry?.dispose?.(); }
   buildings.length = 0;
   allRoads.length = 0;
+  chunks.clear();
   for (const b of bots) scene.remove(b.group);
   bots.length = 0;
   for (const [_,el] of tagCache) el.remove();
@@ -2615,20 +2648,22 @@ function resetAndLoad() {
   bootstrap();
 }
 
-playBtn.onclick = () => {
+const playHandler = () => {
   player.name = (document.getElementById("nameInput").value.trim() || "player").slice(0, 14);
   switchWeapon(CLASSES[currentClass].weapon);
-  // Spawn at world origin (which is our random Rome point)
-  player.pos.set(0, EYE, 0);
-  player.yaw = Math.random() * Math.PI * 2;
-  document.getElementById("clName").textContent = "ROMA";
-  document.getElementById("clFlag").innerHTML = "&#127470;&#127481; ITALY";
+  // Spawn at ~80m from Colosseum center, facing it
+  const spawnR = 80, a = Math.random() * Math.PI * 2;
+  const sx = Math.cos(a) * spawnR, sz = Math.sin(a) * spawnR;
+  player.pos.set(sx, EYE, sz);
+  player.yaw = Math.atan2(-sx, -sz);
+  document.getElementById("clName").textContent = "COLOSSEO";
+  document.getElementById("clFlag").innerHTML = "&#127470;&#127481; ROMA";
   document.getElementById("modeName").textContent = "Free For All";
   matchStart = Date.now();
   document.getElementById("menu").style.display = "none";
   canvas3d.requestPointerLock();
 };
-
+playBtn.onclick = playHandler;
 document.getElementById("resetBtn").onclick = () => resetAndLoad();
 
 buildMapCards();
@@ -2677,8 +2712,14 @@ function frame() {
     player.fovKick = Math.max(0, player.fovKick - dt * 20);
     if (mouseDown) shoot(now);
   }
-  // Stream chunks around player every ~half second
-  if (!frame._nextChunk || now > frame._nextChunk) { updateChunkStreaming(); frame._nextChunk = now + 500; }
+  // Hard walk boundary: clamp player inside 400m radius (Colosseum area)
+  const dxC = player.pos.x, dzC = player.pos.z;
+  const rC = Math.hypot(dxC, dzC);
+  if (rC > WALK_RADIUS) {
+    const s = WALK_RADIUS / rC;
+    player.pos.x *= s; player.pos.z *= s;
+    player.vel.x = 0; player.vel.z = 0;
+  }
   for (const b of bots) botUpdate(b, dt, now);
   updateFx(dt);
   camera.position.copy(player.pos);
