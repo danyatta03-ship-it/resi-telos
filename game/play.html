@@ -3208,99 +3208,305 @@ async function fetchColosseoBbox(onProgress) {
 
 let currentSpawn = null;
 async function bootstrap() {
-  loadEl.textContent = `Preparo il Colosseo...`;
-  loadBar.style.width = "10%";
+  loadEl.textContent = `Costruisco l'area del Colosseo...`;
+  loadBar.style.width = "20%";
   playBtn.disabled = true;
   playBtn.innerHTML = `<span class="plabel">Caricamento...</span>`;
   originLat = COLOSSEO.lat; originLng = COLOSSEO.lng;
   currentSpawn = { ...COLOSSEO };
   landmarkPos.set(0, 0, 0);
 
-  try {
-    const elements = await fetchColosseoBbox((msg, pct) => {
-      loadEl.textContent = msg; loadBar.style.width = pct + "%";
-    });
-    // Build buildings + roads directly from elements
-    for (const el of elements) {
-      if (el.tags?.building) {
-        const rings = [];
-        if (el.type === "way" && el.geometry) rings.push(el.geometry.map(g => projectLL(g.lon, g.lat)));
-        else if (el.type === "relation" && el.members) {
-          for (const m of el.members) if (m.role === "outer" && m.geometry) rings.push(m.geometry.map(g => projectLL(g.lon, g.lat)));
-        }
-        const h = osmHeight(el.tags);
-        for (const r of rings) buildBuildingMesh(r, h, pickFacadeTint());
-      } else if (el.tags?.highway && el.geometry) {
-        const width = ROAD_WIDTHS[el.tags.highway] || 5;
-        const pts = el.geometry.map(g => projectLL(g.lon, g.lat));
-        if (pts.length >= 2) {
-          const mesh = buildRoadMesh(pts, width, null);
-          if (mesh && el.tags.name) allRoads.push({ name: el.tags.name, points: pts, width });
-        }
-      }
-    }
-    addColosseum(0, 0);
-    scatterProps();
-    collidableMeshes = buildings.map(b => b.mesh);
-    spawnBots();
-    loadBar.style.width = "100%";
-    loadEl.textContent = `Pronti. Colosseo + 400m attorno.`;
-    playBtn.disabled = false;
-    playBtn.innerHTML = `<div><div class="plabel">Gioca ora</div><div class="ptxt">Entra in battaglia</div></div>`;
-    playBtn.onclick = playHandler;
-  } catch (e) {
-    console.warn("Overpass fail, using synthetic Colosseo fallback:", e);
-    loadEl.textContent = `OSM non raggiungibile. Uso mappa procedurale locale.`;
-    loadBar.style.width = "60%";
-    buildSyntheticColosseumArea();
-    addColosseum(0, 0);
-    scatterProps();
-    collidableMeshes = buildings.map(b => b.mesh);
-    spawnBots();
-    loadBar.style.width = "100%";
-    loadEl.textContent = `Pronti (mappa procedurale, senza OSM).`;
-    playBtn.disabled = false;
-    playBtn.innerHTML = `<div><div class="plabel">Gioca ora</div><div class="ptxt">Entra in battaglia</div></div>`;
-    playBtn.onclick = playHandler;
-  }
+  // Hand-designed real Rome layout — instant, no network
+  buildRomaColosseoArea();
+  loadBar.style.width = "50%";
+  addColosseum(0, 0);
+  loadBar.style.width = "70%";
+  scatterProps();
+  addForoRomanoRuins();
+  addParkedCars();
+  loadBar.style.width = "90%";
+  collidableMeshes = buildings.map(b => b.mesh);
+  spawnBots();
+  loadBar.style.width = "100%";
+  loadEl.textContent = `Pronti. Colosseo, Foro Romano, Arco di Costantino.`;
+  playBtn.disabled = false;
+  playBtn.innerHTML = `<div><div class="plabel">Gioca ora</div><div class="ptxt">Entra in battaglia</div></div>`;
+  playBtn.onclick = playHandler;
 }
 
-// Hardcoded Colosseum area: rough streets + building blocks, plays instantly if OSM is down
-function buildSyntheticColosseumArea() {
-  // Streets: [name, [[x,z],[x,z],...], width]
+// ======================================================================
+// REAL ROMA COLOSSEO AREA — hand-designed street network + palazzi italiani
+// Coordinate system: X = East (positive), Z = South (positive), Y = up
+// Colosseum at origin (0,0). Approximate 1 unit = 1 meter.
+// ======================================================================
+function buildRomaColosseoArea() {
+  // ===== REAL STREETS (approximated from OSM layout of Colosseum area) =====
+  // Names + polyline geometry + width in meters
   const streets = [
-    ["Via dei Fori Imperiali",     [[-140,-60],[-380,-320]], 22],
-    ["Via di San Gregorio",         [[30,120],[60,400]], 18],
-    ["Via Labicana",                [[130,-60],[400,-20]], 16],
-    ["Via San Giovanni in Laterano",[[220,-30],[400,60]], 15],
-    ["Via Celio Vibenna",           [[80,90],[300,320]], 14],
-    ["Via del Colosseo",            [[-120,110],[-380,180]], 12],
-    ["Piazza del Colosseo (N)",     [[-140,-40],[140,-70]], 20],
-    ["Piazza del Colosseo (S)",     [[-100,110],[140,120]], 20],
+    // Piazza del Colosseo — ring around the monument (approximated as octagonal)
+    ["Piazza del Colosseo", [
+      [-135,  0], [-115,-70], [-60,-115], [ 60,-115],
+      [ 115,-70], [ 135,  0], [ 115, 70], [ 60, 115],
+      [-60, 115], [-115, 70], [-135, 0],
+    ], 14],
+
+    // Via dei Fori Imperiali — wide grand avenue going NW toward Piazza Venezia
+    ["Via dei Fori Imperiali", [[-135, -30], [-220, -110], [-330, -220]], 28],
+    // Via Sacra — parallel to Fori Imperiali, going W into forum
+    ["Via Sacra", [[-140, 10], [-220, -20], [-330, -60]], 8],
+
+    // Via di San Gregorio — going S along Palatino/Celio
+    ["Via di San Gregorio", [[60, 110], [80, 250], [110, 400]], 22],
+    // Via Celio Vibenna — going E from Piazza toward Terme di Traiano
+    ["Via Celio Vibenna", [[130, 40], [280, 100], [400, 130]], 14],
+
+    // Via Labicana — going ENE
+    ["Via Labicana", [[135, -30], [280, -80], [400, -100]], 18],
+    // Via del Colosseo — going NW toward Suburra
+    ["Via del Colosseo", [[-135, 30], [-250, 30], [-380, 60]], 10],
+
+    // Via degli Annibaldi — going N toward Colle Oppio
+    ["Via degli Annibaldi", [[-50, -115], [-80, -220], [-100, -350]], 10],
+    // Via Nicola Salvi — E of Colle Oppio
+    ["Via Nicola Salvi", [[40, -115], [70, -220], [90, -340]], 10],
+
+    // Via San Giovanni in Laterano — E going toward San Clemente
+    ["Via S. Giovanni in Laterano", [[210, -30], [340, 20], [420, 60]], 14],
+    // Piazza Ss. Giovanni e Paolo (short link)
+    ["Clivo di Scauro", [[130, 130], [180, 220], [220, 320]], 8],
   ];
   for (const [name, pts, width] of streets) {
     const mesh = buildRoadMesh(pts, width, null);
     if (mesh) allRoads.push({ name, points: pts, width });
   }
-  // Building blocks: random rectangles in "safe" zones (avoiding Colosseum center + streets)
-  const excluded = (x, z) => Math.hypot(x, z) < 105; // avoid Colosseum
-  for (let i = 0; i < 40; i++) {
-    // Pick a random angle + radius from center
-    const ang = Math.random() * Math.PI * 2;
-    const r = 130 + Math.random() * 230;
-    const cx = Math.cos(ang) * r, cz = Math.sin(ang) * r;
-    if (excluded(cx, cz)) continue;
-    const w = 8 + Math.random() * 18;
-    const d = 8 + Math.random() * 18;
-    const h = 12 + Math.random() * 25; // Roman buildings ~4-8 floors
-    const rot = Math.random() * Math.PI;
-    // Rotated rectangle -> corners
+
+  // ===== BUILDING BLOCKS =====
+  // Positioned in specific real-world quadrants (not random)
+  // Format: [cx, cz, width, depth, height, rotDeg, styleHint]
+  const blocks = [
+    // North of Colosseum, along Via degli Annibaldi & Via Nicola Salvi (Colle Oppio side)
+    [-90, -170, 40, 24, 22, 0],
+    [-90, -220, 40, 24, 25, 0],
+    [-90, -280, 40, 24, 20, 0],
+    [ 0, -170, 32, 24, 24, 0],
+    [ 0, -220, 32, 24, 22, 0],
+    [ 0, -280, 32, 24, 20, 0],
+    [ 90, -170, 40, 24, 24, 0],
+    [ 90, -220, 40, 24, 22, 0],
+
+    // East along Via Labicana / San Giovanni in Laterano
+    [ 260, -50, 46, 26, 22, 15],
+    [ 260, -110, 46, 26, 20, 15],
+    [ 360, -80, 46, 26, 26, 15],
+    [ 320, 60, 50, 30, 24, 20],
+    [ 380, 100, 46, 26, 22, 20],
+
+    // SE along Via Celio Vibenna
+    [ 230, 160, 42, 26, 20, 30],
+    [ 330, 200, 42, 26, 22, 30],
+    [ 260, 260, 40, 26, 24, 25],
+
+    // South along Via di San Gregorio (Palatino side, sparser)
+    [ 140, 200, 30, 24, 20, 90],
+    [ 130, 280, 30, 24, 18, 90],
+    [ 160, 380, 34, 26, 22, 85],
+
+    // West / SW — Palatino hill area (few buildings, mostly park)
+    [-180, 240, 34, 28, 18, 45],
+    [-260, 290, 32, 26, 16, 40],
+
+    // NW — Foro Romano / Fori Imperiali area buildings (mostly museums/palazzi)
+    [-240, -70, 46, 30, 20, 30],
+    [-330, -140, 42, 28, 18, 30],
+    [-390, -220, 40, 28, 22, 30],
+    [-320, -350, 46, 30, 26, 15],
+    [-200, -380, 40, 28, 22, 5],
+  ];
+
+  for (const [cx, cz, w, d, h, rotDeg] of blocks) {
+    const rot = rotDeg * Math.PI / 180;
     const c = Math.cos(rot), s = Math.sin(rot);
-    const corners = [
-      [-w/2, -d/2], [w/2, -d/2], [w/2, d/2], [-w/2, d/2]
-    ].map(([x, z]) => [cx + x*c - z*s, cz + x*s + z*c]);
+    const corners = [[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]]
+      .map(([x, z]) => [cx + x*c - z*s, cz + x*s + z*c]);
     corners.push(corners[0]);
     buildBuildingMesh(corners, h, pickFacadeTint());
+  }
+}
+
+// ======================================================================
+// FORO ROMANO RUINS — columns cluster + partial walls + temple base NW of Colosseum
+// ======================================================================
+function addForoRomanoRuins() {
+  const stoneTex = makeTravertineStoneTexture();
+  const stoneMat = new THREE.MeshLambertMaterial({ map: stoneTex });
+  const marbleMat = new THREE.MeshLambertMaterial({ map: stoneTex, color: 0xe0d0b8 });
+
+  // Foro cluster centered at (-280, -160), sized ~120x80m
+  const fx = -280, fz = -160;
+
+  // Temple of Venus and Roma podium (large rectangular base)
+  const podium = new THREE.Mesh(
+    new THREE.BoxGeometry(80, 3, 40),
+    stoneMat
+  );
+  podium.position.set(fx, 1.5, fz);
+  scene.add(podium);
+  buildings.push({ mesh: podium, min: new THREE.Vector3(fx-40, 0, fz-20), max: new THREE.Vector3(fx+40, 3, fz+20) });
+
+  // Rows of standing columns on the podium (like the surviving Corinthian columns)
+  const colGeo = new THREE.CylinderGeometry(1.2, 1.4, 14, 12);
+  const colMat = marbleMat;
+  const colInst = new THREE.InstancedMesh(colGeo, colMat, 24);
+  const capGeo = new THREE.BoxGeometry(3, 1.2, 3);
+  const capMat = stoneMat;
+  const capInst = new THREE.InstancedMesh(capGeo, capMat, 24);
+  const dummy = new THREE.Object3D();
+  let ci = 0;
+  const layoutCols = [
+    // 2 rows of columns along the long axis
+    ...Array.from({length: 8}, (_, i) => [fx - 35 + i * 10, fz - 12]),
+    ...Array.from({length: 8}, (_, i) => [fx - 35 + i * 10, fz + 12]),
+    // short axis ends
+    ...Array.from({length: 3}, (_, i) => [fx - 40, fz - 8 + i * 8]),
+    ...Array.from({length: 3}, (_, i) => [fx + 40, fz - 8 + i * 8]),
+  ];
+  for (const [x, z] of layoutCols) {
+    // Slight height variation (some columns broken)
+    const height = 12 + Math.random() * 4;
+    dummy.position.set(x, 3 + height/2, z);
+    dummy.scale.set(1, height / 14, 1);
+    dummy.updateMatrix();
+    colInst.setMatrixAt(ci, dummy.matrix);
+    // Capital
+    if (Math.random() > 0.3) {
+      dummy.position.set(x, 3 + height + 0.6, z);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      capInst.setMatrixAt(ci, dummy.matrix);
+    } else {
+      // Missing capital (broken)
+      dummy.position.set(x, -100, z);
+      dummy.updateMatrix();
+      capInst.setMatrixAt(ci, dummy.matrix);
+    }
+    ci++;
+    if (ci >= 24) break;
+  }
+  colInst.count = ci; capInst.count = ci;
+  colInst.instanceMatrix.needsUpdate = true;
+  capInst.instanceMatrix.needsUpdate = true;
+  scene.add(colInst); scene.add(capInst);
+
+  // Broken/fallen column drums scattered on ground
+  const drumGeo = new THREE.CylinderGeometry(1.3, 1.3, 2, 10);
+  for (let i = 0; i < 12; i++) {
+    const drum = new THREE.Mesh(drumGeo, marbleMat);
+    const dx = fx + (Math.random() - 0.5) * 90;
+    const dz = fz + (Math.random() - 0.5) * 50;
+    drum.position.set(dx, 1, dz);
+    drum.rotation.set(
+      Math.random() * 0.3,
+      Math.random() * Math.PI,
+      Math.PI / 2 + (Math.random() - 0.5) * 0.6
+    );
+    scene.add(drum);
+  }
+
+  // Partial standing walls (ruined brick)
+  const brickMat = new THREE.MeshLambertMaterial({ color: 0xa07050 });
+  for (let i = 0; i < 4; i++) {
+    const wallW = 20 + Math.random() * 15;
+    const wallH = 6 + Math.random() * 8;
+    const wall = new THREE.Mesh(
+      new THREE.BoxGeometry(wallW, wallH, 1.5),
+      brickMat
+    );
+    const wx = fx + (Math.random() - 0.5) * 90;
+    const wz = fz - 30 + Math.random() * 15;
+    wall.position.set(wx, wallH/2, wz);
+    wall.rotation.y = Math.random() * Math.PI;
+    scene.add(wall);
+    buildings.push({ mesh: wall, min: new THREE.Vector3(wx-wallW/2, 0, wz-1), max: new THREE.Vector3(wx+wallW/2, wallH, wz+1) });
+  }
+}
+
+// ======================================================================
+// PARKED CARS — simple boxes with wheels, scattered along streets
+// ======================================================================
+function makeCar(x, z, rotY, color) {
+  const grp = new THREE.Group();
+  // Body
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 0.7, 4.2),
+    new THREE.MeshLambertMaterial({ color })
+  );
+  body.position.y = 0.6;
+  // Roof/greenhouse
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(1.7, 0.55, 2.4),
+    new THREE.MeshLambertMaterial({ color })
+  );
+  roof.position.set(0, 1.2, -0.2);
+  // Windshield (dark)
+  const windshield = new THREE.Mesh(
+    new THREE.BoxGeometry(1.75, 0.45, 0.1),
+    new THREE.MeshLambertMaterial({ color: 0x1a2028 })
+  );
+  windshield.position.set(0, 1.15, 1.0);
+  windshield.rotation.x = -0.5;
+  const backWindow = windshield.clone();
+  backWindow.position.z = -1.4;
+  backWindow.rotation.x = 0.5;
+  // Wheels
+  const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.28, 12);
+  const wheelMat = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+  for (const [wx, wz] of [[-0.85, 1.4], [0.85, 1.4], [-0.85, -1.4], [0.85, -1.4]]) {
+    const w = new THREE.Mesh(wheelGeo, wheelMat);
+    w.rotation.z = Math.PI / 2;
+    w.position.set(wx, 0.35, wz);
+    grp.add(w);
+  }
+  // Headlights
+  const hlL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.05), new THREE.MeshBasicMaterial({ color: 0xffeecc }));
+  hlL.position.set(-0.55, 0.6, 2.1);
+  const hlR = hlL.clone(); hlR.position.x = 0.55;
+  // Taillights
+  const tlL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.05), new THREE.MeshBasicMaterial({ color: 0x992222 }));
+  tlL.position.set(-0.55, 0.6, -2.1);
+  const tlR = tlL.clone(); tlR.position.x = 0.55;
+  grp.add(body, roof, windshield, backWindow, hlL, hlR, tlL, tlR);
+  grp.position.set(x, 0, z);
+  grp.rotation.y = rotY;
+  scene.add(grp);
+  buildings.push({
+    mesh: grp,
+    min: new THREE.Vector3(x - 1.5, 0, z - 2.5),
+    max: new THREE.Vector3(x + 1.5, 1.5, z + 2.5),
+  });
+  return grp;
+}
+
+function addParkedCars() {
+  const colors = [0x8a8a8a, 0xffffff, 0x1a1a1a, 0x8a3020, 0x2040a0, 0x304a30, 0xaa6018, 0xf0f0f0, 0x606060];
+  // Parking spots along the main streets (list of positions + rotations)
+  const spots = [
+    // Via Labicana (parallel to street going ENE)
+    [175, -60, 0.35], [200, -75, 0.35], [225, -90, 0.35],
+    // Via San Gregorio (parallel going S)
+    [80, 160, Math.PI/2 + 0.12], [90, 200, Math.PI/2 + 0.12], [95, 240, Math.PI/2 + 0.12],
+    // Via Celio Vibenna
+    [180, 90, 0.4], [220, 105, 0.4], [255, 125, 0.4],
+    // Via del Colosseo
+    [-190, 20, 0.05], [-230, 25, 0.05], [-280, 32, 0.05],
+    // Via degli Annibaldi
+    [-65, -180, Math.PI/2 + 0.1], [-70, -240, Math.PI/2 + 0.1], [-80, -300, Math.PI/2 + 0.1],
+    // Via Nicola Salvi
+    [55, -180, Math.PI/2 + 0.15], [65, -240, Math.PI/2 + 0.15], [75, -300, Math.PI/2 + 0.15],
+    // Via dei Fori Imperiali
+    [-175, -70, -Math.PI/4], [-215, -115, -Math.PI/4], [-260, -160, -Math.PI/4],
+  ];
+  for (const [x, z, rot] of spots) {
+    makeCar(x, z, rot, colors[Math.floor(Math.random() * colors.length)]);
   }
 }
 
