@@ -70,98 +70,104 @@
   .tag .bar { width:70px; height:4px; background:rgba(0,0,0,.7); border-radius:2px; margin:2px auto 0; overflow:hidden; }
   .tag .bar span { display:block; height:100%; background:linear-gradient(90deg,#4ade80,#84e070); transition:width .15s; }
 
-  /* -------- MENU (concept art clone) -------- */
+  /* -------- MENU (clean flexbox layout) -------- */
   #menu { position:fixed; inset:0; z-index:10; display:flex; flex-direction:column;
     background: linear-gradient(180deg, #060814 0%, #0a1020 40%, #100a06 100%); overflow:hidden; }
   #hero { position:absolute; inset:0; z-index:0; }
   #hero canvas { width:100%; height:100%; display:block; }
-  #hero::after { content:""; position:absolute; inset:0;
-    background: linear-gradient(180deg, rgba(6,8,20,.4) 0%, rgba(6,8,20,.1) 30%, rgba(6,8,20,.5) 70%, rgba(6,8,20,.98) 100%); }
+  #hero::after { content:""; position:absolute; inset:0; pointer-events:none;
+    background: linear-gradient(180deg, rgba(6,8,20,.35) 0%, rgba(6,8,20,.05) 25%, rgba(6,8,20,.55) 65%, rgba(6,8,20,.98) 100%); }
 
   /* Top bar */
-  #topBar { position:relative; z-index:2; display:flex; justify-content:space-between; align-items:flex-start; padding:26px 34px; }
+  #topBar { position:relative; z-index:2; display:flex; justify-content:space-between; align-items:center; padding:24px 40px 0 40px; flex-shrink:0; }
   #logo { display:flex; align-items:center; gap:16px; }
-  #logo .ico { width:52px; height:52px; border:2.5px solid #fff; border-radius:50%; position:relative; }
+  #logo .ico { width:48px; height:48px; border:2.5px solid #fff; border-radius:50%; position:relative; flex-shrink:0; }
   #logo .ico::before, #logo .ico::after { content:""; position:absolute; background:#fff; }
-  #logo .ico::before { top:50%; left:6px; right:6px; height:2px; transform:translateY(-1px); }
-  #logo .ico::after { left:50%; top:6px; bottom:6px; width:2px; transform:translateX(-1px); }
-  #logo .ico > span { position:absolute; inset:8px; border:1.5px solid #fff; border-radius:50%; }
-  #logo .txt h1 { margin:0; font:900 48px/1 "Rajdhani","Oswald",system-ui; letter-spacing:6px; color:#fff;
-    text-shadow: 0 4px 30px rgba(0,0,0,.8); }
-  #logo .txt .sub { color:#ffb01d; font:600 13px system-ui; letter-spacing:4px; margin-top:2px; text-transform:uppercase; }
-  #logo .txt .sub2 { color:#c0c0c0; font:600 11px system-ui; letter-spacing:3px; margin-top:8px; text-transform:uppercase; opacity:.85; }
+  #logo .ico::before { top:50%; left:5px; right:5px; height:2px; transform:translateY(-1px); }
+  #logo .ico::after { left:50%; top:5px; bottom:5px; width:2px; transform:translateX(-1px); }
+  #logo .ico > span { position:absolute; inset:7px; border:1.5px solid #fff; border-radius:50%; }
+  #logo .txt h1 { margin:0; font:900 40px/1 "Rajdhani","Oswald",system-ui; letter-spacing:5px; color:#fff; text-shadow: 0 4px 30px rgba(0,0,0,.8); }
+  #logo .txt .sub { color:#ffb01d; font:600 11px system-ui; letter-spacing:4px; margin-top:2px; text-transform:uppercase; }
+  #logo .txt .sub2 { color:#c0c0c0; font:600 10px system-ui; letter-spacing:3px; margin-top:4px; text-transform:uppercase; opacity:.85; }
 
   #playersOnline { background:rgba(10,15,25,.85); border:1px solid rgba(255,180,29,.2);
-    padding:10px 18px; border-radius:6px; display:flex; align-items:center; gap:10px; backdrop-filter:blur(8px); }
+    padding:8px 16px; border-radius:6px; display:flex; align-items:center; gap:10px; backdrop-filter:blur(8px); }
   #playersOnline .lbl { font:600 10px system-ui; letter-spacing:2px; color:#9db; text-transform:uppercase; }
-  #playersOnline .cnt { font:800 22px "Rajdhani",system-ui; color:#fff; letter-spacing:-.5px; }
+  #playersOnline .cnt { font:800 20px "Rajdhani",system-ui; color:#fff; letter-spacing:-.5px; }
   #playersOnline .pulse { width:8px; height:8px; border-radius:50%; background:#4ade80; box-shadow:0 0 12px #4ade80; animation:pulse 1.5s infinite; }
   @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
 
-  /* City preview label in center */
-  #cityPreview { position:absolute; left:34px; bottom:220px; z-index:2; }
-  #cityPreview .name { font:800 30px "Rajdhani",system-ui; letter-spacing:4px; color:#fff; text-shadow: 0 4px 20px rgba(0,0,0,.8); }
-  #cityPreview .flag { color:#ffb01d; font:600 12px system-ui; letter-spacing:5px; margin-top:2px; text-transform:uppercase; }
+  /* Middle spacer (hero-visible area) with city preview */
+  #midSpacer { flex:1; position:relative; z-index:2; display:flex; align-items:flex-end; padding:0 40px 0 40px; pointer-events:none; }
+  #cityPreview .name { font:800 42px/1 "Rajdhani",system-ui; letter-spacing:5px; color:#fff; text-shadow: 0 4px 20px rgba(0,0,0,.85); }
+  #cityPreview .flag { color:#ffb01d; font:600 12px system-ui; letter-spacing:5px; margin-top:6px; text-transform:uppercase; }
 
-  /* Main content area (below hero, layered) */
-  #main { position:relative; z-index:2; flex:1; display:grid; grid-template-columns: 1fr 1.2fr 1fr; gap:24px;
-    padding:0 34px 24px 34px; align-items:end; }
+  /* Main content area: 3-column grid */
+  #main { position:relative; z-index:2; display:grid; grid-template-columns: 300px 1fr 320px; gap:20px;
+    padding:20px 40px 0 40px; align-items:stretch; flex-shrink:0; }
 
-  .panel { background:rgba(10,15,25,.82); border:1px solid rgba(255,180,29,.15); border-radius:8px;
-    padding:20px 22px; backdrop-filter:blur(10px); box-shadow: 0 10px 40px rgba(0,0,0,.5); }
-  .panel h3 { margin:0 0 16px; font:700 13px system-ui; letter-spacing:3px; color:#fff; text-transform:uppercase; }
+  .panel { background:rgba(10,15,25,.85); border:1px solid rgba(255,180,29,.15); border-radius:8px;
+    padding:18px 20px; backdrop-filter:blur(10px); box-shadow: 0 10px 40px rgba(0,0,0,.5); display:flex; flex-direction:column; }
+  .panel h3 { margin:0 0 14px; font:700 13px system-ui; letter-spacing:3px; color:#fff; text-transform:uppercase; }
   .panel h3 .sub { display:block; color:#9db; font:400 11px system-ui; letter-spacing:1px; margin-top:2px; text-transform:none; }
 
   /* Feature list (left panel) */
   #features ul { list-style:none; padding:0; margin:0; }
-  #features li { display:flex; align-items:center; gap:14px; padding:8px 0; color:#c8c8d0; font:600 12px system-ui; letter-spacing:1px; text-transform:uppercase; }
-  #features li .fi { width:28px; height:28px; border-radius:50%; background:rgba(255,180,29,.15); border:1.5px solid #ffb01d;
-    display:flex; align-items:center; justify-content:center; color:#ffb01d; font:800 14px system-ui; flex-shrink:0; }
+  #features li { display:flex; align-items:center; gap:12px; padding:7px 0; color:#c8c8d0; font:600 11px system-ui; letter-spacing:1px; text-transform:uppercase; }
+  #features li .fi { width:24px; height:24px; border-radius:50%; background:rgba(255,180,29,.15); border:1.5px solid #ffb01d;
+    display:flex; align-items:center; justify-content:center; color:#ffb01d; font:800 12px system-ui; flex-shrink:0; }
 
-  /* Center bottom: name input + world map + play button */
-  #center h3 { text-align:center; margin-bottom:12px; }
-  #nameInput { width:100%; padding:11px 14px; border-radius:6px; border:1px solid rgba(255,180,29,.3);
+  /* Center: setup panel */
+  #center h3 { text-align:center; margin-bottom:10px; }
+  #nameInput { width:100%; padding:10px 14px; border-radius:6px; border:1px solid rgba(255,180,29,.3);
     background:rgba(0,0,0,.5); color:#fff; font:600 14px system-ui; box-sizing:border-box; outline:none; text-align:center; letter-spacing:1px; }
   #nameInput:focus { border-color:#ffb01d; }
-  #worldMap { margin-top:14px; height:130px; background:rgba(0,0,0,.4); border-radius:6px; overflow:hidden; position:relative; }
+  #worldMap { margin-top:10px; height:104px; background:rgba(0,0,0,.4); border-radius:6px; overflow:hidden; position:relative; }
   #worldMap canvas { width:100%; height:100%; display:block; }
-  #playBtn { margin-top:14px; width:100%; padding:16px; background:linear-gradient(180deg,#ffc848,#ffa028);
+  #playBtn { margin-top:10px; width:100%; padding:14px; background:linear-gradient(180deg,#ffc848,#ffa028);
     color:#1a0a02; border:none; border-radius:6px; font:800 15px "Rajdhani",system-ui; cursor:pointer; letter-spacing:4px; text-transform:uppercase;
     transition:all .15s; box-shadow: 0 8px 24px rgba(255,180,29,.4), inset 0 -3px 0 rgba(0,0,0,.15); display:flex; align-items:center; justify-content:center; gap:10px; }
   #playBtn:hover:not(:disabled) { transform:translateY(-2px); box-shadow: 0 12px 30px rgba(255,180,29,.6), inset 0 -3px 0 rgba(0,0,0,.15); }
   #playBtn:disabled { background:#4a3020; color:#8a7860; cursor:wait; box-shadow:none; }
-  #playBtn .ptxt { font-size:11px; font-weight:600; opacity:.7; letter-spacing:2px; }
+  #playBtn .ptxt { font-size:10px; font-weight:600; opacity:.7; letter-spacing:2px; }
   #playBtn .plabel { font-size:16px; }
+  #resetBtn { margin-top:8px; padding:9px; width:100%; background:rgba(255,180,29,0.08); color:#ffb01d;
+    border:1px solid rgba(255,180,29,0.3); border-radius:6px; font:600 10px system-ui; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:all .15s; }
+  #resetBtn:hover { background:rgba(255,180,29,0.18); border-color:#ffb01d; }
   #loading { color:#ffb01d; font:600 11px system-ui; margin-top:8px; text-align:center; letter-spacing:1px; text-transform:uppercase; min-height:14px; opacity:.85; }
   #loadBar { height:2px; background:rgba(255,180,29,.15); border-radius:1px; margin-top:6px; overflow:hidden; }
   #loadBar span { display:block; height:100%; width:0; background:linear-gradient(90deg,#ffa028,#ffe08a); transition:width .3s; }
 
-  /* Right panel: map carousel */
+  /* Right panel: map carousel with scroll */
+  #maps { max-height:100%; }
   #maps h3 .sub { color:#c0c0c0; }
-  .mapList { display:flex; flex-direction:column; gap:10px; }
-  .mapCard { display:flex; gap:12px; padding:10px; background:rgba(0,0,0,.4); border:1px solid rgba(255,180,29,.1);
-    border-radius:6px; cursor:pointer; transition:all .15s; align-items:center; }
+  .mapList { display:flex; flex-direction:column; gap:8px; overflow-y:auto; padding-right:4px; max-height:340px; }
+  .mapList::-webkit-scrollbar { width:6px; }
+  .mapList::-webkit-scrollbar-track { background:rgba(0,0,0,0.2); border-radius:3px; }
+  .mapList::-webkit-scrollbar-thumb { background:rgba(255,180,29,0.3); border-radius:3px; }
+  .mapCard { display:flex; gap:10px; padding:8px; background:rgba(0,0,0,.4); border:1px solid rgba(255,180,29,.1);
+    border-radius:6px; cursor:pointer; transition:all .15s; align-items:center; flex-shrink:0; }
   .mapCard:hover { background:rgba(255,180,29,.08); border-color:rgba(255,180,29,.4); }
   .mapCard.sel { background:rgba(255,180,29,.15); border-color:#ffb01d; }
-  .mapCard .thumb { width:72px; height:52px; border-radius:4px; overflow:hidden; flex-shrink:0; background:#111; }
+  .mapCard .thumb { width:60px; height:42px; border-radius:4px; overflow:hidden; flex-shrink:0; background:#111; }
   .mapCard .thumb canvas { width:100%; height:100%; display:block; }
-  .mapCard .info .n { font:700 13px system-ui; letter-spacing:2px; color:#fff; text-transform:uppercase; }
-  .mapCard .info .m { font:600 10px system-ui; letter-spacing:1px; color:#ffb01d; margin-top:2px; text-transform:uppercase; }
+  .mapCard .info .n { font:700 12px system-ui; letter-spacing:2px; color:#fff; text-transform:uppercase; }
+  .mapCard .info .m { font:600 9px system-ui; letter-spacing:1px; color:#ffb01d; margin-top:2px; text-transform:uppercase; }
 
-  /* Bottom: class selector row */
-  #classes { position:absolute; left:34px; right:34px; bottom:16px; z-index:3;
-    display:flex; gap:12px; align-items:center; }
-  #classes .title { font:700 11px system-ui; letter-spacing:3px; color:#fff; text-transform:uppercase; margin-right:16px; opacity:.7; }
+  /* Bottom: class selector row (in-flow, no overlap) */
+  #classes { position:relative; z-index:2; display:flex; gap:10px; align-items:center;
+    padding:20px 40px 24px 40px; flex-shrink:0; }
+  #classes .title { font:700 11px system-ui; letter-spacing:3px; color:#fff; text-transform:uppercase; margin-right:12px; opacity:.7; white-space:nowrap; }
   .classCard { flex:1; padding:12px 14px; background:rgba(10,15,25,.9); border:1px solid rgba(255,180,29,.15);
-    border-radius:6px; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:12px; min-width:0; }
+    border-radius:6px; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:12px; min-width:0; backdrop-filter:blur(10px); }
   .classCard:hover { background:rgba(255,180,29,.1); border-color:rgba(255,180,29,.5); }
   .classCard.sel { background:rgba(255,180,29,.2); border-color:#ffb01d; box-shadow:0 0 20px rgba(255,180,29,.3); }
-  .classCard .cIco { width:40px; height:40px; border-radius:4px; background:linear-gradient(135deg,#1a2035,#2a3045); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:22px; }
-  .classCard .cInfo .cn { font:700 13px system-ui; letter-spacing:2px; color:#fff; text-transform:uppercase; }
+  .classCard .cIco { width:38px; height:38px; border-radius:4px; background:linear-gradient(135deg,#1a2035,#2a3045); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:20px; }
+  .classCard .cInfo .cn { font:700 12px system-ui; letter-spacing:2px; color:#fff; text-transform:uppercase; }
   .classCard .cInfo .cw { font:600 10px system-ui; letter-spacing:1px; color:#ffb01d; margin-top:2px; text-transform:uppercase; }
 
-  @media (max-width:1200px) { #main { grid-template-columns: 1fr 1fr; } #maps { display:none; } }
-  @media (max-width:800px) { #main { grid-template-columns: 1fr; } #features { display:none; } #classes { flex-wrap:wrap; } }
+  @media (max-width:1250px) { #main { grid-template-columns: 1fr 1fr; } #maps { display:none; } }
+  @media (max-width:900px) { #main { grid-template-columns: 1fr; } #features { display:none; } #classes { flex-wrap:wrap; padding:12px 20px; } #logo .txt h1 { font-size:32px; } }
 </style>
 </head>
 <body>
@@ -188,9 +194,11 @@
     </div>
   </div>
 
-  <div id="cityPreview">
-    <div class="name" id="cpName">ROMA</div>
-    <div class="flag" id="cpFlag">&#127470;&#127481; ITALY</div>
+  <div id="midSpacer">
+    <div id="cityPreview">
+      <div class="name" id="cpName">ROMA</div>
+      <div class="flag" id="cpFlag">&#127470;&#127481; ITALY</div>
+    </div>
   </div>
 
   <div id="main">
@@ -214,6 +222,7 @@
       <button id="playBtn" disabled>
         <span class="plabel">Caricamento...</span>
       </button>
+      <button id="resetBtn" type="button">Nuova posizione random</button>
       <div id="loading">In attesa</div>
       <div id="loadBar"><span></span></div>
     </div>
@@ -1908,73 +1917,148 @@ function paintHero() {
   const c = document.querySelector("#hero canvas");
   const ctx = c.getContext("2d");
   const W = c.width = innerWidth, H = c.height = innerHeight;
-  const zone = ZONES[currentZoneKey];
-  // Sky gradient (dusk to dawn based on landmark type)
-  const skyPal = {
-    colosseum: ["#3a2015","#7a4028","#c8804a","#f0b070"],
-    stpeters:  ["#2a2540","#4a3a60","#8060a0","#c090d0"],
-    pantheon:  ["#1a1520","#402540","#803a60","#c05088"],
-    null:      ["#101520","#2a2540","#4a3040","#7a4028"],
-  };
-  const pal = skyPal[zone.landmark] || skyPal.null;
+  // ---- Sky gradient (Rome sunset) ----
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, pal[0]); g.addColorStop(0.4, pal[1]); g.addColorStop(0.75, pal[2]); g.addColorStop(1, pal[3]);
+  g.addColorStop(0.00, "#0a0f24");
+  g.addColorStop(0.22, "#2a1e38");
+  g.addColorStop(0.42, "#5a2f34");
+  g.addColorStop(0.58, "#9a4a2c");
+  g.addColorStop(0.72, "#d47030");
+  g.addColorStop(0.83, "#f0a050");
+  g.addColorStop(0.92, "#f8c078");
+  g.addColorStop(1.00, "#f8d090");
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // Sun glow
-  const sx = W * 0.72, sy = H * 0.4;
-  const sunG = ctx.createRadialGradient(sx, sy, 20, sx, sy, Math.max(W, H) * 0.5);
-  sunG.addColorStop(0, "rgba(255,220,140,0.7)"); sunG.addColorStop(1, "rgba(255,150,50,0)");
-  ctx.fillStyle = sunG; ctx.beginPath(); ctx.arc(sx, sy, Math.max(W,H)*0.5, 0, Math.PI*2); ctx.fill();
-  // Far city silhouette
-  ctx.fillStyle = "rgba(10,5,5,0.8)";
-  for (let x = 0; x < W; x += 30) {
-    const h = 30 + Math.sin(x*0.05)*20 + Math.random()*40;
-    ctx.fillRect(x, H*0.55 - h, 28, h);
+  // ---- Sun ----
+  const sx = W * 0.75, sy = H * 0.55;
+  const sunG = ctx.createRadialGradient(sx, sy, 20, sx, sy, W * 0.4);
+  sunG.addColorStop(0.0, "rgba(255,240,180,0.95)");
+  sunG.addColorStop(0.15, "rgba(255,200,120,0.7)");
+  sunG.addColorStop(0.4, "rgba(255,150,60,0.25)");
+  sunG.addColorStop(1.0, "rgba(255,120,40,0)");
+  ctx.fillStyle = sunG; ctx.beginPath(); ctx.arc(sx, sy, W*0.4, 0, Math.PI*2); ctx.fill();
+  // Sun disc
+  ctx.fillStyle = "rgba(255,235,170,0.85)"; ctx.beginPath(); ctx.arc(sx, sy, 40, 0, Math.PI*2); ctx.fill();
+  // ---- Distant hills ----
+  ctx.fillStyle = "rgba(30,15,25,0.75)";
+  ctx.beginPath();
+  ctx.moveTo(0, H*0.48);
+  for (let x = 0; x <= W; x += 40) {
+    ctx.lineTo(x, H*0.48 + Math.sin(x*0.008)*22 + Math.cos(x*0.02)*10);
   }
-  // Landmark silhouette
-  ctx.fillStyle = "rgba(0,0,0,0.92)";
-  const cxL = W * 0.5, cyL = H * 0.7;
-  if (zone.landmark === "colosseum") {
-    const cw = Math.min(W*0.5, 700), ch = 200;
-    ctx.beginPath();
-    ctx.ellipse(cxL, cyL, cw/2, ch/2, 0, Math.PI, 0);
-    ctx.rect(cxL - cw/2, cyL, cw, ch/2);
-    ctx.fill();
-    // Arches
-    ctx.fillStyle = "rgba(120,70,40,0.5)";
-    for (let i = 0; i < 22; i++) {
-      const t = (i + 0.5) / 22;
-      const ax = cxL - cw/2 + t * cw;
-      const ay = cyL - Math.sin((1-t)*Math.PI) * ch/2 + 30;
-      ctx.beginPath(); ctx.arc(ax, ay, 10, 0, Math.PI); ctx.fill();
-    }
-  } else if (zone.landmark === "stpeters") {
-    // Basilica: dome + lantern + nave
-    ctx.beginPath();
-    ctx.rect(cxL - 200, cyL - 40, 400, 200);
-    ctx.arc(cxL, cyL - 40, 80, Math.PI, 0);
-    ctx.fill();
-    ctx.fillRect(cxL - 8, cyL - 150, 16, 30);
-    // Colonnade
-    for (let x = -280; x < 280; x += 22) {
-      ctx.fillRect(cxL + x, cyL + 40, 6, 120);
-    }
-  } else if (zone.landmark === "pantheon") {
-    ctx.beginPath();
-    ctx.rect(cxL - 120, cyL - 20, 240, 180);
-    ctx.arc(cxL, cyL - 20, 90, Math.PI, 0);
-    ctx.fill();
-  } else {
-    // Generic city with towers
-    for (let x = cxL - 300; x < cxL + 300; x += 45) {
-      const h = 100 + Math.random() * 180;
-      ctx.fillRect(x, cyL - h + 100, 40, h + 100);
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+
+  // ---- Middle far city silhouette (thin buildings on horizon) ----
+  ctx.fillStyle = "rgba(15,8,15,0.88)";
+  const midY = H*0.52;
+  for (let x = 0; x < W; x += 22) {
+    const h = 20 + Math.sin(x*0.05)*15 + Math.random()*30;
+    ctx.fillRect(x, midY - h, 20, h + 60);
+  }
+
+  // ---- Landmark silhouettes above the panels (visible in sky area) ----
+  ctx.fillStyle = "rgba(0,0,0,0.94)";
+  const groundY = H * 0.52;
+
+  // 1) COLOSSEO (large, center-left) — main hero landmark
+  const colX = W * 0.30, colW = Math.min(W*0.22, 380), colH = colW * 0.40;
+  ctx.beginPath();
+  ctx.ellipse(colX, groundY - colH*0.5, colW/2, colH/2, 0, Math.PI, 0);
+  ctx.rect(colX - colW/2, groundY - colH*0.5, colW, colH*0.5 + 60);
+  ctx.fill();
+  // Arches on Colosseum
+  ctx.fillStyle = "rgba(140,80,45,0.55)";
+  for (let row = 0; row < 3; row++) {
+    for (let i = 0; i < 20; i++) {
+      const t = (i + 0.5) / 20;
+      const ax = colX - colW/2 * 0.95 + t * colW * 0.95;
+      const rowY = groundY - colH*0.5 + 20 + row * 25;
+      const ay = row === 0 ? rowY - Math.sin((1-Math.abs(t*2-1))*Math.PI/2) * colH*0.35 : rowY;
+      const arcR = colH*0.06 - row * 0.5;
+      ctx.beginPath(); ctx.arc(ax, ay, arcR, 0, Math.PI); ctx.fill();
     }
   }
-  // Foreground haze
-  const hg = ctx.createLinearGradient(0, H*0.6, 0, H);
-  hg.addColorStop(0, "rgba(0,0,0,0)"); hg.addColorStop(1, "rgba(0,0,0,0.7)");
-  ctx.fillStyle = hg; ctx.fillRect(0, H*0.6, W, H*0.4);
+
+  // 2) SAN PIETRO — dome center
+  ctx.fillStyle = "rgba(0,0,0,0.94)";
+  const spX = W * 0.55, spY = groundY;
+  ctx.beginPath();
+  ctx.rect(spX - 130, spY - 90, 260, 110);
+  ctx.arc(spX, spY - 90, 75, Math.PI, 0);
+  ctx.fill();
+  // Lantern
+  ctx.fillRect(spX - 10, spY - 200, 20, 35);
+  ctx.beginPath(); ctx.arc(spX, spY - 200, 10, 0, Math.PI*2); ctx.fill();
+  // Cross
+  ctx.fillRect(spX - 1.5, spY - 225, 3, 25);
+  ctx.fillRect(spX - 7, spY - 215, 14, 3);
+  // Colonnade
+  for (let s = -1; s <= 1; s += 2) {
+    for (let i = 0; i < 10; i++) {
+      const x = spX + s * (150 + i * 14);
+      if (Math.abs(x - spX) > W * 0.22) break;
+      ctx.fillRect(x, spY - 40, 5, 60);
+    }
+  }
+
+  // 3) PANTHEON (right of San Pietro)
+  const pX = W * 0.72;
+  ctx.beginPath();
+  ctx.rect(pX - 80, spY - 50, 160, 70);
+  ctx.arc(pX, spY - 50, 65, Math.PI, 0);
+  ctx.fill();
+  // Portico columns
+  for (let i = 0; i < 6; i++) {
+    ctx.fillRect(pX - 60 + i * 24, spY - 30, 4, 50);
+  }
+
+  // 4) CAMPANILE (bell tower, left)
+  const tX = W * 0.13;
+  ctx.fillRect(tX, spY - 110, 22, 130);
+  // Bell openings
+  ctx.fillStyle = "rgba(140,80,45,0.55)";
+  ctx.fillRect(tX + 4, spY - 90, 6, 10);
+  ctx.fillRect(tX + 12, spY - 90, 6, 10);
+  ctx.fillStyle = "rgba(0,0,0,0.94)";
+  // Pyramidal top
+  ctx.beginPath();
+  ctx.moveTo(tX - 5, spY - 110);
+  ctx.lineTo(tX + 11, spY - 135);
+  ctx.lineTo(tX + 27, spY - 110);
+  ctx.closePath(); ctx.fill();
+
+  // 5) EUR obelisk / modern (far right)
+  const eX = W * 0.88;
+  ctx.fillRect(eX, spY - 150, 55, 170);
+  ctx.beginPath(); ctx.arc(eX + 27, spY - 150, 28, Math.PI, 0); ctx.fill();
+
+  // 6) Some pine trees (typical Roman umbrella pines) scattered
+  for (const [px, ph] of [[W*0.05, 60], [W*0.22, 55], [W*0.44, 50], [W*0.83, 65], [W*0.98, 55]]) {
+    // Trunk
+    ctx.fillRect(px - 2, spY - ph + 30, 4, ph);
+    // Umbrella top
+    ctx.beginPath(); ctx.ellipse(px, spY - ph + 30, 24, 12, 0, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ---- Foreground darkening for panels area (below horizon) ----
+  const hg = ctx.createLinearGradient(0, H*0.68, 0, H);
+  hg.addColorStop(0, "rgba(6,8,20,0.3)");
+  hg.addColorStop(0.4, "rgba(6,8,20,0.7)");
+  hg.addColorStop(1, "rgba(6,8,20,0.98)");
+  ctx.fillStyle = hg; ctx.fillRect(0, H*0.68, W, H*0.32);
+
+  // Left side darkening for logo readability
+  const lg = ctx.createLinearGradient(0, 0, W*0.35, 0);
+  lg.addColorStop(0, "rgba(6,8,20,0.6)");
+  lg.addColorStop(1, "rgba(6,8,20,0)");
+  ctx.fillStyle = lg; ctx.fillRect(0, 0, W*0.35, H*0.4);
+
+  // Sparse dust particles floating
+  ctx.fillStyle = "rgba(255,220,180,0.4)";
+  for (let i = 0; i < 40; i++) {
+    ctx.beginPath();
+    ctx.arc(Math.random()*W, Math.random()*H*0.7, 0.5 + Math.random()*1.5, 0, Math.PI*2);
+    ctx.fill();
+  }
 }
 
 function paintMapThumb(canvas, zoneKey) {
@@ -2168,12 +2252,7 @@ playBtn.onclick = () => {
   canvas3d.requestPointerLock();
 };
 
-// "Nuova posizione" button in menu — resettata la partita in un nuovo punto random
-const resetBtnEl = document.createElement("button");
-resetBtnEl.textContent = "Nuova posizione random";
-resetBtnEl.style.cssText = "margin-top:8px; padding:10px; width:100%; background:rgba(255,180,29,0.15); color:#ffb01d; border:1px solid rgba(255,180,29,0.3); border-radius:6px; font:600 11px system-ui; letter-spacing:2px; text-transform:uppercase; cursor:pointer;";
-resetBtnEl.onclick = () => resetAndLoad();
-playBtn.parentNode.insertBefore(resetBtnEl, playBtn.nextSibling);
+document.getElementById("resetBtn").onclick = () => resetAndLoad();
 
 buildMapCards();
 paintHero();
