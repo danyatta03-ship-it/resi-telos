@@ -524,10 +524,29 @@ function pickFacadeTex() { return facadeTexPool[(Math.random() * facadeTexPool.l
 // Legacy compat (old code refers to these):
 const brickDiffuse = facadeTexPool[0];
 const brickBump = null;
+// High-res REAL PBR textures from Poly Haven (CC0, CORS-enabled CDN).
+// Fallback URLs are progressively lower-res / different sources.
 const travertineTex = loadTex([
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/travertine_01/travertine_01_diff_1k.jpg",
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/beige_wall_002/beige_wall_002_diff_1k.jpg",
   "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r169/examples/textures/planets/moon_1024.jpg",
-  "https://threejs.org/examples/textures/planets/moon_1024.jpg",
 ]);
+// Real Colosseum-style travertine (weathered honey stone) — used on the arch bays and inner walls
+const colosseumStoneTex = loadTex([
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/travertine_01/travertine_01_diff_2k.jpg",
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/travertine_01/travertine_01_diff_1k.jpg",
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/roman_ancient_stone/roman_ancient_stone_diff_1k.jpg",
+], (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
+// Real asphalt for roads
+const asphaltTex = loadTex([
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_diff_1k.jpg",
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_asphalt_01/aerial_asphalt_01_diff_1k.jpg",
+], (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
+// Real sidewalk (concrete slabs) for road sides
+const sidewalkTex = loadTex([
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_wall_007/concrete_wall_007_diff_1k.jpg",
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_asphalt_01/aerial_asphalt_01_diff_1k.jpg",
+], (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
 const facadeTints = [0xffffff, 0xf8f0e0, 0xffefd8, 0xf0e8d8, 0xffe8c8];
 function pickFacadeTint() { return facadeTints[(Math.random() * facadeTints.length) | 0]; }
 
@@ -1253,8 +1272,10 @@ function addColosseum(x=0, z=0) {
   ];
   const totalH = 46.65;
 
-  const stoneMat = new THREE.MeshLambertMaterial({ color: 0xc8a877 });
-  const shadowMat = new THREE.MeshLambertMaterial({ color: 0x8a6a48 });
+  // Use real high-res travertine photo texture (via clone-per-material to control repeat)
+  colosseumStoneTex.wrapS = colosseumStoneTex.wrapT = THREE.RepeatWrapping;
+  const stoneMat = new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0xd8b898 });
+  const shadowMat = new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0x8a6a48 });
 
   // Ruined section: real Colosseum lost outer wall on ~SE quadrant
   const ruined = (i, ti) => {
@@ -1480,16 +1501,13 @@ const ROAD_WIDTHS = {
   pedestrian: 5, footway: 3, path: 2, track: 3, cycleway: 2.5,
 };
 
-// Build a road strip mesh from a polyline of local (x,z) points
-function buildRoadMesh(points, width, chunk) {
-  if (points.length < 2) return null;
-  const positions = [];
-  const indices = [];
-  const uvs = [];
+// Build a road: main asphalt strip + 2 sidewalks + 2 curbs (each as separate mesh strip)
+// Uses real hi-res asphalt/concrete photo textures with per-instance UV repeat.
+function buildRoadStrip(points, halfW, y, tex, uPerMeter, colorTint = 0xffffff) {
+  const positions = [], indices = [], uvs = [];
   let uvY = 0;
   for (let i = 0; i < points.length; i++) {
     const [x, z] = points[i];
-    // Direction: average of prev/next segment
     let dx, dz;
     if (i === 0) { dx = points[1][0] - x; dz = points[1][1] - z; }
     else if (i === points.length - 1) { dx = x - points[i-1][0]; dz = z - points[i-1][1]; }
@@ -1500,15 +1518,13 @@ function buildRoadMesh(points, width, chunk) {
       dx = Math.cos(ang); dz = Math.sin(ang);
     }
     const len = Math.hypot(dx, dz) || 1;
-    // Perpendicular (rotated 90deg)
     const px = -dz / len, pz = dx / len;
-    const w = width / 2;
-    positions.push(x + px * w, 0.02, z + pz * w);
-    positions.push(x - px * w, 0.02, z - pz * w);
+    positions.push(x + px * halfW, y, z + pz * halfW);
+    positions.push(x - px * halfW, y, z - pz * halfW);
     uvs.push(0, uvY, 1, uvY);
     if (i > 0) {
       const segLen = Math.hypot(x - points[i-1][0], z - points[i-1][1]);
-      uvY += segLen / 6; // texture repeats every 6m
+      uvY += segLen * uPerMeter;
       const a = (i-1)*2, b = (i-1)*2+1, c = i*2, d = i*2+1;
       indices.push(a, c, b, b, c, d);
     }
@@ -1518,11 +1534,70 @@ function buildRoadMesh(points, width, chunk) {
   geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   geo.setIndex(indices);
   geo.computeVertexNormals();
-  const roadTex = makeRoadTexture(); // shared? per road? Use shared
-  const mat = new THREE.MeshLambertMaterial({ map: roadTex, color: 0x9a9a9a });
+  // UVs are already scaled per-vertex, so we share the texture globally (repeat=(1,1))
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  const mat = new THREE.MeshLambertMaterial({ map: tex, color: colorTint });
   const mesh = new THREE.Mesh(geo, mat);
   scene.add(mesh);
   return mesh;
+}
+// Offset a polyline sideways by `d` meters (positive = to the right of direction of travel)
+function offsetPolyline(points, d) {
+  const out = [];
+  for (let i = 0; i < points.length; i++) {
+    const [x, z] = points[i];
+    let dx, dz;
+    if (i === 0) { dx = points[1][0] - x; dz = points[1][1] - z; }
+    else if (i === points.length - 1) { dx = x - points[i-1][0]; dz = z - points[i-1][1]; }
+    else {
+      const a = Math.atan2(z - points[i-1][1], x - points[i-1][0]);
+      const b = Math.atan2(points[i+1][1] - z, points[i+1][0] - x);
+      const ang = (a + b) / 2;
+      dx = Math.cos(ang); dz = Math.sin(ang);
+    }
+    const len = Math.hypot(dx, dz) || 1;
+    const px = -dz / len, pz = dx / len;
+    out.push([x + px * d, z + pz * d]);
+  }
+  return out;
+}
+
+function buildRoadMesh(points, width, chunk) {
+  if (points.length < 2) return null;
+  const asphaltW = width * 0.7;
+  const sidewalkW = width * 0.14;
+  const curbW = 0.15;
+  // 1) Asphalt road (main)
+  const road = buildRoadStrip(points, asphaltW/2, 0.02, asphaltTex, 1/6, 0x808085);
+  // 2) Sidewalks (both sides) at slightly higher y
+  const sideOffset = asphaltW/2 + sidewalkW/2 + curbW;
+  const leftLine = offsetPolyline(points, sideOffset);
+  const rightLine = offsetPolyline(points, -sideOffset);
+  const sw1 = buildRoadStrip(leftLine, sidewalkW/2, 0.17, sidewalkTex, 1/2, 0xbdb8ae);
+  const sw2 = buildRoadStrip(rightLine, sidewalkW/2, 0.17, sidewalkTex, 1/2, 0xbdb8ae);
+  // 3) Curbs (thin dark strip between asphalt & sidewalk)
+  const curbOffsetL = asphaltW/2 + curbW/2;
+  const curbOffsetR = -(asphaltW/2 + curbW/2);
+  const curbLineL = offsetPolyline(points, curbOffsetL);
+  const curbLineR = offsetPolyline(points, curbOffsetR);
+  const cb1 = buildRoadStrip(curbLineL, curbW/2, 0.16, sidewalkTex, 1/1, 0x4a4a4a);
+  const cb2 = buildRoadStrip(curbLineR, curbW/2, 0.16, sidewalkTex, 1/1, 0x4a4a4a);
+  // 4) Center yellow dashed line (as a thin overlay strip on the asphalt)
+  const centerStrip = buildRoadStrip(points, 0.1, 0.025, makeCenterLineTexture(), 1/6, 0xffffff);
+  return road; // return the main mesh (for compat)
+}
+// Yellow dashed center-line texture (procedural, small)
+let _centerLineTex = null;
+function makeCenterLineTexture() {
+  if (_centerLineTex) return _centerLineTex;
+  const c = document.createElement("canvas"); c.width = 8; c.height = 64;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "rgba(0,0,0,0)"; ctx.fillRect(0, 0, 8, 64);
+  ctx.fillStyle = "#e8d040"; ctx.fillRect(0, 8, 8, 40); // dash
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  _centerLineTex = tex; return tex;
 }
 
 // Asphalt road texture (procedural, tiles along road)
