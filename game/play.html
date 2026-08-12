@@ -332,10 +332,19 @@ let currentClass = "assault";
 // ======================================================================
 // TEXTURES
 // ======================================================================
+// White 1x1 pixel placeholder so materials sampling this texture return WHITE (not black)
+// while the real image is still loading. Prevents black landscape / black colosseum during load.
+const _whitePixel = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 4;
+  const ctx = c.getContext("2d"); ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, 4, 4);
+  return c;
+})();
 function loadTex(urls, onLoad) {
   let i = 0;
-  const tex = new THREE.Texture();
+  const tex = new THREE.Texture(_whitePixel); // start with a white pixel — color modulation shows correctly
+  tex.needsUpdate = true;
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
   const tryNext = () => {
     if (i >= urls.length) { console.warn("texture failed:", urls[0]); return; }
     const url = urls[i++];
@@ -767,14 +776,14 @@ const roofTexture = makeRoofTexture();
 // SCENE (cinematic golden-hour Rome)
 // ======================================================================
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0xd4a870, 0.0028);
+scene.fog = new THREE.FogExp2(0xd2c8b8, 0.0018);
 const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.05, 1500);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.0;
 document.body.appendChild(renderer.domElement);
 addEventListener("resize", () => {
   camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
@@ -789,33 +798,33 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
-// ---- Sky sphere with painted Rome sunset ----
+// ---- Sky sphere: bright daytime Rome (hazy blue like the aerial photo) ----
 function makeSkyTexture() {
   const c = document.createElement("canvas");
   c.width = 2048; c.height = 1024;
   const ctx = c.getContext("2d");
   const g = ctx.createLinearGradient(0, 0, 0, 1024);
-  g.addColorStop(0.0, "#1a2540");
-  g.addColorStop(0.35, "#5a3a55");
-  g.addColorStop(0.55, "#c07044");
-  g.addColorStop(0.72, "#f0b070");
-  g.addColorStop(0.85, "#f8d090");
-  g.addColorStop(1.0, "#f8dcaa");
+  g.addColorStop(0.0, "#9ab8d4"); // deep clear blue at zenith
+  g.addColorStop(0.35, "#b6c8db");
+  g.addColorStop(0.55, "#d0d8dc"); // horizon haze
+  g.addColorStop(0.72, "#dcd4c4");
+  g.addColorStop(0.85, "#c8b6a0");
+  g.addColorStop(1.0, "#a8988a"); // slightly warm ground haze
   ctx.fillStyle = g; ctx.fillRect(0, 0, 2048, 1024);
-  // Sun disc (bloom will glow it)
-  const sunX = 2048*0.7, sunY = 1024*0.45;
-  const rg = ctx.createRadialGradient(sunX, sunY, 20, sunX, sunY, 260);
-  rg.addColorStop(0, "rgba(255,240,180,1)");
-  rg.addColorStop(0.3, "rgba(255,200,120,0.7)");
-  rg.addColorStop(1, "rgba(255,150,50,0)");
-  ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(sunX, sunY, 260, 0, Math.PI*2); ctx.fill();
-  // Sparse clouds
-  ctx.fillStyle = "rgba(255,230,190,0.35)";
-  for (let i = 0; i < 24; i++) {
-    const x = Math.random()*2048, y = 150 + Math.random()*350;
-    for (let j = 0; j < 6; j++) {
+  // Bright sun disc
+  const sunX = 2048*0.55, sunY = 1024*0.28;
+  const rg = ctx.createRadialGradient(sunX, sunY, 20, sunX, sunY, 220);
+  rg.addColorStop(0, "rgba(255,255,240,1)");
+  rg.addColorStop(0.25, "rgba(255,250,220,0.4)");
+  rg.addColorStop(1, "rgba(255,255,220,0)");
+  ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(sunX, sunY, 220, 0, Math.PI*2); ctx.fill();
+  // White fluffy clouds
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  for (let i = 0; i < 30; i++) {
+    const x = Math.random()*2048, y = 100 + Math.random()*400;
+    for (let j = 0; j < 8; j++) {
       ctx.beginPath();
-      ctx.ellipse(x + j*30, y + Math.sin(j)*8, 40 + Math.random()*30, 12 + Math.random()*8, 0, 0, Math.PI*2);
+      ctx.ellipse(x + j*35, y + Math.sin(j)*10, 45 + Math.random()*35, 14 + Math.random()*10, 0, 0, Math.PI*2);
       ctx.fill();
     }
   }
@@ -830,16 +839,16 @@ const skySphere = new THREE.Mesh(
 );
 scene.add(skySphere);
 
-// ---- Golden hour lighting ----
-const ambientLight = new THREE.HemisphereLight(0xffddaa, 0x3a2818, 0.5);
+// ---- Bright daytime Rome lighting (matches aerial photo) ----
+const ambientLight = new THREE.HemisphereLight(0xffffff, 0x8a7860, 1.1); // strong ambient so nothing is pitch-black
 scene.add(ambientLight);
-const sun = new THREE.DirectionalLight(0xffcc88, 1.8);
-sun.position.set(180, 220, -120); // low angle from behind (matches painted sun)
+const sun = new THREE.DirectionalLight(0xfff0d8, 1.6); // warm white afternoon sun
+sun.position.set(150, 280, 60); // high sun angle
 scene.add(sun);
-// Rim light from opposite side to add depth
-const rimLight = new THREE.DirectionalLight(0x6688ff, 0.35);
-rimLight.position.set(-120, 150, 100);
-scene.add(rimLight);
+// Fill from opposite side (sky bounce) so shadows are lifted
+const fillLight = new THREE.DirectionalLight(0xd8e4ff, 0.5);
+fillLight.position.set(-100, 200, -80);
+scene.add(fillLight);
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000),
   new THREE.MeshLambertMaterial({ map: groundDiffuse, color: 0x9a8a76 }));
@@ -1274,8 +1283,9 @@ function addColosseum(x=0, z=0) {
 
   // Use real high-res travertine photo texture (via clone-per-material to control repeat)
   colosseumStoneTex.wrapS = colosseumStoneTex.wrapT = THREE.RepeatWrapping;
-  const stoneMat = new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0xd8b898 });
-  const shadowMat = new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0x8a6a48 });
+  // Bright travertine gold — matches real Colosseum stone. Texture (if it loads) adds detail on top.
+  const stoneMat = new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0xd0a870 });
+  const shadowMat = new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0xa07c50 });
 
   // Ruined section: real Colosseum lost outer wall on ~SE quadrant
   const ruined = (i, ti) => {
@@ -1406,7 +1416,134 @@ function addColosseum(x=0, z=0) {
   crossBar.position.set(x - 20, 3, z + 5);
   scene.add(crossPost, crossBar);
 
+  // ---- Arco di Costantino: 21m tall triple triumphal arch, SW of Colosseum ----
+  addArcoDiCostantino(x - 130, z - 20, Math.PI / 6);
+
+  // ---- Meta Sudans stub (small fountain ruin base) ----
+  const meta = new THREE.Mesh(
+    new THREE.CylinderGeometry(4, 5, 6, 16),
+    new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0xa88860 })
+  );
+  meta.position.set(x - 100, 3, z + 10);
+  scene.add(meta);
+  buildings.push({ mesh: meta, min: new THREE.Vector3(x-105, 0, z+5), max: new THREE.Vector3(x-95, 6, z+15) });
+
   landmarkPos.set(x, totalH, z);
+}
+
+// Arco di Costantino: triple arch + attic with reliefs (21m tall, 25.7m wide)
+function addArcoDiCostantino(x = 0, z = 0, rotY = 0) {
+  const grp = new THREE.Group();
+  const W = 26, H = 21, D = 7.5;
+  const stoneMat = new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0xd0a870 });
+  const shadowMat = new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0xa07c50 });
+
+  // Build the main body as a single Shape with 3 arch holes
+  const shape = new THREE.Shape();
+  shape.moveTo(-W/2, 0);
+  shape.lineTo(W/2, 0);
+  shape.lineTo(W/2, H);
+  shape.lineTo(-W/2, H);
+  shape.closePath();
+
+  // Central arch: 6.5m wide, ~10m tall
+  const cAW = 6.5, cAH = 10;
+  const cHole = new THREE.Path();
+  cHole.moveTo(-cAW/2, 0);
+  cHole.lineTo(cAW/2, 0);
+  cHole.lineTo(cAW/2, cAH - cAW/2);
+  const N = 14;
+  for (let i = 1; i <= N; i++) {
+    const t = (i / N) * Math.PI;
+    cHole.lineTo(cAW/2 * Math.cos(t), (cAH - cAW/2) + (cAW/2) * Math.sin(t));
+  }
+  cHole.lineTo(-cAW/2, 0);
+  cHole.closePath();
+  shape.holes.push(cHole);
+
+  // Side arches: 3.5m wide, ~7m tall
+  const sAW = 3.5, sAH = 7;
+  for (const sx of [-8.5, 8.5]) {
+    const sHole = new THREE.Path();
+    sHole.moveTo(sx - sAW/2, 0);
+    sHole.lineTo(sx + sAW/2, 0);
+    sHole.lineTo(sx + sAW/2, sAH - sAW/2);
+    for (let i = 1; i <= N; i++) {
+      const t = (i / N) * Math.PI;
+      sHole.lineTo(sx + sAW/2 * Math.cos(t), (sAH - sAW/2) + (sAW/2) * Math.sin(t));
+    }
+    sHole.lineTo(sx - sAW/2, 0);
+    sHole.closePath();
+    shape.holes.push(sHole);
+  }
+
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: D, bevelEnabled: false });
+  geo.translate(0, 0, -D/2);
+  const body = new THREE.Mesh(geo, stoneMat);
+  grp.add(body);
+
+  // Cornice above arches
+  const cornice1 = new THREE.Mesh(new THREE.BoxGeometry(W + 1, 0.8, D + 0.6), shadowMat);
+  cornice1.position.y = 11.5;
+  grp.add(cornice1);
+  const cornice2 = new THREE.Mesh(new THREE.BoxGeometry(W + 1.4, 0.6, D + 1), shadowMat);
+  cornice2.position.y = H - 0.5;
+  grp.add(cornice2);
+  // Attic top cornice
+  const topCornice = new THREE.Mesh(new THREE.BoxGeometry(W + 2, 0.4, D + 1.4), shadowMat);
+  topCornice.position.y = H + 0.2;
+  grp.add(topCornice);
+
+  // 4 columns on front + 4 on back (protruding half-columns actually, but simplified as box pilasters)
+  for (let side = -1; side <= 1; side += 2) {
+    for (const cx of [-11, -5, 5, 11]) {
+      const col = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.5, 0.5, 10, 10),
+        new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0xd8b078 })
+      );
+      col.position.set(cx, 5.5, side * (D/2 + 0.5));
+      grp.add(col);
+      // Capital
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 1.2), shadowMat);
+      cap.position.set(cx, 10.8, side * (D/2 + 0.5));
+      grp.add(cap);
+      // Base
+      const bas = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.4, 1.2), shadowMat);
+      bas.position.set(cx, 0.2, side * (D/2 + 0.5));
+      grp.add(bas);
+    }
+  }
+
+  // Statue placeholders on top of columns (like the Dacian prisoners) — simple pillars
+  for (const cx of [-11, -5, 5, 11]) {
+    const statue = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.6, 0.7, 2.2, 8),
+      new THREE.MeshLambertMaterial({ color: 0xc0a880 })
+    );
+    statue.position.set(cx, H + 1.5, 0);
+    grp.add(statue);
+  }
+
+  // Inscription tablet (dark)
+  const inscription = new THREE.Mesh(new THREE.BoxGeometry(14, 3.5, 0.15),
+    new THREE.MeshLambertMaterial({ color: 0x2a1f14 }));
+  inscription.position.set(0, 15.5, D/2 + 0.1);
+  grp.add(inscription);
+  const inscription2 = inscription.clone(); inscription2.position.z = -D/2 - 0.1;
+  grp.add(inscription2);
+
+  grp.rotation.y = rotY;
+  grp.position.set(x, 0, z);
+  scene.add(grp);
+
+  // Add to collision buildings (rough bbox — rotation-safe using max extent)
+  const r = Math.max(W, D) / 2 + 2;
+  buildings.push({
+    mesh: body,
+    min: new THREE.Vector3(x - r, 0, z - r),
+    max: new THREE.Vector3(x + r, H + 2, z + r),
+  });
+  return grp;
 }
 function addStPeters(x=0,z=0) {
   travertineTex.repeat.set(6, 3);
@@ -2530,11 +2667,11 @@ function drawMinimap() {
 function updateCompass() {
   const el = document.getElementById("compass");
   const road = nearestRoadName();
-  const loaded = [...chunks.values()].filter(c => c.state === 'loaded').length;
+  const distC = Math.round(Math.hypot(player.pos.x, player.pos.z));
   if (road) {
     el.innerHTML = `&#x25CF; ${road}`;
   } else {
-    el.innerHTML = `Roma &bull; ${loaded} chunk`;
+    el.innerHTML = `&#x25CF; Colosseo &bull; ${distC}m`;
   }
 }
 function updateGrenCd(now) {
