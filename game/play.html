@@ -372,6 +372,165 @@ function makeGroundTexture() {
 }
 const groundDiffuse = makeGroundTexture();
 
+// ======================================================================
+// WEAPON TEXTURES (procedural canvas — metal / polymer / grip / glove)
+// ======================================================================
+function makeMetalTexture(base = "#2a2c32", scratch = 40) {
+  const c = document.createElement("canvas"); c.width = c.height = 256;
+  const ctx = c.getContext("2d");
+  // Base gradient (top light, bottom dark for barrel curvature fake)
+  const g = ctx.createLinearGradient(0, 0, 256, 0);
+  g.addColorStop(0, "#111216");
+  g.addColorStop(0.35, base);
+  g.addColorStop(0.65, base);
+  g.addColorStop(1, "#111216");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 256, 256);
+  // Fine noise
+  const img = ctx.getImageData(0, 0, 256, 256);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 18;
+    img.data[i]   = Math.max(0, Math.min(255, img.data[i]   + n));
+    img.data[i+1] = Math.max(0, Math.min(255, img.data[i+1] + n));
+    img.data[i+2] = Math.max(0, Math.min(255, img.data[i+2] + n));
+  }
+  ctx.putImageData(img, 0, 0);
+  // Scratches (fine lines)
+  for (let i = 0; i < scratch; i++) {
+    ctx.strokeStyle = `rgba(${180+Math.random()*40},${180+Math.random()*40},${190+Math.random()*40},${0.1+Math.random()*0.2})`;
+    ctx.lineWidth = 0.5 + Math.random();
+    ctx.beginPath();
+    const x = Math.random()*256, y = Math.random()*256;
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + (Math.random()-0.5)*40, y + (Math.random()-0.5)*10);
+    ctx.stroke();
+  }
+  // Wear spots (darker patches)
+  for (let i = 0; i < 8; i++) {
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath();
+    ctx.arc(Math.random()*256, Math.random()*256, 4 + Math.random()*10, 0, Math.PI*2);
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+function makeGripTexture() {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#0a0a0c"; ctx.fillRect(0, 0, 128, 128);
+  // Crosshatch pattern (diagonal grip lines)
+  ctx.strokeStyle = "rgba(255,255,255,0.06)";
+  ctx.lineWidth = 1;
+  for (let i = -128; i < 256; i += 6) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 128, 128); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(i, 128); ctx.lineTo(i + 128, 0); ctx.stroke();
+  }
+  // Small dot texture (rubber grip pips)
+  ctx.fillStyle = "rgba(255,255,255,0.10)";
+  for (let y = 6; y < 128; y += 8) {
+    for (let x = (y/8)%2===0 ? 6 : 10; x < 128; x += 8) {
+      ctx.beginPath(); ctx.arc(x, y, 1.4, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(2, 2);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+function makePolymerTexture() {
+  const c = document.createElement("canvas"); c.width = c.height = 256;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#141519"; ctx.fillRect(0, 0, 256, 256);
+  // Subtle noise
+  const img = ctx.getImageData(0, 0, 256, 256);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 10;
+    img.data[i]   = Math.max(0, Math.min(255, 20 + n));
+    img.data[i+1] = Math.max(0, Math.min(255, 21 + n));
+    img.data[i+2] = Math.max(0, Math.min(255, 25 + n));
+  }
+  ctx.putImageData(img, 0, 0);
+  // Panel seams
+  ctx.strokeStyle = "rgba(0,0,0,0.5)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(256, 60); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 180); ctx.lineTo(256, 180); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(128, 0); ctx.lineTo(128, 256); ctx.stroke();
+  // Screws
+  ctx.fillStyle = "#3a3a40";
+  for (const [x, y] of [[40,40],[210,40],[40,210],[210,210]]) {
+    ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.7)"; ctx.beginPath(); ctx.moveTo(x-2,y); ctx.lineTo(x+2,y); ctx.stroke();
+  }
+  // Scratches
+  for (let i = 0; i < 12; i++) {
+    ctx.strokeStyle = `rgba(200,200,210,${0.05+Math.random()*0.1})`;
+    ctx.beginPath();
+    ctx.moveTo(Math.random()*256, Math.random()*256);
+    ctx.lineTo(Math.random()*256, Math.random()*256);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+function makeTacticalGloveTexture() {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#0e0f14"; ctx.fillRect(0, 0, 128, 128);
+  // Woven fabric noise
+  const img = ctx.getImageData(0, 0, 128, 128);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 20;
+    img.data[i]   = Math.max(0, Math.min(255, 15 + n));
+    img.data[i+1] = Math.max(0, Math.min(255, 16 + n));
+    img.data[i+2] = Math.max(0, Math.min(255, 20 + n));
+  }
+  ctx.putImageData(img, 0, 0);
+  // Weave lines
+  ctx.strokeStyle = "rgba(0,0,0,0.4)";
+  for (let i = 0; i < 128; i += 3) {
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(128, i); ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(255,255,255,0.05)";
+  for (let i = 0; i < 128; i += 3) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 128); ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(3, 3);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+function makeWoodTexture() {
+  const c = document.createElement("canvas"); c.width = 256; c.height = 128;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#3a2416"; ctx.fillRect(0, 0, 256, 128);
+  // Wood grain
+  for (let y = 0; y < 128; y += 2) {
+    const shade = 30 + Math.sin(y * 0.25) * 15 + Math.random() * 8;
+    ctx.fillStyle = `rgb(${shade+30},${shade+15},${shade})`;
+    ctx.fillRect(0, y, 256, 2);
+  }
+  // Dark knots
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.beginPath(); ctx.ellipse(Math.random()*256, Math.random()*128, 6, 3, 0, 0, Math.PI*2); ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const texMetal   = makeMetalTexture("#2a2c32", 60);
+const texMetalDark = makeMetalTexture("#181a20", 40);
+const texGrip    = makeGripTexture();
+const texPolymer = makePolymerTexture();
+const texGlove   = makeTacticalGloveTexture();
+const texWood    = makeWoodTexture();
+
 function makeRoofTexture() {
   const c = document.createElement("canvas"); c.width = c.height = 256;
   const ctx = c.getContext("2d");
@@ -867,17 +1026,93 @@ const ammo = {};
 for (const k of Object.keys(WEAPONS)) ammo[k] = WEAPONS[k].mag;
 let lastShotAt = 0, reloadingUntil = 0;
 const vmScene = new THREE.Scene();
-vmScene.add(new THREE.AmbientLight(0xffffff, 0.9));
-const vmDL = new THREE.DirectionalLight(0xffffff, 0.5); vmDL.position.set(1,2,1); vmScene.add(vmDL);
+vmScene.add(new THREE.AmbientLight(0xffddaa, 0.5));
+const vmDL = new THREE.DirectionalLight(0xffffff, 1.0); vmDL.position.set(2, 3, 2); vmScene.add(vmDL);
+const vmRim = new THREE.DirectionalLight(0x88aaff, 0.4); vmRim.position.set(-2, 1, -1); vmScene.add(vmRim);
 const vmCam = new THREE.PerspectiveCamera(55, 1, 0.01, 5);
 const gun = new THREE.Group();
-gun.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.35), new THREE.MeshLambertMaterial({color:0x1a1a1a})),{position:new THREE.Vector3(0.15,-0.14,-0.32)}));
-const gunBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.28,10), new THREE.MeshLambertMaterial({color:0x333333}));
-gunBarrel.rotation.x = Math.PI/2; gunBarrel.position.set(0.15,-0.11,-0.5); gun.add(gunBarrel);
-const gunGrip = new THREE.Mesh(new THREE.BoxGeometry(0.06,0.14,0.08), new THREE.MeshLambertMaterial({color:0x0f0f0f}));
-gunGrip.position.set(0.15,-0.22,-0.2); gun.add(gunGrip);
-const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.06,0.35,8), new THREE.MeshLambertMaterial({color:0xd7b48f}));
-arm.rotation.z = Math.PI/2.2; arm.position.set(0.05,-0.22,-0.15); gun.add(arm);
+
+// Body (upper receiver) — dark polymer
+const gunBody = new THREE.Mesh(
+  new THREE.BoxGeometry(0.10, 0.10, 0.35),
+  new THREE.MeshPhongMaterial({ map: texPolymer, shininess: 60, specular: 0x333333 })
+);
+gunBody.position.set(0.15, -0.14, -0.32);
+gun.add(gunBody);
+
+// Barrel — steel with scratches
+const gunBarrel = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.02, 0.02, 0.28, 12),
+  new THREE.MeshPhongMaterial({ map: texMetalDark, shininess: 140, specular: 0xaaaaaa })
+);
+gunBarrel.rotation.x = Math.PI/2;
+gunBarrel.position.set(0.15, -0.11, -0.5);
+gun.add(gunBarrel);
+
+// Muzzle brake (small ring at tip)
+const muzzleBrake = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.028, 0.028, 0.04, 8),
+  new THREE.MeshPhongMaterial({ map: texMetal, shininess: 100 })
+);
+muzzleBrake.rotation.x = Math.PI/2;
+muzzleBrake.position.set(0.15, -0.11, -0.66);
+gun.add(muzzleBrake);
+
+// Grip — rubber crosshatch
+const gunGrip = new THREE.Mesh(
+  new THREE.BoxGeometry(0.06, 0.14, 0.08),
+  new THREE.MeshLambertMaterial({ map: texGrip })
+);
+gunGrip.position.set(0.15, -0.22, -0.2);
+gun.add(gunGrip);
+
+// Magazine (curved-ish rectangle) — polymer
+const gunMag = new THREE.Mesh(
+  new THREE.BoxGeometry(0.05, 0.14, 0.05),
+  new THREE.MeshPhongMaterial({ map: texPolymer, shininess: 30 })
+);
+gunMag.position.set(0.15, -0.22, -0.32);
+gun.add(gunMag);
+
+// Foregrip/rail — metal
+const gunRail = new THREE.Mesh(
+  new THREE.BoxGeometry(0.08, 0.04, 0.18),
+  new THREE.MeshPhongMaterial({ map: texMetal, shininess: 80 })
+);
+gunRail.position.set(0.15, -0.15, -0.45);
+gun.add(gunRail);
+
+// Red-dot sight on top
+const sightBase = new THREE.Mesh(
+  new THREE.BoxGeometry(0.04, 0.03, 0.09),
+  new THREE.MeshPhongMaterial({ map: texMetal, shininess: 100 })
+);
+sightBase.position.set(0.15, -0.06, -0.32);
+gun.add(sightBase);
+const sightLens = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.02, 0.02, 0.03, 12),
+  new THREE.MeshBasicMaterial({ color: 0xff2222 })
+);
+sightLens.rotation.x = Math.PI/2;
+sightLens.position.set(0.15, -0.045, -0.32);
+gun.add(sightLens);
+
+// Arm — tactical glove/sleeve (no more bare skin)
+const arm = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.05, 0.06, 0.35, 10),
+  new THREE.MeshLambertMaterial({ map: texGlove, color: 0x1a1c22 })
+);
+arm.rotation.z = Math.PI/2.2;
+arm.position.set(0.05, -0.22, -0.15);
+gun.add(arm);
+// Glove/fist wrapping around grip
+const fist = new THREE.Mesh(
+  new THREE.BoxGeometry(0.09, 0.10, 0.11),
+  new THREE.MeshLambertMaterial({ map: texGlove, color: 0x0e0f14 })
+);
+fist.position.set(0.16, -0.19, -0.19);
+gun.add(fist);
+
 const flash = new THREE.Mesh(new THREE.PlaneGeometry(0.2,0.2), new THREE.MeshBasicMaterial({color:0xfff1a8,transparent:true,opacity:0,depthWrite:false}));
 flash.position.set(0.15,-0.10,-0.66); gun.add(flash);
 const muzzleLight = new THREE.PointLight(0xffcc66, 0, 3, 2);
@@ -994,8 +1229,10 @@ const matBoot     = new THREE.MeshLambertMaterial({ color: 0x0a0a0c });
 const matGlove    = new THREE.MeshLambertMaterial({ color: 0x131418 });
 const matHelmet   = new THREE.MeshLambertMaterial({ color: 0x14161c });
 const matVisor    = new THREE.MeshPhongMaterial({ color: 0x1a2436, shininess:120, specular: 0x9ac8ff, transparent: true, opacity: 0.75 });
-const matRifle    = new THREE.MeshLambertMaterial({ color: 0x0f0f13 });
-const matBarrel   = new THREE.MeshLambertMaterial({ color: 0x2a2a30 });
+const matRifle    = new THREE.MeshPhongMaterial({ map: texPolymer, shininess: 50, specular: 0x333333 });
+const matBarrel   = new THREE.MeshPhongMaterial({ map: texMetalDark, shininess: 130, specular: 0xaaaaaa });
+const matGrip     = new THREE.MeshLambertMaterial({ map: texGrip });
+const matMag      = new THREE.MeshPhongMaterial({ map: texPolymer, shininess: 30 });
 const matBadgeRed = new THREE.MeshBasicMaterial({ color: 0xff3030 });
 const matBadgeBlue= new THREE.MeshBasicMaterial({ color: 0x3080ff });
 
@@ -1121,15 +1358,24 @@ function makeRiotCop(team) {
   rifleBarrel.rotation.x = Math.PI/2;
   rifleBarrel.position.set(0, 0.30, 0.62);
   grp.add(rifleBarrel);
-  const rifleMag = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18, 0.06), matRifle);
+  const rifleMag = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18, 0.06), matMag);
   rifleMag.position.set(0, 0.15, 0.32);
   grp.add(rifleMag);
   const rifleStock = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.10, 0.20), matRifle);
   rifleStock.position.set(0, 0.28, 0.00);
   grp.add(rifleStock);
-  const rifleSight = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.07, 0.10), matRifle);
+  const rifleGrip = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.06), matGrip);
+  rifleGrip.position.set(0, 0.18, 0.20);
+  grp.add(rifleGrip);
+  const rifleSight = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.07, 0.10), matBarrel);
   rifleSight.position.set(0, 0.38, 0.28);
   grp.add(rifleSight);
+  // Small red dot on sight (for bloom pop)
+  const rifleDot = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.02, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff3030 }));
+  rifleDot.rotation.x = Math.PI/2;
+  rifleDot.position.set(0, 0.40, 0.28);
+  grp.add(rifleDot);
 
   return grp;
 }
