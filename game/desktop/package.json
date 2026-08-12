@@ -23,7 +23,7 @@
       { "from": "../play.html", "to": "game/play.html" }
     ],
     "win": {
-      "target": ["nsis", "portable"],
+      "target": ["portable"],
       "artifactName": "REALWAR-Roma-${version}-${arch}.${ext}"
     },
     "nsis": {
