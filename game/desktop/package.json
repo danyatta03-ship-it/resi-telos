@@ -1,40 +1,31 @@
 {
-  "name": "city-shooter-desktop",
-  "version": "0.1.0",
+  "name": "realwar-desktop",
+  "version": "0.2.0",
   "private": true,
-  "description": "City Shooter — desktop wrapper (Electron)",
+  "description": "REALWAR Roma — desktop build",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "pack": "electron-builder --dir",
-    "dist:win": "electron-builder --win --x64",
-    "dist:mac": "electron-builder --mac",
-    "dist:linux": "electron-builder --linux"
+    "dist:win": "electron-builder --win --x64"
   },
   "devDependencies": {
     "electron": "^32.2.0",
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.cityshooter.app",
-    "productName": "City Shooter",
+    "appId": "com.realwar.roma",
+    "productName": "REALWAR Roma",
     "asar": true,
     "files": [
-      "main.js",
-      "preload.js",
-      "!node_modules/electron/**",
-      "!node_modules/electron-builder/**"
+      "main.js"
     ],
     "extraResources": [
-      { "from": "../client/dist", "to": "client" },
-      { "from": "../server",      "to": "server", "filter": ["**/*", "!node_modules/.cache"] }
+      { "from": "../play.html", "to": "game/play.html" }
     ],
     "win": {
       "target": ["nsis", "portable"],
-      "artifactName": "CityShooter-${version}-${arch}.${ext}"
+      "artifactName": "REALWAR-Roma-${version}-${arch}.${ext}"
     },
-    "mac": { "target": ["dmg"] },
-    "linux": { "target": ["AppImage"] },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,

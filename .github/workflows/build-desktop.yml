@@ -1,63 +1,35 @@
-name: Build City Shooter Desktop
+name: Build REALWAR Roma Desktop
 
 on:
   workflow_dispatch: {}
   push:
     branches: [claude/browser-game-real-cities-6vugme, main]
     paths:
-      - "game/**"
+      - "game/play.html"
+      - "game/desktop/**"
       - ".github/workflows/build-desktop.yml"
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            name: Windows
-            build: dist:win
-            pattern: "game/desktop/dist/*.exe"
-          - os: ubuntu-latest
-            name: Linux
-            build: dist:linux
-            pattern: "game/desktop/dist/*.AppImage"
-          - os: macos-latest
-            name: macOS
-            build: dist:mac
-            pattern: "game/desktop/dist/*.dmg"
-    runs-on: ${{ matrix.os }}
+  build-windows:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Install client deps
-        working-directory: game/client
-        run: npm install --no-audit --no-fund
-
-      - name: Build client bundle
-        working-directory: game/client
-        run: npm run build
-
-      - name: Install server deps
-        working-directory: game/server
-        run: npm install --no-audit --no-fund --omit=dev
-
-      - name: Install desktop deps (Electron + builder)
+      - name: Install desktop deps
         working-directory: game/desktop
         run: npm install --no-audit --no-fund
 
-      - name: Build ${{ matrix.name }} artifact
+      - name: Build Windows exe
         working-directory: game/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npm run ${{ matrix.build }}
+        run: npm run dist:win
 
-      - name: List dist/ (debug)
+      - name: List dist/
         if: always()
         working-directory: game/desktop
         shell: bash
@@ -66,6 +38,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: CityShooter-${{ matrix.name }}
-          path: ${{ matrix.pattern }}
+          name: REALWAR-Roma-Windows
+          path: |
+            game/desktop/dist/*.exe
           if-no-files-found: error

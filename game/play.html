@@ -300,6 +300,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
 import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 // ======================================================================
 // ZONES (real cities)
@@ -553,9 +554,47 @@ const colosseumStoneTex = loadTex([
 ], (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
 // Real asphalt for roads
 const asphaltTex = loadTex([
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_02/asphalt_02_diff_2k.jpg",
   "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_diff_1k.jpg",
-  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_asphalt_01/aerial_asphalt_01_diff_1k.jpg",
 ], (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
+function loadLinTex(urls) {
+  const t = loadTex(urls, (tt) => { tt.colorSpace = THREE.NoColorSpace; });
+  t.colorSpace = THREE.NoColorSpace;
+  return t;
+}
+const asphaltNormalTex = loadLinTex([
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_02/asphalt_02_nor_gl_2k.jpg",
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_nor_gl_1k.jpg",
+]);
+const asphaltRoughTex = loadLinTex([
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_02/asphalt_02_rough_2k.jpg",
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_rough_1k.jpg",
+]);
+const travertineNormalTex = loadLinTex([
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/travertine_01/travertine_01_nor_gl_2k.jpg",
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/travertine_01/travertine_01_nor_gl_1k.jpg",
+]);
+const travertineRoughTex = loadLinTex([
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/travertine_01/travertine_01_rough_2k.jpg",
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/travertine_01/travertine_01_rough_1k.jpg",
+]);
+// Real terracotta roof tiles (Polyhaven)
+const roofTilesTex = loadTex([
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/roof_09/roof_09_diff_2k.jpg",
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/roof_09/roof_09_diff_1k.jpg",
+], (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
+const roofTilesNormalTex = loadLinTex([
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/roof_09/roof_09_nor_gl_2k.jpg",
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/roof_09/roof_09_nor_gl_1k.jpg",
+]);
+// Real Italian plaster wall for palazzi
+const plasterTex = loadTex([
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/painted_plaster_wall/painted_plaster_wall_diff_2k.jpg",
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/painted_plaster_wall/painted_plaster_wall_diff_1k.jpg",
+], (t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
+const plasterNormalTex = loadLinTex([
+  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/painted_plaster_wall/painted_plaster_wall_nor_gl_2k.jpg",
+]);
 // Real sidewalk (concrete slabs) for road sides
 const sidewalkTex = loadTex([
   "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_wall_007/concrete_wall_007_diff_1k.jpg",
@@ -781,6 +820,10 @@ const roofTexture = makeRoofTexture();
 // SCENE (cinematic golden-hour Rome)
 // ======================================================================
 const scene = new THREE.Scene();
+{
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+}
 scene.fog = new THREE.FogExp2(0xa8bcc8, 0.0012);
 const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.05, 1500);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", stencil: false });
@@ -792,6 +835,7 @@ renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.VSMShadowMap;
 renderer.physicallyCorrectLights = true;
+renderer.useLegacyLights = false;
 document.body.appendChild(renderer.domElement);
 addEventListener("resize", () => {
   camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
@@ -875,8 +919,16 @@ const fillLight = new THREE.DirectionalLight(0xd8e4ff, 0.5);
 fillLight.position.set(-100, 200, -80);
 scene.add(fillLight);
 
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000),
-  new THREE.MeshLambertMaterial({ map: groundDiffuse, color: 0x8a7862 }));
+{
+  asphaltTex.repeat.set(80,80); asphaltNormalTex.repeat.set(80,80); asphaltRoughTex.repeat.set(80,80);
+  asphaltNormalTex.wrapS = asphaltNormalTex.wrapT = THREE.RepeatWrapping;
+  asphaltRoughTex.wrapS = asphaltRoughTex.wrapT = THREE.RepeatWrapping;
+}
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000, 4, 4),
+  new THREE.MeshStandardMaterial({
+    map: asphaltTex, normalMap: asphaltNormalTex, roughnessMap: asphaltRoughTex,
+    roughness: 1.0, metalness: 0.0, color: 0x9c8f78,
+  }));
 ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 
 // ---- SANPIETRINI PAVEMENT: real Roman cobblestone fan pattern ----
@@ -964,12 +1016,21 @@ function buildBuildingMesh(ring, height, _tint) {
   uv.needsUpdate = true;
   // Pick a Roman facade for this building
   const facadeTex = pickFacadeTex();
-  const wallMat = new THREE.MeshLambertMaterial({ map: facadeTex });
-  // Roof: terracotta tiles pattern
-  const roofTex = roofTexture.clone(); roofTex.needsUpdate = true;
-  roofTex.wrapS = roofTex.wrapT = THREE.RepeatWrapping;
-  roofTex.repeat.set(Math.max(1, (bb.max.x - bb.min.x) / 3), Math.max(1, (bb.max.z - bb.min.z) / 3));
-  const capMat = new THREE.MeshLambertMaterial({ map: roofTex });
+  const wallMat = new THREE.MeshStandardMaterial({
+    map: facadeTex, normalMap: plasterNormalTex,
+    roughness: 0.85, metalness: 0.0,
+  });
+  // Roof: real terracotta tiles from Polyhaven
+  const rt = roofTilesTex.clone(); rt.needsUpdate = true;
+  rt.wrapS = rt.wrapT = THREE.RepeatWrapping;
+  rt.repeat.set(Math.max(1, (bb.max.x - bb.min.x) / 4), Math.max(1, (bb.max.z - bb.min.z) / 4));
+  const rn = roofTilesNormalTex.clone(); rn.needsUpdate = true;
+  rn.wrapS = rn.wrapT = THREE.RepeatWrapping;
+  rn.repeat.copy(rt.repeat); rn.colorSpace = THREE.NoColorSpace;
+  const capMat = new THREE.MeshStandardMaterial({
+    map: rt, normalMap: rn,
+    roughness: 0.8, metalness: 0.0, color: 0xb46436,
+  });
   const mesh = new THREE.Mesh(geo, [capMat, wallMat]);
   mesh.castShadow = true; mesh.receiveShadow = true;
   scene.add(mesh);
@@ -1519,8 +1580,11 @@ function addColosseum(x=0, z=0) {
   const totalH = 46.65;
 
   // Rich procedural travertine texture (real stone blocks + weathering + holes)
-  const travStoneTex = makeTravertineStoneTexture();
-  const stoneMat = new THREE.MeshLambertMaterial({ map: travStoneTex });
+  const travStoneTex = colosseumStoneTex;
+  const stoneMat = new THREE.MeshStandardMaterial({
+    map: travStoneTex, normalMap: travertineNormalTex, roughnessMap: travertineRoughTex,
+    roughness: 0.95, metalness: 0.02, color: 0xd8b880,
+  });
   const shadowMat = new THREE.MeshLambertMaterial({ map: travStoneTex, color: 0x808070 });
 
   // Ruined section: real Colosseum lost outer wall on SE (stair-stepped collapse)
@@ -1806,7 +1870,7 @@ function addColosseum(x=0, z=0) {
 function addArcoDiCostantino(x = 0, z = 0, rotY = 0) {
   const grp = new THREE.Group();
   const W = 26, H = 21, D = 7.5;
-  const stoneMat = new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0xd0a870 });
+  const stoneMat = new THREE.MeshStandardMaterial({ map: colosseumStoneTex, normalMap: travertineNormalTex, roughnessMap: travertineRoughTex, color: 0xd0a870, roughness: 0.9, metalness: 0.02 });
   const shadowMat = new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0xa07c50 });
 
   // Build the main body as a single Shape with 3 arch holes
