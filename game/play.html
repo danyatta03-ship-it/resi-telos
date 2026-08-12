@@ -887,17 +887,78 @@ function buildBuildingMesh(ring, height, _tint) {
 // ======================================================================
 // SCENE PROPS (trees, lamps, barriers, columns) — spawned around city
 // ======================================================================
+// Real Tuscan/Roman cypress: tall narrow columnar with thin dark green crown
 function makeCypress(x, z) {
+  const h = 10 + Math.random() * 4;
   const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.14, 0.18, 0.6, 8),
+    new THREE.CylinderGeometry(0.15, 0.22, 1.2, 8),
     new THREE.MeshLambertMaterial({ color: 0x4a2c14 }));
-  trunk.position.set(x, 0.3, z);
-  const foliage = new THREE.Mesh(
-    new THREE.ConeGeometry(0.9, 7.5, 12),
-    new THREE.MeshLambertMaterial({ color: 0x1b3a1c }));
-  foliage.position.set(x, 4.4, z);
+  trunk.position.set(x, 0.6, z);
+  // Multi-layered narrow cones for a dense look
+  const foliage = new THREE.Group();
+  for (let i = 0; i < 3; i++) {
+    const r = 0.8 - i * 0.15;
+    const ch = h * (0.9 - i * 0.15);
+    const cone = new THREE.Mesh(
+      new THREE.ConeGeometry(r, ch, 10),
+      new THREE.MeshLambertMaterial({ color: 0x1a3a20 - i * 0x080410 })
+    );
+    cone.position.set(x, 1.2 + ch/2 + i * 0.4, z);
+    foliage.add(cone);
+  }
   scene.add(trunk, foliage);
   return { trunk, foliage };
+}
+
+// Umbrella pine (Pinus pinea) — iconic Roman tree with wide flat crown
+function makeUmbrellaPine(x, z) {
+  const trunkH = 8 + Math.random() * 4;
+  // Trunk: curved brownish gray
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25, 0.35, trunkH, 8),
+    new THREE.MeshLambertMaterial({ color: 0x5a3a24 }));
+  trunk.position.set(x, trunkH/2, z);
+  // Slight lean to look natural
+  trunk.rotation.z = (Math.random() - 0.5) * 0.15;
+  trunk.rotation.x = (Math.random() - 0.5) * 0.1;
+  // Crown: wide flat dome made of several overlapping ellipsoid puffs (like the real pine's umbrella)
+  const crownGrp = new THREE.Group();
+  const crownY = trunkH + 1.5;
+  const puffColors = [0x2a4d25, 0x2c5028, 0x263f22, 0x30552b];
+  for (let i = 0; i < 6; i++) {
+    const puff = new THREE.Mesh(
+      new THREE.SphereGeometry(2.5 + Math.random() * 1.2, 10, 8),
+      new THREE.MeshLambertMaterial({ color: puffColors[i % puffColors.length] })
+    );
+    const ang = (i / 6) * Math.PI * 2;
+    puff.position.set(x + Math.cos(ang) * 2.2, crownY + Math.random() * 0.8, z + Math.sin(ang) * 2.2);
+    puff.scale.set(1, 0.5, 1); // flatten vertically (umbrella shape)
+    crownGrp.add(puff);
+  }
+  // Central big puff
+  const center = new THREE.Mesh(
+    new THREE.SphereGeometry(3.5, 12, 10),
+    new THREE.MeshLambertMaterial({ color: 0x2c5028 }));
+  center.position.set(x, crownY + 0.5, z);
+  center.scale.set(1, 0.55, 1);
+  crownGrp.add(center);
+  scene.add(trunk, crownGrp);
+  return { trunk, crown: crownGrp };
+}
+
+// Oleander bush (small ornamental)
+function makeBush(x, z) {
+  const grp = new THREE.Group();
+  for (let i = 0; i < 4; i++) {
+    const b = new THREE.Mesh(
+      new THREE.SphereGeometry(0.5 + Math.random() * 0.4, 8, 6),
+      new THREE.MeshLambertMaterial({ color: 0x2a4d25 + Math.floor(Math.random()*0x102010) })
+    );
+    b.position.set(x + (Math.random()-0.5)*1.2, 0.4 + Math.random()*0.3, z + (Math.random()-0.5)*1.2);
+    grp.add(b);
+  }
+  scene.add(grp);
+  return grp;
 }
 function makeLampPost(x, z) {
   const g = new THREE.Group();
@@ -970,15 +1031,28 @@ function makeRubble(x, z) {
   return g;
 }
 function scatterProps() {
-  // Cypress trees around the map edges and in some open spaces
-  for (let i = 0; i < 24; i++) {
-    let sp;
+  const findOpen = (minR, maxR) => {
     for (let t = 0; t < 40; t++) {
-      const a = Math.random() * Math.PI * 2, r = 60 + Math.random() * 200;
+      const a = Math.random() * Math.PI * 2, r = minR + Math.random() * (maxR - minR);
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
-      if (groundY(x, z) < 0.2) { sp = { x, z }; break; }
+      if (groundY(x, z) < 0.2 && Math.hypot(x, z) > 105) return { x, z };
     }
+    return null;
+  };
+  // Umbrella pines (Pinus pinea) — iconic Roman tree, big and photographic
+  for (let i = 0; i < 14; i++) {
+    const sp = findOpen(115, 260);
+    if (sp) makeUmbrellaPine(sp.x, sp.z);
+  }
+  // Cypresses (fewer, taller narrow accents)
+  for (let i = 0; i < 10; i++) {
+    const sp = findOpen(110, 250);
     if (sp) makeCypress(sp.x, sp.z);
+  }
+  // Small bushes/oleanders scattered
+  for (let i = 0; i < 20; i++) {
+    const sp = findOpen(60, 280);
+    if (sp) makeBush(sp.x, sp.z);
   }
   // Lamp posts in a rough grid
   for (let i = 0; i < 20; i++) {
@@ -1134,76 +1208,184 @@ function makeColosseumTexture() {
 let _colosseumTex = null;
 function colosseumTex() { return _colosseumTex ||= makeColosseumTexture(); }
 
-function addColosseum(x=0, z=0) {
-  // Outer wall: full tall ellipse ring (with the painted 4-tier arch texture wrapping around)
-  const outerA = 94, outerB = 78, ringT = 4.5, H = 48;
+// ---- Build one arch bay geometry (pillar frame with arch cutout) ----
+function makeArchBayGeometry(bayW, bayH, wallDepth, archRatio = 0.65) {
+  const halfW = bayW / 2;
+  const archW = bayW * archRatio;
+  const archH = archW / 2;
   const shape = new THREE.Shape();
-  const seg = 96;
-  shape.moveTo(outerA, 0);
-  for (let i=1;i<=seg;i++){const th=(i/seg)*Math.PI*2;shape.lineTo(outerA*Math.cos(th),outerB*Math.sin(th));}
+  shape.moveTo(-halfW, 0);
+  shape.lineTo(halfW, 0);
+  shape.lineTo(halfW, bayH);
+  shape.lineTo(-halfW, bayH);
+  shape.closePath();
   const hole = new THREE.Path();
-  hole.moveTo(outerA - ringT, 0);
-  for (let i=1;i<=seg;i++){const th=(i/seg)*Math.PI*2;hole.lineTo((outerA-ringT)*Math.cos(th),(outerB-ringT)*Math.sin(th));}
+  const archBottomY = 0.5;
+  const archTopY = bayH - 1.2;
+  const springY = archTopY - archH;
+  const halfArchW = archW / 2;
+  hole.moveTo(-halfArchW, archBottomY);
+  hole.lineTo(halfArchW, archBottomY);
+  hole.lineTo(halfArchW, springY);
+  const N = 14;
+  for (let i = 1; i <= N; i++) {
+    const t = (i / N) * Math.PI;
+    hole.lineTo(halfArchW - archW/2 * (1 - Math.cos(t)), springY + archH * Math.sin(t));
+  }
+  hole.lineTo(-halfArchW, springY);
+  hole.closePath();
   shape.holes.push(hole);
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: H, bevelEnabled: false, curveSegments: 8 });
-  geo.rotateX(-Math.PI/2); geo.translate(x, 0, z);
-  // Regenerate UVs so texture wraps around perimeter and vertical fills full height
-  const perim = Math.PI * (3*(outerA+outerB) - Math.sqrt((3*outerA+outerB)*(outerA+3*outerB)));
-  const uv = geo.attributes.uv, pos = geo.attributes.position;
-  for (const grp of geo.groups) {
-    if (grp.materialIndex !== 1) continue;
-    for (let i = grp.start; i < grp.start + grp.count; i++) {
-      const vi = geo.index ? geo.index.array[i] : i;
-      const px = pos.getX(vi) - x, py = pos.getY(vi), pz = pos.getZ(vi) - z;
-      const ang = Math.atan2(pz, px);
-      const u = (ang + Math.PI) / (Math.PI*2) * (perim / 30); // 30m per texture tile
-      const v = 1 - py / H;
-      uv.setXY(vi, u, v);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: wallDepth, bevelEnabled: false });
+  geo.translate(0, 0, -wallDepth / 2);
+  return geo;
+}
+
+function addColosseum(x=0, z=0) {
+  // Real Colosseum: 189×156m, 48m tall, 80 arches per tier, 4 tiers
+  const A = 90, B = 74;
+  const wallDepth = 3.0;
+  const nArches = 80;
+  const tiers = [
+    { h: 10.6, y: 0,     hasArch: true }, // Doric ground
+    { h: 11.85, y: 10.6, hasArch: true }, // Ionic
+    { h: 11.6,  y: 22.45, hasArch: true }, // Corinthian
+    { h: 12.6,  y: 34.05, hasArch: false }, // Attic (solid, small windows)
+  ];
+  const totalH = 46.65;
+
+  const stoneMat = new THREE.MeshLambertMaterial({ color: 0xc8a877 });
+  const shadowMat = new THREE.MeshLambertMaterial({ color: 0x8a6a48 });
+
+  // Ruined section: real Colosseum lost outer wall on ~SE quadrant
+  const ruined = (i, ti) => {
+    const deg = (i / nArches) * 360;
+    if (ti >= 2) return deg > 170 && deg < 350; // upper 2 tiers mostly gone
+    if (ti === 1) return deg > 200 && deg < 320;
+    return deg > 235 && deg < 285; // ground floor mostly intact except small gap
+  };
+
+  const bayGeoms = tiers.map(t => t.hasArch ? makeArchBayGeometry(7.2, t.h, wallDepth) : null);
+
+  for (let ti = 0; ti < tiers.length; ti++) {
+    const tier = tiers[ti];
+    if (tier.hasArch) {
+      const alive = [];
+      for (let i = 0; i < nArches; i++) if (!ruined(i, ti)) alive.push(i);
+      const inst = new THREE.InstancedMesh(bayGeoms[ti], stoneMat, alive.length);
+      const dummy = new THREE.Object3D();
+      for (let k = 0; k < alive.length; k++) {
+        const i = alive[k];
+        const theta = (i / nArches) * Math.PI * 2;
+        const px = A * Math.cos(theta), pz = B * Math.sin(theta);
+        // Tangent direction for rotation (bay faces radially outward)
+        const rot = -theta + Math.PI/2 * 0 - Math.PI/2;
+        // Actually rot around Y should be such that bay's outward normal points radially
+        // Bay's local +Z direction after ExtrudeGeometry is +Z. We want it to point outward from center.
+        const outAng = Math.atan2(pz, px);
+        dummy.position.set(x + px, tier.y, z + pz);
+        dummy.rotation.set(0, -outAng + Math.PI/2, 0);
+        dummy.updateMatrix();
+        inst.setMatrixAt(k, dummy.matrix);
+      }
+      inst.instanceMatrix.needsUpdate = true;
+      inst.castShadow = false;
+      scene.add(inst);
+      buildings.push({
+        mesh: inst,
+        min: new THREE.Vector3(x - A - wallDepth, tier.y, z - B - wallDepth),
+        max: new THREE.Vector3(x + A + wallDepth, tier.y + tier.h, z + B + wallDepth),
+      });
+    } else {
+      // Attic: full ellipse ring wall (only NW half to reflect ruin)
+      const shape = new THREE.Shape();
+      const seg = 48;
+      // Only draw the arc that's NOT ruined
+      const startDeg = 350, endDeg = 170 + 360; // wrap
+      const startRad = startDeg * Math.PI / 180, endRad = endDeg * Math.PI / 180;
+      // Outer arc
+      shape.moveTo((A + wallDepth/2) * Math.cos(startRad), (B + wallDepth/2) * Math.sin(startRad));
+      for (let i = 1; i <= seg; i++) {
+        const t = startRad + (endRad - startRad) * (i / seg);
+        shape.lineTo((A + wallDepth/2) * Math.cos(t), (B + wallDepth/2) * Math.sin(t));
+      }
+      // Inner arc backward
+      for (let i = seg; i >= 0; i--) {
+        const t = startRad + (endRad - startRad) * (i / seg);
+        shape.lineTo((A - wallDepth/2) * Math.cos(t), (B - wallDepth/2) * Math.sin(t));
+      }
+      shape.closePath();
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: tier.h, bevelEnabled: false, curveSegments: 4 });
+      geo.rotateX(-Math.PI/2);
+      geo.translate(x, tier.y, z);
+      const mesh = new THREE.Mesh(geo, stoneMat);
+      scene.add(mesh);
+      geo.computeBoundingBox();
+      buildings.push({ mesh, min: geo.boundingBox.min.clone(), max: geo.boundingBox.max.clone() });
     }
   }
-  uv.needsUpdate = true;
-  const ctex = colosseumTex();
-  ctex.wrapS = THREE.RepeatWrapping;
-  const wallMat = new THREE.MeshLambertMaterial({ map: ctex });
-  const capMat = new THREE.MeshLambertMaterial({ color: 0x9a7852 });
-  const mesh = new THREE.Mesh(geo, [capMat, wallMat]);
-  scene.add(mesh);
-  geo.computeBoundingBox();
-  buildings.push({ mesh, min: geo.boundingBox.min.clone(), max: geo.boundingBox.max.clone() });
 
-  // Inner ring (partially collapsed): shorter and rougher, no arches (represents ruined interior)
-  const iA = 84, iB = 68, iRingT = 3, iH = 28;
-  const shape2 = new THREE.Shape();
-  shape2.moveTo(iA, 0);
-  for (let i=1;i<=seg;i++){const th=(i/seg)*Math.PI*2;shape2.lineTo(iA*Math.cos(th),iB*Math.sin(th));}
-  const hole2 = new THREE.Path();
-  hole2.moveTo(iA - iRingT, 0);
-  for (let i=1;i<=seg;i++){const th=(i/seg)*Math.PI*2;hole2.lineTo((iA-iRingT)*Math.cos(th),(iB-iRingT)*Math.sin(th));}
-  shape2.holes.push(hole2);
-  const geo2 = new THREE.ExtrudeGeometry(shape2, { depth: iH, bevelEnabled: false, curveSegments: 8 });
-  geo2.rotateX(-Math.PI/2); geo2.translate(x, 0, z);
-  travertineTex.repeat.set(30, 8);
-  const mesh2 = new THREE.Mesh(geo2, new THREE.MeshLambertMaterial({ map: travertineTex, color: 0x9a7852 }));
-  scene.add(mesh2); geo2.computeBoundingBox();
-  buildings.push({ mesh: mesh2, min: geo2.boundingBox.min.clone(), max: geo2.boundingBox.max.clone() });
-
-  // Arena floor (sandy)
-  const arena = new THREE.Mesh(new THREE.CircleGeometry(iA - iRingT - 3, 48),
-    new THREE.MeshLambertMaterial({ color: 0x8a6a3f }));
-  arena.rotation.x = -Math.PI/2; arena.position.set(x, 0.05, z); scene.add(arena);
-
-  // Hypogeum grid (visible underground chambers rendered as dark grid on arena floor)
-  for (let gi = -3; gi <= 3; gi++) {
-    const line = new THREE.Mesh(new THREE.PlaneGeometry(140, 0.4),
-      new THREE.MeshBasicMaterial({ color: 0x1a1006 }));
-    line.rotation.x = -Math.PI/2; line.position.set(x, 0.06, z + gi * 8);
-    scene.add(line);
-    const line2 = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 100),
-      new THREE.MeshBasicMaterial({ color: 0x1a1006 }));
-    line2.rotation.x = -Math.PI/2; line2.position.set(x + gi * 12, 0.06, z);
-    scene.add(line2);
+  // Cornices (horizontal bands) between tiers
+  for (let ti = 1; ti < tiers.length; ti++) {
+    const y = tiers[ti].y;
+    const cornice = new THREE.Mesh(
+      new THREE.TorusGeometry(1, 0.5, 6, 96),
+      shadowMat,
+    );
+    cornice.scale.set(A + 1, 1, B + 1);
+    cornice.rotation.x = Math.PI/2;
+    cornice.position.set(x, y, z);
+    scene.add(cornice);
   }
-  landmarkPos.set(x, H, z);
+  // Top cornice
+  const topCornice = new THREE.Mesh(new THREE.TorusGeometry(1, 0.8, 6, 96), shadowMat);
+  topCornice.scale.set(A + 1.5, 1, B + 1.5);
+  topCornice.rotation.x = Math.PI/2;
+  topCornice.position.set(x, totalH, z);
+  scene.add(topCornice);
+
+  // Inner partial wall (still-standing inner arcade)
+  const iA = 62, iB = 50, iH = 24;
+  const shapeI = new THREE.Shape();
+  const segI = 64;
+  shapeI.moveTo(iA, 0);
+  for (let i=1;i<=segI;i++){const th=(i/segI)*Math.PI*2;shapeI.lineTo(iA*Math.cos(th),iB*Math.sin(th));}
+  const holeI = new THREE.Path();
+  holeI.moveTo(iA - 3, 0);
+  for (let i=1;i<=segI;i++){const th=(i/segI)*Math.PI*2;holeI.lineTo((iA-3)*Math.cos(th),(iB-3)*Math.sin(th));}
+  shapeI.holes.push(holeI);
+  const geoI = new THREE.ExtrudeGeometry(shapeI, { depth: iH, bevelEnabled: false, curveSegments: 6 });
+  geoI.rotateX(-Math.PI/2); geoI.translate(x, 0, z);
+  const meshI = new THREE.Mesh(geoI, new THREE.MeshLambertMaterial({ color: 0xa07852 }));
+  scene.add(meshI); geoI.computeBoundingBox();
+  buildings.push({ mesh: meshI, min: geoI.boundingBox.min.clone(), max: geoI.boundingBox.max.clone() });
+
+  // Arena floor (elliptical, sandy)
+  const arena = new THREE.Mesh(new THREE.CircleGeometry(iA - 5, 48), new THREE.MeshLambertMaterial({ color: 0x8a6a3f }));
+  arena.rotation.x = -Math.PI/2; arena.position.set(x, 0.05, z); arena.scale.set(1, 1, iB/iA); scene.add(arena);
+
+  // Hypogeum: real box walls exposed on arena floor (~1.5m tall)
+  const hypoMat = new THREE.MeshLambertMaterial({ color: 0x3a2a18 });
+  for (let gi = -4; gi <= 4; gi++) {
+    const wallL = new THREE.Mesh(new THREE.BoxGeometry(iA*1.4, 1.5, 0.6), hypoMat);
+    wallL.position.set(x, 0.75, z + gi * 6);
+    scene.add(wallL);
+  }
+  for (let gi = -3; gi <= 3; gi++) {
+    const wallW = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.5, iB*1.3), hypoMat);
+    wallW.position.set(x + gi * 8, 0.75, z);
+    scene.add(wallW);
+  }
+
+  // Wooden cross (the real one placed by Pope Benedict XIV)
+  const crossPost = new THREE.Mesh(new THREE.BoxGeometry(0.4, 4, 0.4),
+    new THREE.MeshLambertMaterial({ color: 0x3a2416 }));
+  crossPost.position.set(x - 20, 2, z + 5);
+  const crossBar = new THREE.Mesh(new THREE.BoxGeometry(2, 0.4, 0.4),
+    new THREE.MeshLambertMaterial({ color: 0x3a2416 }));
+  crossBar.position.set(x - 20, 3, z + 5);
+  scene.add(crossPost, crossBar);
+
+  landmarkPos.set(x, totalH, z);
 }
 function addStPeters(x=0,z=0) {
   travertineTex.repeat.set(6, 3);
