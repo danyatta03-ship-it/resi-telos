@@ -298,6 +298,8 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
+import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
 
 // ======================================================================
 // ZONES (real cities)
@@ -781,14 +783,15 @@ const roofTexture = makeRoofTexture();
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0xa8bcc8, 0.0012);
 const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.05, 1500);
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", stencil: false });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.9;
+renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.VSMShadowMap;
+renderer.physicallyCorrectLights = true;
 document.body.appendChild(renderer.domElement);
 addEventListener("resize", () => {
   camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
@@ -799,8 +802,14 @@ addEventListener("resize", () => {
 // Postprocessing: bloom for cinematic glow on lights, muzzle flash, sun
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.7, 0.85);
+const ssao = new SSAOPass(scene, camera, innerWidth, innerHeight);
+ssao.kernelRadius = 8;
+ssao.minDistance = 0.002;
+ssao.maxDistance = 0.08;
+composer.addPass(ssao);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.35, 0.5, 0.9);
 composer.addPass(bloom);
+composer.addPass(new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio()));
 composer.addPass(new OutputPass());
 
 // ---- Sky: DEEP BLUE clear Roman sky (like the reference photos) ----
@@ -847,17 +856,19 @@ scene.add(skySphere);
 // ---- Bright daytime Rome lighting (matches aerial photo) ----
 const ambientLight = new THREE.HemisphereLight(0xffffff, 0x8a7860, 1.1); // strong ambient so nothing is pitch-black
 scene.add(ambientLight);
-const sun = new THREE.DirectionalLight(0xfff0d8, 1.6);
+const sun = new THREE.DirectionalLight(0xfff0d8, 2.6);
 sun.position.set(150, 280, 60);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.near = 50;
-sun.shadow.camera.far = 600;
-sun.shadow.camera.left = -250;
-sun.shadow.camera.right = 250;
-sun.shadow.camera.top = 250;
-sun.shadow.camera.bottom = -250;
-sun.shadow.bias = -0.0005;
+sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.camera.near = 20;
+sun.shadow.camera.far = 700;
+sun.shadow.camera.left = -180;
+sun.shadow.camera.right = 180;
+sun.shadow.camera.top = 180;
+sun.shadow.camera.bottom = -180;
+sun.shadow.bias = -0.00012;
+sun.shadow.normalBias = 0.04;
+sun.shadow.radius = 6;
 scene.add(sun);
 // Fill from opposite side (sky bounce) so shadows are lifted
 const fillLight = new THREE.DirectionalLight(0xd8e4ff, 0.5);
@@ -3930,12 +3941,7 @@ function frame() {
   updateFx(dt);
   updateCasings(dt);
   camera.position.copy(player.pos);
-  if (shakeMag > 0.0005) {
-    camera.position.x += (Math.random()-0.5) * shakeMag;
-    camera.position.y += (Math.random()-0.5) * shakeMag;
-    camera.position.z += (Math.random()-0.5) * shakeMag;
-    shakeMag *= Math.pow(0.001, dt);
-  } else shakeMag = 0;
+  shakeMag = 0;
   const ld = lookDir();
   camera.lookAt(player.pos.x + ld.x, player.pos.y + ld.y, player.pos.z + ld.z);
   const dmgAge = now - dmgDirTs;
