@@ -10,7 +10,16 @@
 
   /* -------- IN-GAME HUD -------- */
   #hud { position:fixed; inset:0; pointer-events:none; z-index:5; }
-  #crosshair { position:absolute; top:50%; left:50%; width:14px; height:14px; margin:-7px 0 0 -7px; border:2px solid #fff; border-radius:50%; opacity:.85; }
+  /* Dynamic tactical "+" crosshair with 4 tick marks + center dot */
+  #crosshair { position:absolute; top:50%; left:50%; width:40px; height:40px; margin:-20px 0 0 -20px; pointer-events:none; opacity:.95;
+    filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)); }
+  #crosshair .tick { position:absolute; background:#fff; }
+  #crosshair .tick.top    { top:0;    left:50%; margin-left:-1px; width:2px; height:9px; }
+  #crosshair .tick.bottom { bottom:0; left:50%; margin-left:-1px; width:2px; height:9px; }
+  #crosshair .tick.left   { top:50%;  left:0;   margin-top:-1px;  width:9px; height:2px; }
+  #crosshair .tick.right  { top:50%;  right:0;  margin-top:-1px;  width:9px; height:2px; }
+  #crosshair .dot { position:absolute; top:50%; left:50%; width:3px; height:3px; margin:-1.5px 0 0 -1.5px; background:#fff; border-radius:50%; }
+  #crosshair.hostile .tick, #crosshair.hostile .dot { background:#ff3030; }
   #hit { position:absolute; top:50%; left:50%; width:22px; height:22px; margin:-11px 0 0 -11px; opacity:0; transition:opacity .1s;
     background: linear-gradient(45deg, transparent 45%, #ffb01d 45% 55%, transparent 55%), linear-gradient(-45deg, transparent 45%, #ffb01d 45% 55%, transparent 55%); }
 
@@ -246,7 +255,11 @@
 
 <!-- ============================= IN-GAME HUD ============================= -->
 <div id="hud">
-  <div id="crosshair"></div>
+  <div id="crosshair">
+    <span class="tick top"></span><span class="tick bottom"></span>
+    <span class="tick left"></span><span class="tick right"></span>
+    <span class="dot"></span>
+  </div>
   <div id="hit"></div>
   <div id="teamScore">
     <div class="mode" id="modeName">Team Deathmatch</div>
@@ -335,19 +348,187 @@ function loadTex(urls, onLoad) {
   tryNext();
   return tex;
 }
-const brickDiffuse = loadTex([
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r169/examples/textures/brick_diffuse.jpg",
-  "https://threejs.org/examples/textures/brick_diffuse.jpg",
-]);
-const brickBump = loadTex([
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r169/examples/textures/brick_bump.jpg",
-  "https://threejs.org/examples/textures/brick_bump.jpg",
-]);
+// ---- ROMAN FACADE TEXTURE (rich procedural: plaster + windows + shutters + cornices) ----
+function makeRomanFacadeTexture(baseHex, roofHex, shutterHex, seed = 0) {
+  const c = document.createElement("canvas");
+  c.width = 512; c.height = 1024; // taller = 1 building floor = ~256px
+  const ctx = c.getContext("2d");
+
+  // 1. Plaster base with weathering
+  const g = ctx.createLinearGradient(0, 0, 0, 1024);
+  g.addColorStop(0, roofHex);
+  g.addColorStop(0.02, roofHex);
+  g.addColorStop(0.04, baseHex);
+  g.addColorStop(1, baseHex);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 512, 1024);
+  // Weathering noise
+  const img = ctx.getImageData(0, 40, 512, 984);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 25;
+    img.data[i]   = Math.max(0, Math.min(255, img.data[i] + n));
+    img.data[i+1] = Math.max(0, Math.min(255, img.data[i+1] + n));
+    img.data[i+2] = Math.max(0, Math.min(255, img.data[i+2] + n));
+  }
+  ctx.putImageData(img, 0, 40);
+  // Water stains
+  for (let i = 0; i < 6; i++) {
+    ctx.fillStyle = `rgba(60,50,40,${0.06+Math.random()*0.06})`;
+    const wx = Math.random() * 512, wy = 100 + Math.random() * 800;
+    ctx.beginPath();
+    ctx.moveTo(wx, wy);
+    ctx.bezierCurveTo(wx + 30, wy + 50, wx - 20, wy + 100, wx + 10, wy + 200);
+    ctx.lineTo(wx + 20, wy + 200);
+    ctx.bezierCurveTo(wx - 5, wy + 100, wx + 40, wy + 50, wx + 30, wy);
+    ctx.fill();
+  }
+  // Cracks
+  ctx.strokeStyle = "rgba(0,0,0,0.15)"; ctx.lineWidth = 0.6;
+  for (let i = 0; i < 8; i++) {
+    ctx.beginPath();
+    ctx.moveTo(Math.random()*512, Math.random()*1024);
+    for (let j = 0; j < 4; j++) ctx.lineTo(Math.random()*512, Math.random()*1024);
+    ctx.stroke();
+  }
+
+  // 2. Roof / cornice top band (terracotta)
+  ctx.fillStyle = roofHex;
+  ctx.fillRect(0, 0, 512, 40);
+  // Roof tiles hint
+  ctx.strokeStyle = "rgba(0,0,0,0.4)"; ctx.lineWidth = 0.5;
+  for (let x = 0; x < 512; x += 12) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 32); ctx.stroke();
+  }
+  // Cornice shadow
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.fillRect(0, 40, 512, 6);
+  ctx.fillStyle = "rgba(255,255,255,0.15)";
+  ctx.fillRect(0, 46, 512, 2);
+
+  // 3. Floor separators (horizontal cornices between floors)
+  const floors = 4;
+  const floorH = (1024 - 60) / floors;
+  for (let f = 1; f < floors; f++) {
+    const y = 60 + f * floorH;
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.fillRect(0, y - 4, 512, 3);
+    ctx.fillStyle = "rgba(255,255,255,0.10)";
+    ctx.fillRect(0, y - 1, 512, 1);
+  }
+
+  // 4. Windows with real shutters (persiane) in Roman style
+  const cols = 3;
+  const winW = 100, winH = 130;
+  for (let f = 0; f < floors; f++) {
+    for (let col = 0; col < cols; col++) {
+      const wx = 40 + col * ((512 - 80 - winW) / (cols - 1));
+      const wy = 60 + f * floorH + (floorH - winH) / 2;
+
+      // Windowsill (davanzale) below
+      ctx.fillStyle = "#3a2a1a";
+      ctx.fillRect(wx - 10, wy + winH, winW + 20, 5);
+      ctx.fillStyle = "rgba(0,0,0,0.3)";
+      ctx.fillRect(wx - 10, wy + winH + 5, winW + 20, 2);
+
+      // Window frame (dark stone surround)
+      ctx.fillStyle = "#3a3230";
+      ctx.fillRect(wx - 6, wy - 4, winW + 12, winH + 8);
+
+      // Window depth (dark inset)
+      ctx.fillStyle = "#151512";
+      ctx.fillRect(wx, wy, winW, winH);
+
+      // Randomized shutter state per window
+      const rnd = ((f * cols + col + seed * 7) * 9973) % 100 / 100;
+      if (rnd < 0.3) {
+        // Fully open shutters (folded to sides) — glass visible with light
+        ctx.fillStyle = (Math.random() < 0.5) ? "#ffe082" : "#2a3648";
+        ctx.fillRect(wx + 4, wy + 4, winW - 8, winH - 8);
+        // Window cross
+        ctx.fillStyle = "#1a1108";
+        ctx.fillRect(wx + winW/2 - 1.5, wy + 4, 3, winH - 8);
+        ctx.fillRect(wx + 4, wy + winH/2 - 1.5, winW - 8, 3);
+        // Curtain hint
+        ctx.fillStyle = "rgba(255,240,220,0.3)";
+        ctx.fillRect(wx + 6, wy + 4, 12, winH - 8);
+        ctx.fillRect(wx + winW - 18, wy + 4, 12, winH - 8);
+      } else if (rnd < 0.65) {
+        // Shutters closed
+        ctx.fillStyle = shutterHex;
+        ctx.fillRect(wx + 2, wy + 2, winW - 4, winH - 4);
+        // Slats (persiana lamelle)
+        ctx.strokeStyle = "rgba(0,0,0,0.5)"; ctx.lineWidth = 1;
+        for (let s = 8; s < winH - 4; s += 5) {
+          ctx.beginPath(); ctx.moveTo(wx + 4, wy + s); ctx.lineTo(wx + winW - 4, wy + s); ctx.stroke();
+        }
+        ctx.strokeStyle = "rgba(255,255,255,0.08)";
+        for (let s = 10; s < winH - 4; s += 5) {
+          ctx.beginPath(); ctx.moveTo(wx + 4, wy + s); ctx.lineTo(wx + winW - 4, wy + s); ctx.stroke();
+        }
+        // Center gap between two shutters
+        ctx.fillStyle = "#151512";
+        ctx.fillRect(wx + winW/2 - 1, wy + 2, 2, winH - 4);
+      } else {
+        // Shutters ajar (half open) — show slit of interior
+        ctx.fillStyle = shutterHex;
+        ctx.fillRect(wx + 2, wy + 2, (winW - 4)/2 - 4, winH - 4);
+        ctx.fillRect(wx + (winW/2) + 4, wy + 2, (winW - 4)/2 - 4, winH - 4);
+        // Slats on each panel
+        ctx.strokeStyle = "rgba(0,0,0,0.5)"; ctx.lineWidth = 1;
+        for (let s = 8; s < winH - 4; s += 5) {
+          ctx.beginPath(); ctx.moveTo(wx + 4, wy + s); ctx.lineTo(wx + (winW - 4)/2 - 4 + 2, wy + s); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(wx + winW/2 + 4, wy + s); ctx.lineTo(wx + winW - 4, wy + s); ctx.stroke();
+        }
+      }
+
+      // Balcony railing for lower floors (wrought iron)
+      if (f > 0 && f < floors - 1 && rnd > 0.4) {
+        ctx.fillStyle = "#1a1a1a";
+        ctx.fillRect(wx - 14, wy + winH + 7, winW + 28, 3);
+        for (let bx = wx - 12; bx < wx + winW + 12; bx += 4) {
+          ctx.fillRect(bx, wy + winH + 10, 1, 18);
+        }
+        ctx.fillRect(wx - 14, wy + winH + 28, winW + 28, 2);
+      }
+    }
+  }
+
+  // 5. Ground floor: door + shop entrance
+  const gy0 = 60 + (floors - 1) * floorH + floorH - 60;
+  ctx.fillStyle = "#2a1810";
+  const doorX = 250, doorW = 80;
+  ctx.fillRect(doorX, gy0 - 100, doorW, 130);
+  // Arch top on door
+  ctx.beginPath();
+  ctx.arc(doorX + doorW/2, gy0 - 100, doorW/2, Math.PI, 0);
+  ctx.fill();
+  // Door knocker
+  ctx.fillStyle = "#c8a040";
+  ctx.beginPath(); ctx.arc(doorX + doorW/2, gy0 - 50, 4, 0, Math.PI*2); ctx.fill();
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// Build 5 Rome-style facade variants
+const ROMAN_FACADES = [
+  { base: "#d4b088", roof: "#8b4a1c", shutter: "#3a5a34" }, // ochre + green shutter
+  { base: "#c89870", roof: "#7a3f18", shutter: "#5a3a24" }, // terracotta + brown shutter
+  { base: "#e6cfa8", roof: "#8b4a1c", shutter: "#2a4a58" }, // cream + blue-gray shutter
+  { base: "#b87850", roof: "#7a3f18", shutter: "#3a5a34" }, // sienna + green
+  { base: "#c89870", roof: "#7a3f18", shutter: "#1a2028" }, // umber + black shutter
+];
+const facadeTexPool = ROMAN_FACADES.map((f, i) => makeRomanFacadeTexture(f.base, f.roof, f.shutter, i));
+function pickFacadeTex() { return facadeTexPool[(Math.random() * facadeTexPool.length) | 0]; }
+// Legacy compat (old code refers to these):
+const brickDiffuse = facadeTexPool[0];
+const brickBump = null;
 const travertineTex = loadTex([
   "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r169/examples/textures/planets/moon_1024.jpg",
   "https://threejs.org/examples/textures/planets/moon_1024.jpg",
 ]);
-const facadeTints = [0xe6cfa8, 0xd4b088, 0xc89870, 0xb87850, 0xd8b494, 0xc09068, 0xa87858, 0xe0c090, 0xc8a878, 0xb08858];
+const facadeTints = [0xffffff, 0xf8f0e0, 0xffefd8, 0xf0e8d8, 0xffe8c8];
 function pickFacadeTint() { return facadeTints[(Math.random() * facadeTints.length) | 0]; }
 
 function makeGroundTexture() {
@@ -665,7 +846,7 @@ function osmHeight(tags) {
   if (Number.isFinite(lv) && lv > 0) return lv * 3.2 + 2;
   return 7 + Math.random() * 8;
 }
-function buildBuildingMesh(ring, height, facadeTint) {
+function buildBuildingMesh(ring, height, _tint) {
   if (!ring || ring.length < 4) return null;
   const shape = new THREE.Shape();
   shape.moveTo(ring[0][0], ring[0][1]);
@@ -674,22 +855,29 @@ function buildBuildingMesh(ring, height, facadeTint) {
   let geo;
   try { geo = new THREE.ExtrudeGeometry(shape, { depth: height, bevelEnabled: false, curveSegments: 4 }); } catch (e) { return null; }
   geo.rotateX(-Math.PI / 2);
-  const pos = geo.attributes.position, uv = geo.attributes.uv;
   geo.computeBoundingBox();
   const bb = geo.boundingBox;
+  // Regenerate UVs: horizontal along wall perimeter (tile every ~8m, 1 window unit),
+  // vertical mapped 0..1 across full building height (so texture shows full facade top-to-bottom)
+  const pos = geo.attributes.position, uv = geo.attributes.uv;
   for (const g of geo.groups) {
     if (g.materialIndex !== 1) continue;
     for (let i = g.start; i < g.start + g.count; i++) {
       const vi = geo.index ? geo.index.array[i] : i;
       const x = pos.getX(vi), y = pos.getY(vi), z = pos.getZ(vi);
-      uv.setXY(vi, (x + z) / 3.5, y / 3.5);
+      const u = (x + z) / 8;       // 1 texture cycle ~= 8m of wall (3 windows per unit)
+      const v = 1 - y / height;    // 0 at top (roof), 1 at ground — facade texture reads top-down
+      uv.setXY(vi, u, v);
     }
   }
   uv.needsUpdate = true;
-  const wallMat = new THREE.MeshLambertMaterial({ map: brickDiffuse, bumpMap: brickBump, bumpScale: 0.6, color: facadeTint });
+  // Pick a Roman facade for this building
+  const facadeTex = pickFacadeTex();
+  const wallMat = new THREE.MeshLambertMaterial({ map: facadeTex });
+  // Roof: terracotta tiles pattern
   const roofTex = roofTexture.clone(); roofTex.needsUpdate = true;
   roofTex.wrapS = roofTex.wrapT = THREE.RepeatWrapping;
-  roofTex.repeat.set(Math.max(1, (bb.max.x - bb.min.x) / 4), Math.max(1, (bb.max.z - bb.min.z) / 4));
+  roofTex.repeat.set(Math.max(1, (bb.max.x - bb.min.x) / 3), Math.max(1, (bb.max.z - bb.min.z) / 3));
   const capMat = new THREE.MeshLambertMaterial({ map: roofTex });
   const mesh = new THREE.Mesh(geo, [capMat, wallMat]);
   scene.add(mesh);
@@ -852,50 +1040,170 @@ function osmToBuildings(elements, zone) {
 // ======================================================================
 // LANDMARKS
 // ======================================================================
-function addColosseum(x=0, z=0) {
-  // Multi-tier: 3 elliptical shells getting shorter inward (mimics collapsed inner ring)
+// ---- Colosseum texture: 4 orders of arches (Doric, Ionic, Corinthian, attic) painted on canvas ----
+function makeColosseumTexture() {
+  const c = document.createElement("canvas");
+  c.width = 2048; c.height = 512;
+  const ctx = c.getContext("2d");
+  // Travertine base gradient
+  const g = ctx.createLinearGradient(0, 0, 0, 512);
+  g.addColorStop(0, "#a08258");
+  g.addColorStop(0.5, "#c8a877");
+  g.addColorStop(1, "#b09068");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 2048, 512);
+  // Stone blocks texture
+  const img = ctx.getImageData(0, 0, 2048, 512);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 25;
+    img.data[i]   = Math.max(0, Math.min(255, img.data[i] + n));
+    img.data[i+1] = Math.max(0, Math.min(255, img.data[i+1] + n));
+    img.data[i+2] = Math.max(0, Math.min(255, img.data[i+2] + n));
+  }
+  ctx.putImageData(img, 0, 0);
+  // Block seams
+  ctx.strokeStyle = "rgba(0,0,0,0.4)"; ctx.lineWidth = 1;
+  for (let y = 0; y < 512; y += 24) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(2048, y); ctx.stroke();
+  }
+  for (let y = 0; y < 512; y += 24) {
+    const off = (y / 24) % 2 === 0 ? 0 : 32;
+    for (let x = off; x < 2048; x += 64) {
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 24); ctx.stroke();
+    }
+  }
+  // ---- Draw 4 tiers of arches ----
   const tiers = [
-    { A: 94, B: 78, a: 88, b: 72, H: 48, color: 0xc8a877 }, // outer full ring
-    { A: 88, B: 72, a: 80, b: 65, H: 36, color: 0xb08858 }, // 2nd
-    { A: 80, B: 65, a: 74, b: 58, H: 24, color: 0x9a7248 }, // inner (partial collapse)
+    { yTop: 384, yBot: 512, w: 60, gap: 20 }, // Ground (Doric-ish)
+    { yTop: 256, yBot: 384, w: 60, gap: 20 }, // 1st (Ionic)
+    { yTop: 128, yBot: 256, w: 60, gap: 20 }, // 2nd (Corinthian)
+    { yTop: 0,   yBot: 128, w: 30, gap: 20 }, // Attic (small square windows)
   ];
+  const N = 24; // arches per tier
+  const step = 2048 / N;
+  for (let t = 0; t < 3; t++) {
+    const tier = tiers[t];
+    for (let i = 0; i < N; i++) {
+      const cx = i * step + step / 2;
+      const cy = (tier.yTop + tier.yBot) / 2;
+      const h = tier.yBot - tier.yTop - 30;
+      const w = tier.w;
+      // Arch opening (dark)
+      ctx.fillStyle = "#1a1006";
+      ctx.beginPath();
+      ctx.moveTo(cx - w/2, tier.yBot - 10);
+      ctx.lineTo(cx - w/2, tier.yTop + 20 + w/2);
+      ctx.arc(cx, tier.yTop + 20 + w/2, w/2, Math.PI, 0);
+      ctx.lineTo(cx + w/2, tier.yBot - 10);
+      ctx.closePath();
+      ctx.fill();
+      // Arch keystone
+      ctx.fillStyle = "#8a6838";
+      ctx.fillRect(cx - 4, tier.yTop + 15, 8, 12);
+      // Half-column between arches
+      if (i > 0) {
+        const colX = cx - step/2;
+        ctx.fillStyle = "rgba(60,40,20,0.35)";
+        ctx.fillRect(colX - 4, tier.yTop + 5, 8, tier.yBot - tier.yTop - 10);
+      }
+    }
+  }
+  // Attic (top row: small rectangular windows every other bay)
+  const attic = tiers[3];
+  for (let i = 0; i < N; i++) {
+    if (i % 2 !== 0) continue;
+    const cx = i * step + step / 2;
+    ctx.fillStyle = "#2a1808";
+    ctx.fillRect(cx - 15, attic.yTop + 30, 30, 60);
+    // Corinthian pilaster
+    ctx.fillStyle = "rgba(60,40,20,0.4)";
+    ctx.fillRect(cx - step/2 - 3, attic.yTop, 6, attic.yBot - attic.yTop);
+  }
+  // Heavy wear/dark patches (aged travertine)
+  for (let i = 0; i < 40; i++) {
+    ctx.fillStyle = `rgba(60,40,20,${0.05 + Math.random()*0.1})`;
+    ctx.beginPath();
+    ctx.ellipse(Math.random()*2048, Math.random()*512, 20 + Math.random()*40, 10 + Math.random()*30, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+let _colosseumTex = null;
+function colosseumTex() { return _colosseumTex ||= makeColosseumTexture(); }
+
+function addColosseum(x=0, z=0) {
+  // Outer wall: full tall ellipse ring (with the painted 4-tier arch texture wrapping around)
+  const outerA = 94, outerB = 78, ringT = 4.5, H = 48;
+  const shape = new THREE.Shape();
+  const seg = 96;
+  shape.moveTo(outerA, 0);
+  for (let i=1;i<=seg;i++){const th=(i/seg)*Math.PI*2;shape.lineTo(outerA*Math.cos(th),outerB*Math.sin(th));}
+  const hole = new THREE.Path();
+  hole.moveTo(outerA - ringT, 0);
+  for (let i=1;i<=seg;i++){const th=(i/seg)*Math.PI*2;hole.lineTo((outerA-ringT)*Math.cos(th),(outerB-ringT)*Math.sin(th));}
+  shape.holes.push(hole);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: H, bevelEnabled: false, curveSegments: 8 });
+  geo.rotateX(-Math.PI/2); geo.translate(x, 0, z);
+  // Regenerate UVs so texture wraps around perimeter and vertical fills full height
+  const perim = Math.PI * (3*(outerA+outerB) - Math.sqrt((3*outerA+outerB)*(outerA+3*outerB)));
+  const uv = geo.attributes.uv, pos = geo.attributes.position;
+  for (const grp of geo.groups) {
+    if (grp.materialIndex !== 1) continue;
+    for (let i = grp.start; i < grp.start + grp.count; i++) {
+      const vi = geo.index ? geo.index.array[i] : i;
+      const px = pos.getX(vi) - x, py = pos.getY(vi), pz = pos.getZ(vi) - z;
+      const ang = Math.atan2(pz, px);
+      const u = (ang + Math.PI) / (Math.PI*2) * (perim / 30); // 30m per texture tile
+      const v = 1 - py / H;
+      uv.setXY(vi, u, v);
+    }
+  }
+  uv.needsUpdate = true;
+  const ctex = colosseumTex();
+  ctex.wrapS = THREE.RepeatWrapping;
+  const wallMat = new THREE.MeshLambertMaterial({ map: ctex });
+  const capMat = new THREE.MeshLambertMaterial({ color: 0x9a7852 });
+  const mesh = new THREE.Mesh(geo, [capMat, wallMat]);
+  scene.add(mesh);
+  geo.computeBoundingBox();
+  buildings.push({ mesh, min: geo.boundingBox.min.clone(), max: geo.boundingBox.max.clone() });
+
+  // Inner ring (partially collapsed): shorter and rougher, no arches (represents ruined interior)
+  const iA = 84, iB = 68, iRingT = 3, iH = 28;
+  const shape2 = new THREE.Shape();
+  shape2.moveTo(iA, 0);
+  for (let i=1;i<=seg;i++){const th=(i/seg)*Math.PI*2;shape2.lineTo(iA*Math.cos(th),iB*Math.sin(th));}
+  const hole2 = new THREE.Path();
+  hole2.moveTo(iA - iRingT, 0);
+  for (let i=1;i<=seg;i++){const th=(i/seg)*Math.PI*2;hole2.lineTo((iA-iRingT)*Math.cos(th),(iB-iRingT)*Math.sin(th));}
+  shape2.holes.push(hole2);
+  const geo2 = new THREE.ExtrudeGeometry(shape2, { depth: iH, bevelEnabled: false, curveSegments: 8 });
+  geo2.rotateX(-Math.PI/2); geo2.translate(x, 0, z);
   travertineTex.repeat.set(30, 8);
-  for (const t of tiers) {
-    const shape = new THREE.Shape();
-    const seg = 60;
-    shape.moveTo(t.A, 0);
-    for (let i=1;i<=seg;i++){const th=(i/seg)*Math.PI*2;shape.lineTo(t.A*Math.cos(th),t.B*Math.sin(th));}
-    const hole = new THREE.Path();
-    hole.moveTo(t.a, 0);
-    for (let i=1;i<=seg;i++){const th=(i/seg)*Math.PI*2;hole.lineTo(t.a*Math.cos(th),t.b*Math.sin(th));}
-    shape.holes.push(hole);
-    const geo = new THREE.ExtrudeGeometry(shape,{depth:t.H,bevelEnabled:false,curveSegments:6});
-    geo.rotateX(-Math.PI/2); geo.translate(x,0,z);
-    const mat = new THREE.MeshLambertMaterial({ map: travertineTex, color: t.color });
-    const mesh = new THREE.Mesh(geo, mat);
-    scene.add(mesh); geo.computeBoundingBox();
-    buildings.push({ mesh, min: geo.boundingBox.min.clone(), max: geo.boundingBox.max.clone() });
-  }
-  // Arena floor
-  const arena = new THREE.Mesh(new THREE.CircleGeometry(72, 48),
-    new THREE.MeshLambertMaterial({ color: 0x6a4a2a }));
+  const mesh2 = new THREE.Mesh(geo2, new THREE.MeshLambertMaterial({ map: travertineTex, color: 0x9a7852 }));
+  scene.add(mesh2); geo2.computeBoundingBox();
+  buildings.push({ mesh: mesh2, min: geo2.boundingBox.min.clone(), max: geo2.boundingBox.max.clone() });
+
+  // Arena floor (sandy)
+  const arena = new THREE.Mesh(new THREE.CircleGeometry(iA - iRingT - 3, 48),
+    new THREE.MeshLambertMaterial({ color: 0x8a6a3f }));
   arena.rotation.x = -Math.PI/2; arena.position.set(x, 0.05, z); scene.add(arena);
-  // Ring of pilaster columns around the outer wall to fake arch supports
-  const outer = tiers[0];
-  const cols = 40;
-  for (let i = 0; i < cols; i++) {
-    const th = (i / cols) * Math.PI * 2;
-    const px = x + (outer.A + 2) * Math.cos(th);
-    const pz = z + (outer.B + 2) * Math.sin(th);
-    const col = new THREE.Mesh(
-      new THREE.BoxGeometry(1.8, outer.H, 1.8),
-      new THREE.MeshLambertMaterial({ color: 0x9a7248 })
-    );
-    col.position.set(px, outer.H / 2, pz);
-    col.rotation.y = th;
-    scene.add(col);
+
+  // Hypogeum grid (visible underground chambers rendered as dark grid on arena floor)
+  for (let gi = -3; gi <= 3; gi++) {
+    const line = new THREE.Mesh(new THREE.PlaneGeometry(140, 0.4),
+      new THREE.MeshBasicMaterial({ color: 0x1a1006 }));
+    line.rotation.x = -Math.PI/2; line.position.set(x, 0.06, z + gi * 8);
+    scene.add(line);
+    const line2 = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 100),
+      new THREE.MeshBasicMaterial({ color: 0x1a1006 }));
+    line2.rotation.x = -Math.PI/2; line2.position.set(x + gi * 12, 0.06, z);
+    scene.add(line2);
   }
-  landmarkPos.set(x, tiers[0].H, z);
+  landmarkPos.set(x, H, z);
 }
 function addStPeters(x=0,z=0) {
   travertineTex.repeat.set(6, 3);
@@ -962,22 +1270,16 @@ function chunkBounds(i, j) {
   return { s: toLat(z1), n: toLat(z0), w: toLng(x0), e: toLng(x1) };
 }
 
-async function overpassQuery(query, timeoutMs = 15000) {
+async function overpassQuery(query) {
   for (const url of OVERPASS_ENDPOINTS) {
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), timeoutMs);
     try {
-      const res = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(query), signal: ac.signal });
-      clearTimeout(timer);
-      if (!res.ok) { console.warn("overpass status", url, res.status); continue; }
+      const res = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(query) });
+      if (!res.ok) continue;
       const data = await res.json();
       return data.elements || [];
-    } catch (err) {
-      clearTimeout(timer);
-      console.warn("overpass fail", url, err.message || err);
-    }
+    } catch (err) { console.warn("overpass fail", url, err); }
   }
-  throw new Error("Overpass down / timeout");
+  throw new Error("Overpass down");
 }
 
 // Road widths in meters based on OSM highway type
@@ -1148,39 +1450,14 @@ function unloadChunk(i, j) {
   collidableMeshes = buildings.map(b => b.mesh);
 }
 
-// Rate-limited chunk loader: max 2 in-flight to keep Overpass happy
-let _inFlight = 0;
-const MAX_INFLIGHT = 2;
-const _queue = [];
-function enqueueChunk(i, j) {
-  const key = chunkKey(i, j);
-  if (chunks.has(key)) return;
-  if (_queue.some(([qi, qj]) => qi === i && qj === j)) return;
-  _queue.push([i, j]);
-  drainQueue();
-}
-function drainQueue() {
-  while (_inFlight < MAX_INFLIGHT && _queue.length) {
-    const [i, j] = _queue.shift();
-    if (chunks.has(chunkKey(i, j))) continue;
-    _inFlight++;
-    loadChunk(i, j).finally(() => { _inFlight--; drainQueue(); });
-  }
-}
-
 function updateChunkStreaming() {
   const { i: pi, j: pj } = chunkAt(player.pos.x, player.pos.z);
-  // Load close chunks in priority order (nearest first)
-  const toLoad = [];
+  // Load close chunks (async, no await — fire and forget)
   for (let di = -CHUNK_RADIUS; di <= CHUNK_RADIUS; di++) {
     for (let dj = -CHUNK_RADIUS; dj <= CHUNK_RADIUS; dj++) {
-      if (!chunks.has(chunkKey(pi + di, pj + dj))) {
-        toLoad.push([pi + di, pj + dj, di*di + dj*dj]);
-      }
+      loadChunk(pi + di, pj + dj);
     }
   }
-  toLoad.sort((a, b) => a[2] - b[2]);
-  for (const [i, j] of toLoad) enqueueChunk(i, j);
   // Unload far chunks
   const keep = CHUNK_RADIUS + 1;
   for (const key of [...chunks.keys()]) {
@@ -1651,7 +1928,10 @@ function makeBot(i) {
   return { group:grp, hp:100, kills:0, deaths:0, streak:0,
     name:botNames[i%botNames.length], team, teamColor,
     pos:new THREE.Vector3(0,0.92,0), dir:Math.random()*Math.PI*2, dirTimer:0, shootTimer:Math.random()*2,
-    dead:false, respawnAt:0, bob:0 };
+    dead:false, respawnAt:0, bob:0,
+    state: "wander", // 'wander' | 'chase' | 'engage' | 'flee' | 'strafe'
+    stateTimer: 0, strafeDir: (Math.random() < 0.5 ? 1 : -1),
+    lastSawPlayer: 0, targetPos: null };
 }
 function randomOpenPoint(minR=30, maxR=180) {
   for (let t=0;t<60;t++) {
@@ -1693,44 +1973,110 @@ function respawnBot(bot) {
   const sp = randomOpenPoint(40, 160);
   bot.pos.set(sp.x, 0.92, sp.z); bot.group.visible = true;
 }
+function botCanSeePlayer(bot) {
+  if (player.dead) return { seen: false, dist: Infinity };
+  const from = bot.pos.clone(); from.y += 0.6;
+  const to = player.pos.clone();
+  const diff = to.clone().sub(from);
+  const dist = diff.length();
+  if (dist > 90) return { seen: false, dist };
+  diff.normalize();
+  const hit = raycastWorld(from, diff, dist);
+  return { seen: !hit || hit.distance > dist - 0.5, dist };
+}
+
 function botUpdate(bot, dt, now) {
   if (bot.dead) { if (now >= bot.respawnAt) respawnBot(bot); return; }
-  bot.dirTimer -= dt;
-  if (bot.dirTimer <= 0) { bot.dir = Math.random()*Math.PI*2; bot.dirTimer = 1+Math.random()*2; }
-  const speed = 3.5;
-  const step = new THREE.Vector3(Math.cos(bot.dir)*speed*dt, 0, Math.sin(bot.dir)*speed*dt);
-  const posV = new THREE.Vector3(bot.pos.x, bot.pos.y+0.5, bot.pos.z);
-  collideHoriz(posV, step, bot.pos.y-0.5, bot.pos.y+1.5);
+  bot.stateTimer -= dt;
+
+  // Sight check every frame (cheap raycast)
+  const sight = botCanSeePlayer(bot);
+  if (sight.seen && bot.team !== player.team) bot.lastSawPlayer = now;
+  const recentlySawPlayer = (now - bot.lastSawPlayer) < 4000;
+
+  // State transitions
+  if (bot.hp < 30 && sight.seen && sight.dist < 40) {
+    bot.state = "flee";
+  } else if (sight.seen && sight.dist < 25) {
+    bot.state = "strafe";
+  } else if (sight.seen && sight.dist < 60) {
+    bot.state = "engage";
+  } else if (recentlySawPlayer && sight.dist < 90) {
+    bot.state = "chase";
+  } else if (bot.stateTimer <= 0) {
+    bot.state = "wander";
+    bot.stateTimer = 1.5 + Math.random() * 2.5;
+    bot.dir = Math.random() * Math.PI * 2;
+  }
+
+  // Movement per state
+  let speed = 3.5, moveDir = bot.dir;
+  const angToPlayer = Math.atan2(player.pos.z - bot.pos.z, player.pos.x - bot.pos.x);
+  switch (bot.state) {
+    case "wander":
+      speed = 2.5;
+      break;
+    case "chase":
+      moveDir = angToPlayer;
+      speed = 5.5;
+      break;
+    case "engage":
+      // Move slightly forward while shooting
+      moveDir = angToPlayer;
+      speed = 2.0;
+      break;
+    case "strafe":
+      // Circle strafe around player
+      moveDir = angToPlayer + bot.strafeDir * Math.PI / 2;
+      speed = 4.5;
+      if (bot.stateTimer <= 0) { bot.strafeDir = -bot.strafeDir; bot.stateTimer = 1 + Math.random() * 1.5; }
+      break;
+    case "flee":
+      // Run away from player
+      moveDir = angToPlayer + Math.PI;
+      speed = 6.0;
+      break;
+  }
+
+  // Apply movement with collision
+  const step = new THREE.Vector3(Math.cos(moveDir) * speed * dt, 0, Math.sin(moveDir) * speed * dt);
+  const posV = new THREE.Vector3(bot.pos.x, bot.pos.y + 0.5, bot.pos.z);
+  collideHoriz(posV, step, bot.pos.y - 0.5, bot.pos.y + 1.5);
   const moved = Math.hypot(posV.x - bot.pos.x, posV.z - bot.pos.z);
-  if (moved < speed*dt*0.1) bot.dirTimer = 0;
+  if (moved < speed * dt * 0.2 && bot.state === "wander") { bot.dir = Math.random() * Math.PI * 2; bot.stateTimer = 0.5; }
   bot.pos.x = posV.x; bot.pos.z = posV.z;
   bot.pos.x = Math.max(-300, Math.min(300, bot.pos.x));
   bot.pos.z = Math.max(-300, Math.min(300, bot.pos.z));
   bot.pos.y = 0.92;
-  bot.bob += dt*10;
-  const bobY = Math.sin(bot.bob)*0.08*(moved>0.01?1:0);
-  bot.group.position.set(bot.pos.x, bot.pos.y+bobY, bot.pos.z);
-  bot.group.rotation.y = -bot.dir + Math.PI/2;
+
+  // Face player when engaging/strafing/fleeing; face movement direction when wandering
+  const faceAng = (bot.state === "wander") ? bot.dir : angToPlayer;
+  bot.dir = faceAng; // used elsewhere
+
+  bot.bob += dt * (speed * 2);
+  const bobY = Math.sin(bot.bob) * 0.06 * (moved > 0.01 ? 1 : 0);
+  bot.group.position.set(bot.pos.x, bot.pos.y + bobY, bot.pos.z);
+  bot.group.rotation.y = -faceAng + Math.PI / 2;
+
+  // Shooting (only when has LOS and reasonably close)
   bot.shootTimer -= dt;
-  if (bot.shootTimer <= 0 && !player.dead && bot.team !== player.team) {
-    bot.shootTimer = 0.9+Math.random()*1.4;
+  if (bot.shootTimer <= 0 && sight.seen && bot.team !== player.team && sight.dist < 80) {
+    // Burst: shorter interval when engaging up close
+    const gap = bot.state === "strafe" ? 0.25 : (bot.state === "engage" ? 0.35 : 0.6);
+    bot.shootTimer = gap + Math.random() * 0.5;
     const from = bot.pos.clone(); from.y += 0.6;
-    const dir = player.pos.clone().sub(from);
-    const dist = dir.length();
-    if (dist < 80) {
-      dir.normalize();
-      const hit = raycastWorld(from, dir, dist);
-      if (!hit || hit.distance > dist - 0.5) {
-        dir.x += (Math.random()-0.5)*0.08;
-        dir.y += (Math.random()-0.5)*0.08;
-        dir.z += (Math.random()-0.5)*0.08;
-        dir.normalize();
-        tracer(from, from.clone().addScaledVector(dir,200));
-        sfxShoot(dist, "maa1");
-        const toP = player.pos.clone().sub(from).normalize();
-        if (dir.dot(toP) > 0.994) damagePlayer(10);
-      }
-    }
+    const dir = player.pos.clone().sub(from).normalize();
+    // Spread based on distance + state (worse aim while strafing)
+    const spread = 0.05 + (sight.dist / 200) + (bot.state === "strafe" ? 0.04 : 0);
+    dir.x += (Math.random() - 0.5) * spread;
+    dir.y += (Math.random() - 0.5) * spread;
+    dir.z += (Math.random() - 0.5) * spread;
+    dir.normalize();
+    tracer(from, from.clone().addScaledVector(dir, 200));
+    sfxShoot(sight.dist, "maa1");
+    // Hit test cone: bot hits player if aim close enough
+    const toP = player.pos.clone().sub(from).normalize();
+    if (dir.dot(toP) > 0.993) damagePlayer(bot.state === "strafe" ? 6 : 10);
   }
 }
 
@@ -2221,47 +2567,33 @@ async function bootstrap() {
   loadBar.style.width = "10%";
   playBtn.disabled = true;
   playBtn.innerHTML = `<span class="plabel">Caricamento...</span>`;
+  // Random spawn anywhere in Rome bbox
   currentSpawn = randomRomeSpawn();
   originLat = currentSpawn.lat; originLng = currentSpawn.lng;
-  landmarkPos.set(0, 0, 0);
+  landmarkPos.set(0, 0, 0); // no landmark focus, just wherever we spawn
 
+  // Load the 3x3 chunks around origin (blocks until initial loaded)
   loadEl.textContent = `Scarico Roma da OpenStreetMap...`;
-  loadBar.style.width = "20%";
-
-  // Load ONLY the center chunk sync, unlock game as soon as it's ready.
-  // Then load the ring of 8 around it in background.
+  loadBar.style.width = "30%";
   try {
-    await Promise.race([
-      loadChunk(0, 0),
-      new Promise((_, rej) => setTimeout(() => rej(new Error("Timeout centrale (20s)")), 20000)),
-    ]);
-    loadBar.style.width = "70%";
-    loadEl.textContent = `Chunk centrale ok. Genero bot e props...`;
+    const initial = [];
+    for (let di = -1; di <= 1; di++)
+      for (let dj = -1; dj <= 1; dj++)
+        initial.push(loadChunk(di, dj));
+    await Promise.all(initial);
+    loadBar.style.width = "80%";
+    loadEl.textContent = `Costruisco strade e palazzi...`;
     scatterProps();
     spawnBots();
     loadBar.style.width = "100%";
-    loadEl.textContent = `Pronti. Il resto della citta si carica mentre giochi.`;
+    loadEl.textContent = `Pronti. Buon divertimento.`;
     playBtn.disabled = false;
     playBtn.innerHTML = `<div><div class="plabel">Gioca ora</div><div class="ptxt">Entra in battaglia</div></div>`;
-
-    // Restore normal play click handler (may have been overwritten by retry path)
-    playBtn.onclick = playHandler;
-    // Fire-and-forget: load surrounding chunks in background (1 at a time to avoid rate limit)
-    (async () => {
-      const around = [];
-      for (let di = -1; di <= 1; di++)
-        for (let dj = -1; dj <= 1; dj++)
-          if (!(di === 0 && dj === 0)) around.push([di, dj]);
-      for (const [di, dj] of around) {
-        try { await loadChunk(di, dj); } catch {}
-      }
-    })();
   } catch (e) {
-    console.error("bootstrap failed:", e);
-    loadEl.textContent = `OSM lento/non raggiungibile. Clicca RIPROVA.`;
+    console.error(e);
+    loadEl.textContent = "OSM non raggiungibile. Riprova.";
     playBtn.disabled = false;
     playBtn.innerHTML = `<div><div class="plabel">Riprova</div></div>`;
-    playBtn.onclick = () => resetAndLoad();
   }
 }
 
@@ -2283,9 +2615,10 @@ function resetAndLoad() {
   bootstrap();
 }
 
-const playHandler = () => {
+playBtn.onclick = () => {
   player.name = (document.getElementById("nameInput").value.trim() || "player").slice(0, 14);
   switchWeapon(CLASSES[currentClass].weapon);
+  // Spawn at world origin (which is our random Rome point)
   player.pos.set(0, EYE, 0);
   player.yaw = Math.random() * Math.PI * 2;
   document.getElementById("clName").textContent = "ROMA";
@@ -2295,7 +2628,6 @@ const playHandler = () => {
   document.getElementById("menu").style.display = "none";
   canvas3d.requestPointerLock();
 };
-playBtn.onclick = playHandler;
 
 document.getElementById("resetBtn").onclick = () => resetAndLoad();
 
@@ -2370,6 +2702,19 @@ function frame() {
   vmCam.aspect = innerWidth/innerHeight; vmCam.updateProjectionMatrix();
   renderer.render(vmScene, vmCam);
   drawTags(); drawMinimap(); updateCompass(); updateGrenCd(now); updateScoreboard();
+  // Crosshair goes red when aiming at an enemy in engagement range
+  const lookD = lookDir(), eyeP = player.pos;
+  let hostileHit = false;
+  for (const b of bots) {
+    if (b.dead) continue;
+    const tmp = new THREE.Vector3().copy(b.pos).add(new THREE.Vector3(0, 0.6, 0)).sub(eyeP);
+    const t = tmp.dot(lookD);
+    if (t < 0 || t > 100) continue;
+    const perpSq = tmp.lengthSq() - t*t;
+    if (perpSq < 0.55*0.55) { hostileHit = true; break; }
+  }
+  const chEl = document.getElementById("crosshair");
+  chEl.classList.toggle("hostile", hostileHit);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
