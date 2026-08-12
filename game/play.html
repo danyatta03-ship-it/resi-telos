@@ -3357,27 +3357,72 @@ async function fetchColosseoBbox(onProgress) {
 
 let currentSpawn = null;
 async function bootstrap() {
-  loadEl.textContent = `Costruisco l'area del Colosseo...`;
-  loadBar.style.width = "20%";
+  loadEl.textContent = `Preparo l'area del Colosseo...`;
+  loadBar.style.width = "10%";
   playBtn.disabled = true;
   playBtn.innerHTML = `<span class="plabel">Caricamento...</span>`;
   originLat = COLOSSEO.lat; originLng = COLOSSEO.lng;
   currentSpawn = { ...COLOSSEO };
   landmarkPos.set(0, 0, 0);
 
-  // Hand-designed real Rome layout — instant, no network
-  buildRomaColosseoArea();
-  loadBar.style.width = "50%";
+  // Always add the hand-modelled landmarks first (Colosseum, Arco, Foro Romano)
+  // — these aren't in OSM as 3D data
   addColosseum(0, 0);
-  loadBar.style.width = "70%";
+  loadBar.style.width = "20%";
   scatterProps();
   addForoRomanoRuins();
+  loadBar.style.width = "25%";
+
+  // Try to fetch REAL OSM data (buildings + streets) via Overpass
+  let osmSuccess = false;
+  try {
+    loadEl.textContent = `Scarico Roma da OpenStreetMap (max 25s)...`;
+    // Aggressive: race 3 endpoints in parallel with 25s hard timeout
+    const elements = await Promise.race([
+      fetchColosseoBbox((msg, pct) => { loadEl.textContent = msg; loadBar.style.width = (25 + pct * 0.5) + "%"; }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("Timeout 25s")), 25000)),
+    ]);
+    loadEl.textContent = `Costruisco ${elements.length} elementi OSM reali...`;
+    loadBar.style.width = "80%";
+    let bCount = 0, rCount = 0;
+    for (const el of elements) {
+      if (el.tags?.building) {
+        const rings = [];
+        if (el.type === "way" && el.geometry) rings.push(el.geometry.map(g => projectLL(g.lon, g.lat)));
+        else if (el.type === "relation" && el.members) {
+          for (const m of el.members) if (m.role === "outer" && m.geometry) rings.push(m.geometry.map(g => projectLL(g.lon, g.lat)));
+        }
+        const h = osmHeight(el.tags);
+        for (const r of rings) {
+          // Skip buildings inside Colosseum area
+          const cx = r.reduce((s, p) => s + p[0], 0) / r.length;
+          const cz = r.reduce((s, p) => s + p[1], 0) / r.length;
+          if (Math.hypot(cx, cz) < 120) continue;
+          if (buildBuildingMesh(r, h, pickFacadeTint())) bCount++;
+        }
+      } else if (el.tags?.highway && el.geometry) {
+        const width = ROAD_WIDTHS[el.tags.highway] || 5;
+        const pts = el.geometry.map(g => projectLL(g.lon, g.lat));
+        if (pts.length >= 2) {
+          const mesh = buildRoadMesh(pts, width, null);
+          if (mesh) { rCount++; if (el.tags.name) allRoads.push({ name: el.tags.name, points: pts, width }); }
+        }
+      }
+    }
+    osmSuccess = true;
+    loadEl.textContent = `OSM caricato: ${bCount} palazzi + ${rCount} strade.`;
+  } catch (err) {
+    console.warn("OSM fallito, uso layout hardcoded:", err.message);
+    loadEl.textContent = `OSM non risponde, uso layout locale.`;
+    buildRomaColosseoArea();
+  }
+
   addParkedCars();
-  loadBar.style.width = "90%";
+  loadBar.style.width = "95%";
   collidableMeshes = buildings.map(b => b.mesh);
   spawnBots();
   loadBar.style.width = "100%";
-  loadEl.textContent = `Pronti. Colosseo, Foro Romano, Arco di Costantino.`;
+  loadEl.textContent = osmSuccess ? `Pronti — Roma OSM reale.` : `Pronti — layout locale.`;
   playBtn.disabled = false;
   playBtn.innerHTML = `<div><div class="plabel">Gioca ora</div><div class="ptxt">Entra in battaglia</div></div>`;
   playBtn.onclick = playHandler;
