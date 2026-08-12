@@ -1271,7 +1271,7 @@ function makeArchBayGeometry(bayW, bayH, wallDepth, archRatio = 0.65) {
 function addColosseum(x=0, z=0) {
   // Real Colosseum: 189×156m, 48m tall, 80 arches per tier, 4 tiers
   const A = 90, B = 74;
-  const wallDepth = 3.0;
+  const wallDepth = 4.5;
   const nArches = 80;
   const tiers = [
     { h: 10.6, y: 0,     hasArch: true }, // Doric ground
@@ -1355,24 +1355,55 @@ function addColosseum(x=0, z=0) {
     }
   }
 
-  // Cornices (horizontal bands) between tiers
-  for (let ti = 1; ti < tiers.length; ti++) {
-    const y = tiers[ti].y;
-    const cornice = new THREE.Mesh(
-      new THREE.TorusGeometry(1, 0.5, 6, 96),
-      shadowMat,
-    );
-    cornice.scale.set(A + 1, 1, B + 1);
-    cornice.rotation.x = Math.PI/2;
-    cornice.position.set(x, y, z);
-    scene.add(cornice);
+  // Cornices: proper protruding elliptical bands (like the real stone cornices)
+  function makeEllipseBand(A0, B0, thickness, height, matC) {
+    const shape = new THREE.Shape();
+    const seg = 96;
+    shape.moveTo(A0 + thickness, 0);
+    for (let i=1;i<=seg;i++){const th=(i/seg)*Math.PI*2;shape.lineTo((A0+thickness)*Math.cos(th),(B0+thickness)*Math.sin(th));}
+    const hole = new THREE.Path();
+    hole.moveTo(A0 - 0.2, 0);
+    for (let i=1;i<=seg;i++){const th=(i/seg)*Math.PI*2;hole.lineTo((A0-0.2)*Math.cos(th),(B0-0.2)*Math.sin(th));}
+    shape.holes.push(hole);
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: height, bevelEnabled: false, curveSegments: 6 });
+    geo.rotateX(-Math.PI/2);
+    return new THREE.Mesh(geo, matC);
   }
-  // Top cornice
-  const topCornice = new THREE.Mesh(new THREE.TorusGeometry(1, 0.8, 6, 96), shadowMat);
-  topCornice.scale.set(A + 1.5, 1, B + 1.5);
-  topCornice.rotation.x = Math.PI/2;
-  topCornice.position.set(x, totalH, z);
-  scene.add(topCornice);
+  for (let ti = 1; ti < tiers.length; ti++) {
+    const yTier = tiers[ti].y;
+    const band = makeEllipseBand(A - 0.5, B - 0.5, 1.2, 1.0, shadowMat);
+    band.position.set(x, yTier - 0.5, z);
+    scene.add(band);
+  }
+  // Top cornice (larger, more pronounced)
+  const topBand = makeEllipseBand(A - 0.5, B - 0.5, 1.8, 1.4, shadowMat);
+  topBand.position.set(x, totalH - 0.7, z);
+  scene.add(topBand);
+
+  // ---- Half-columns / pilasters between arch bays (on outer face) ----
+  // Each of the ~80 bays gets a slender vertical column at its boundary → 80 columns per tier
+  const pilarGeo = new THREE.CylinderGeometry(0.55, 0.55, 10.0, 8);
+  const pilarMat = new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0xd8b078 });
+  for (let ti = 0; ti < 3; ti++) { // only arch tiers
+    const tier = tiers[ti];
+    const alive = [];
+    for (let i = 0; i < nArches; i++) if (!ruined(i, ti)) alive.push(i);
+    const inst = new THREE.InstancedMesh(pilarGeo, pilarMat, alive.length);
+    const dummy = new THREE.Object3D();
+    for (let k = 0; k < alive.length; k++) {
+      const i = alive[k];
+      // Position between bays i and i+1 → theta at bay boundary
+      const theta = ((i + 0.5) / nArches) * Math.PI * 2;
+      // Position slightly outside the ellipse (protruding half-column)
+      const px = (A + 0.6) * Math.cos(theta), pz = (B + 0.6) * Math.sin(theta);
+      dummy.position.set(x + px, tier.y + tier.h/2, z + pz);
+      dummy.scale.set(1, tier.h / 10.0, 1); // scale to match tier height
+      dummy.updateMatrix();
+      inst.setMatrixAt(k, dummy.matrix);
+    }
+    inst.instanceMatrix.needsUpdate = true;
+    scene.add(inst);
+  }
 
   // Inner partial wall (still-standing inner arcade)
   const iA = 62, iB = 50, iH = 24;
