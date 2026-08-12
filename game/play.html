@@ -1437,125 +1437,93 @@ function addColosseum(x=0, z=0) {
         max: new THREE.Vector3(x + A + wallDepth, tier.y + tier.h, z + B + wallDepth),
       });
     } else {
-      // Attic: solid wall from 0° to 155° (matches 3rd tier intact arc)
-      const shape = new THREE.Shape();
-      const seg = 72;
-      const startDeg = 0, endDeg = 155;
-      const startRad = startDeg * Math.PI / 180, endRad = endDeg * Math.PI / 180;
-      const atticDepth = wallDepth * 1.1;
-      shape.moveTo((A + atticDepth/2) * Math.cos(startRad), (B + atticDepth/2) * Math.sin(startRad));
-      for (let i = 1; i <= seg; i++) {
-        const t = startRad + (endRad - startRad) * (i / seg);
-        shape.lineTo((A + atticDepth/2) * Math.cos(t), (B + atticDepth/2) * Math.sin(t));
+      // Attic: solid arc wall built from N tangent box segments (guaranteed to render)
+      // Arc from 0° to 155°, one box every 1.55° = 100 boxes
+      const atticBaySeg = 100;
+      const atticStartDeg = 0, atticEndDeg = 155;
+      const segArcRad = ((atticEndDeg - atticStartDeg) / atticBaySeg) * Math.PI / 180;
+      const segArcLen = Math.max(A, B) * segArcRad + 0.05; // slight overlap
+      const atticBoxGeo = new THREE.BoxGeometry(segArcLen, tier.h, wallDepth);
+      const atticInst = new THREE.InstancedMesh(atticBoxGeo, stoneMat, atticBaySeg);
+      const atticDummy = new THREE.Object3D();
+      for (let s = 0; s < atticBaySeg; s++) {
+        const deg = atticStartDeg + (s + 0.5) * (atticEndDeg - atticStartDeg) / atticBaySeg;
+        const theta = deg * Math.PI / 180;
+        const px = A * Math.cos(theta), pz = B * Math.sin(theta);
+        atticDummy.position.set(x + px, tier.y + tier.h / 2, z + pz);
+        atticDummy.rotation.set(0, -Math.atan2(pz, px) + Math.PI / 2, 0);
+        atticDummy.updateMatrix();
+        atticInst.setMatrixAt(s, atticDummy.matrix);
       }
-      for (let i = seg; i >= 0; i--) {
-        const t = startRad + (endRad - startRad) * (i / seg);
-        shape.lineTo((A - atticDepth/2) * Math.cos(t), (B - atticDepth/2) * Math.sin(t));
-      }
-      shape.closePath();
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: tier.h, bevelEnabled: false, curveSegments: 4 });
-      geo.rotateX(-Math.PI/2);
-      geo.translate(x, tier.y, z);
-      const mesh = new THREE.Mesh(geo, stoneMat);
-      scene.add(mesh);
-      geo.computeBoundingBox();
-      buildings.push({ mesh, min: geo.boundingBox.min.clone(), max: geo.boundingBox.max.clone() });
+      atticInst.instanceMatrix.needsUpdate = true;
+      scene.add(atticInst);
+      buildings.push({
+        mesh: atticInst,
+        min: new THREE.Vector3(x - A - wallDepth, tier.y, z - B - wallDepth),
+        max: new THREE.Vector3(x + A + wallDepth, tier.y + tier.h, z + B + wallDepth),
+      });
 
-      // Attic: small square windows alternating with blank sections (real Colosseum pattern)
-      // Real pattern: window - pilaster - blank - pilaster - window - pilaster - blank ...
-      const windowCount = Math.floor(nArches / 2);
-      const winInst = new THREE.InstancedMesh(
-        new THREE.BoxGeometry(2.4, 3.5, 0.5),
-        new THREE.MeshBasicMaterial({ color: 0x0a0805 }),
-        windowCount
-      );
-      let wk = 0;
-      for (let i = 0; i < nArches; i += 2) { // every 2 bays = window position
-        const deg = (i / nArches) * 360;
-        if (deg > 152) break;
-        // Alternate: window, blank, window, blank
-        if (Math.floor(i / 2) % 2 !== 0) continue;
-        const theta = (i / nArches) * Math.PI * 2;
-        const px = (A + atticDepth/2 - 0.15) * Math.cos(theta);
-        const pz = (B + atticDepth/2 - 0.15) * Math.sin(theta);
-        const dummy = new THREE.Object3D();
-        dummy.position.set(x + px, tier.y + tier.h * 0.55, z + pz);
-        dummy.rotation.y = -Math.atan2(pz, px) + Math.PI / 2;
-        dummy.updateMatrix();
-        winInst.setMatrixAt(wk++, dummy.matrix);
+      // Attic small square windows (dark rectangles set into the wall)
+      // Pattern: window every ~5° starting at 5° (staying inside 0-155° arc)
+      const winStep = 5; // degrees between windows
+      const winCount = Math.floor(150 / winStep);
+      const atticWinGeo = new THREE.BoxGeometry(2.2, 3.4, 0.6);
+      const atticWinInst = new THREE.InstancedMesh(atticWinGeo,
+        new THREE.MeshBasicMaterial({ color: 0x0a0805 }), winCount);
+      const winDummy = new THREE.Object3D();
+      for (let w = 0; w < winCount; w++) {
+        const deg = 5 + w * winStep;
+        if (deg > 150) { atticWinInst.count = w; break; }
+        const theta = deg * Math.PI / 180;
+        // Slightly OUTSIDE the wall so it's visible
+        const px = (A + wallDepth/2 + 0.05) * Math.cos(theta);
+        const pz = (B + wallDepth/2 + 0.05) * Math.sin(theta);
+        winDummy.position.set(x + px, tier.y + tier.h * 0.55, z + pz);
+        winDummy.rotation.set(0, -Math.atan2(pz, px) + Math.PI / 2, 0);
+        winDummy.updateMatrix();
+        atticWinInst.setMatrixAt(w, winDummy.matrix);
       }
-      winInst.count = wk;
-      winInst.instanceMatrix.needsUpdate = true;
-      scene.add(winInst);
-
-      // Corinthian pilaster strips on attic — flat pilasters between windows
-      const pilasterInst = new THREE.InstancedMesh(
-        new THREE.BoxGeometry(0.7, tier.h - 0.5, 0.5),
-        shadowMat,
-        Math.floor(nArches / 2) + 1
-      );
-      let pk = 0;
-      for (let i = 0; i < nArches; i += 2) {
-        const deg = (i / nArches) * 360;
-        if (deg > 154) break;
-        const theta = ((i + 1) / nArches) * Math.PI * 2; // between windows
-        const px = (A + atticDepth/2 - 0.15) * Math.cos(theta);
-        const pz = (B + atticDepth/2 - 0.15) * Math.sin(theta);
-        const dummy = new THREE.Object3D();
-        dummy.position.set(x + px, tier.y + tier.h / 2, z + pz);
-        dummy.rotation.y = -Math.atan2(pz, px) + Math.PI / 2;
-        dummy.updateMatrix();
-        pilasterInst.setMatrixAt(pk++, dummy.matrix);
-      }
-      pilasterInst.count = pk;
-      pilasterInst.instanceMatrix.needsUpdate = true;
-      scene.add(pilasterInst);
+      atticWinInst.instanceMatrix.needsUpdate = true;
+      scene.add(atticWinInst);
     }
   }
 
-  // Cornices: partial elliptical arc bands (ONLY on the intact side, so they don't float
-  // over the ruined section like weird rings). Each tier has its own ruined arc.
-  function makeEllipseArcBand(A0, B0, thickness, height, startDeg, endDeg, matC) {
-    const shape = new THREE.Shape();
-    const seg = 60;
-    const startRad = startDeg * Math.PI / 180, endRad = endDeg * Math.PI / 180;
-    // outer arc forward
-    shape.moveTo((A0 + thickness) * Math.cos(startRad), (B0 + thickness) * Math.sin(startRad));
-    for (let i = 1; i <= seg; i++) {
-      const t = startRad + (endRad - startRad) * (i / seg);
-      shape.lineTo((A0 + thickness) * Math.cos(t), (B0 + thickness) * Math.sin(t));
-    }
-    // inner arc backward
-    for (let i = seg; i >= 0; i--) {
-      const t = startRad + (endRad - startRad) * (i / seg);
-      shape.lineTo(A0 * Math.cos(t), B0 * Math.sin(t));
-    }
-    shape.closePath();
-    const geo = new THREE.ExtrudeGeometry(shape, { depth: height, bevelEnabled: false, curveSegments: 4 });
-    geo.rotateX(-Math.PI/2);
-    return new THREE.Mesh(geo, matC);
-  }
-  // Arc coverage per tier (matches the ruined() function extent):
-  // Ground: 290° -> 240° = intact arc 290..600 (=240+360)
-  // 2nd: 320° -> 200° (=560)
-  // 3rd: 350° -> 155° (=515)
-  // Attic: 0° -> 120°
+  // Cornices: thin horizontal bands built from tangent boxes (same reliable technique)
+  // One tier arc definition = arc's intact range
   const tierArcs = [
-    { start: 290, end: 240 + 360 }, // ground
-    { start: 320, end: 200 + 360 }, // 2nd
-    { start: 350, end: 155 + 360 }, // 3rd
-    { start: 0,   end: 120 },       // attic (below top)
+    { start: 290, end: 240 + 360 }, // ground floor cornice
+    { start: 320, end: 200 + 360 }, // 2nd tier cornice
+    { start: 350, end: 155 + 360 }, // 3rd tier cornice
   ];
-  for (let ti = 1; ti < tiers.length; ti++) {
-    const arc = tierArcs[ti];
-    const band = makeEllipseArcBand(A - 0.3, B - 0.3, 1.5, 1.0, arc.start, arc.end, shadowMat);
-    band.position.set(x, tiers[ti].y - 0.5, z);
-    scene.add(band);
+  function addCorniceArc(yBase, height, startDeg, endDeg, matC, extraOut = 1.0) {
+    const seg = 100;
+    const arcDeg = endDeg - startDeg;
+    const segRad = (arcDeg / seg) * Math.PI / 180;
+    const segLen = Math.max(A, B) * segRad + 0.05;
+    const boxGeo = new THREE.BoxGeometry(segLen, height, wallDepth + extraOut * 2);
+    const inst = new THREE.InstancedMesh(boxGeo, matC, seg);
+    const dummy = new THREE.Object3D();
+    for (let s = 0; s < seg; s++) {
+      const deg = startDeg + (s + 0.5) * arcDeg / seg;
+      const theta = deg * Math.PI / 180;
+      const px = A * Math.cos(theta), pz = B * Math.sin(theta);
+      dummy.position.set(x + px, yBase + height / 2, z + pz);
+      dummy.rotation.set(0, -Math.atan2(pz, px) + Math.PI / 2, 0);
+      dummy.updateMatrix();
+      inst.setMatrixAt(s, dummy.matrix);
+    }
+    inst.instanceMatrix.needsUpdate = true;
+    scene.add(inst);
   }
-  // Top cornice (only on intact half = the attic arc 0-120)
-  const topBand = makeEllipseArcBand(A - 0.3, B - 0.3, 2.0, 1.4, 0, 120, shadowMat);
-  topBand.position.set(x, totalH - 0.7, z);
-  scene.add(topBand);
+  // Between-tier cornices
+  for (let ti = 1; ti < 3; ti++) {
+    const arc = tierArcs[ti];
+    addCorniceArc(tiers[ti].y - 0.5, 1.0, arc.start, arc.end, shadowMat, 0.8);
+  }
+  // Between-tier cornice: 3rd tier top (below attic)
+  addCorniceArc(tiers[3].y - 0.5, 1.0, tierArcs[2].start, tierArcs[2].end, shadowMat, 0.8);
+  // Top cornice above attic (0-155° same as attic)
+  addCorniceArc(totalH - 0.8, 1.4, 0, 155, shadowMat, 1.2);
 
   // ---- ENGAGED SQUARE PILASTERS between arch bays ----
   // Ground = Tuscan/Doric (square), 2nd = Ionic, 3rd = Corinthian.
