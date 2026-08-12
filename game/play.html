@@ -71,6 +71,8 @@
   #scoreboard tr.me { background:rgba(255,180,29,.08); }
 
   #vignette { position:fixed; inset:0; pointer-events:none; z-index:6; box-shadow: inset 0 0 200px 40px rgba(255,0,0,0); transition:box-shadow .12s; }
+  #dmgDir { position:fixed; top:50%; left:50%; width:220px; height:220px; margin:-110px 0 0 -110px; pointer-events:none; z-index:7; opacity:0; transition:opacity .15s; }
+  #dmgDir svg { width:100%; height:100%; }
   #dead { position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:7; display:none; align-items:center; justify-content:center;
     font:900 42px "Rajdhani",system-ui; pointer-events:none; letter-spacing:6px; color:#ff3333; text-shadow:0 4px 20px rgba(255,0,0,.5); text-transform:uppercase; }
 
@@ -280,6 +282,7 @@
   <div id="cityLabel"><div id="clName">ROMA</div><div class="flag" id="clFlag">&#127470;&#127481; ITALY</div></div>
 </div>
 <div id="scoreboard"><h2>Classifica</h2><table id="scoreTable"></table></div>
+<div id="dmgDir"><svg viewBox="-100 -100 200 200"><g id="dmgDirG"><path d="M -30 -70 L 0 -90 L 30 -70 L 15 -78 L 0 -82 L -15 -78 Z" fill="rgba(255,60,60,0.85)" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/></g></svg></div>
 <div id="vignette"></div>
 <div id="dead">Sei morto</div>
 
@@ -784,6 +787,8 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.9;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 addEventListener("resize", () => {
   camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
@@ -842,8 +847,17 @@ scene.add(skySphere);
 // ---- Bright daytime Rome lighting (matches aerial photo) ----
 const ambientLight = new THREE.HemisphereLight(0xffffff, 0x8a7860, 1.1); // strong ambient so nothing is pitch-black
 scene.add(ambientLight);
-const sun = new THREE.DirectionalLight(0xfff0d8, 1.6); // warm white afternoon sun
-sun.position.set(150, 280, 60); // high sun angle
+const sun = new THREE.DirectionalLight(0xfff0d8, 1.6);
+sun.position.set(150, 280, 60);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 50;
+sun.shadow.camera.far = 600;
+sun.shadow.camera.left = -250;
+sun.shadow.camera.right = 250;
+sun.shadow.camera.top = 250;
+sun.shadow.camera.bottom = -250;
+sun.shadow.bias = -0.0005;
 scene.add(sun);
 // Fill from opposite side (sky bounce) so shadows are lifted
 const fillLight = new THREE.DirectionalLight(0xd8e4ff, 0.5);
@@ -852,7 +866,7 @@ scene.add(fillLight);
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000),
   new THREE.MeshLambertMaterial({ map: groundDiffuse, color: 0x8a7862 }));
-ground.rotation.x = -Math.PI / 2; scene.add(ground);
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 
 // ---- SANPIETRINI PAVEMENT: real Roman cobblestone fan pattern ----
 function makeSanpietriniTexture() {
@@ -946,6 +960,7 @@ function buildBuildingMesh(ring, height, _tint) {
   roofTex.repeat.set(Math.max(1, (bb.max.x - bb.min.x) / 3), Math.max(1, (bb.max.z - bb.min.z) / 3));
   const capMat = new THREE.MeshLambertMaterial({ map: roofTex });
   const mesh = new THREE.Mesh(geo, [capMat, wallMat]);
+  mesh.castShadow = true; mesh.receiveShadow = true;
   scene.add(mesh);
   buildings.push({ mesh, min: new THREE.Vector3(bb.min.x, bb.min.y, bb.min.z), max: new THREE.Vector3(bb.max.x, bb.max.y, bb.max.z) });
 
@@ -961,6 +976,7 @@ function buildBuildingMesh(ring, height, _tint) {
     new THREE.MeshLambertMaterial({ color: 0xb8a480 })
   );
   cornice.position.set(cx, height - 0.25, cz);
+  cornice.castShadow = true;
   scene.add(cornice);
 
   // Terracotta sloped roof: 4-sided pyramidal hipped roof
@@ -970,6 +986,7 @@ function buildBuildingMesh(ring, height, _tint) {
   // Use a box scaled + tilted as a hipped roof cap
   const roofCap = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, roofRidgeH, d * 0.8), roofMat);
   roofCap.position.set(cx, height + roofRidgeH / 2 + 0.1, cz);
+  roofCap.castShadow = true;
   scene.add(roofCap);
   // Angled overhang pieces on each side (fake sloped tiles)
   const overhangMat = new THREE.MeshLambertMaterial({ color: 0x7a3818 });
@@ -1530,7 +1547,7 @@ function addColosseum(x=0, z=0) {
         inst.setMatrixAt(k, dummy.matrix);
       }
       inst.instanceMatrix.needsUpdate = true;
-      inst.castShadow = false;
+      inst.castShadow = true; inst.receiveShadow = true;
       scene.add(inst);
       buildings.push({
         mesh: inst,
@@ -2426,7 +2443,36 @@ function reload() {
 // EFFECTS
 // ======================================================================
 const fx = [];
+const casings = [];
 const grenades = new Map();
+let shakeMag = 0;
+let dmgDirTs = 0, dmgDirAngle = 0;
+function ejectCasing(originWorld, right) {
+  const geo = new THREE.CylinderGeometry(0.018, 0.02, 0.06, 6);
+  const mat = new THREE.MeshStandardMaterial({ color: 0xd4a24a, metalness: 0.85, roughness: 0.35 });
+  const m = new THREE.Mesh(geo, mat);
+  m.position.copy(originWorld);
+  scene.add(m);
+  const vel = right.clone().multiplyScalar(2.2 + Math.random()*1.2);
+  vel.y += 2.0 + Math.random()*0.6;
+  vel.x += (Math.random()-0.5)*0.5; vel.z += (Math.random()-0.5)*0.5;
+  const rot = new THREE.Vector3((Math.random()-0.5)*12, (Math.random()-0.5)*12, (Math.random()-0.5)*12);
+  casings.push({ mesh: m, vel, rot, life: 2.5 });
+}
+function updateCasings(dt) {
+  for (let i = casings.length - 1; i >= 0; i--) {
+    const c = casings[i];
+    c.vel.y -= 12*dt;
+    c.mesh.position.addScaledVector(c.vel, dt);
+    c.mesh.rotation.x += c.rot.x*dt; c.mesh.rotation.y += c.rot.y*dt; c.mesh.rotation.z += c.rot.z*dt;
+    const gy = groundY(c.mesh.position.x, c.mesh.position.z);
+    if (c.mesh.position.y < gy + 0.02) {
+      c.mesh.position.y = gy + 0.02; c.vel.y = -c.vel.y*0.25; c.vel.x*=0.5; c.vel.z*=0.5; c.rot.multiplyScalar(0.6);
+    }
+    c.life -= dt;
+    if (c.life <= 0) { scene.remove(c.mesh); c.mesh.geometry.dispose(); c.mesh.material.dispose(); casings.splice(i,1); }
+  }
+}
 function tracer(from, to) {
   const g = new THREE.BufferGeometry().setFromPoints([from.clone(), to.clone()]);
   const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0xffee88, transparent: true }));
@@ -2470,7 +2516,7 @@ function updateFx(dt) {
         if (dist<6) damageBot(b, Math.round(90*(1-dist/6)), g.owner === "player");
       }
       const pd = Math.hypot(player.pos.x-at.x, player.pos.y-at.y, player.pos.z-at.z);
-      if (pd<6) damagePlayer(Math.round(70*(1-pd/6)));
+      if (pd<6) damagePlayer(Math.round(70*(1-pd/6)), at);
       scene.remove(g.mesh); g.mesh.geometry.dispose(); grenades.delete(id);
     }
   }
@@ -2821,7 +2867,7 @@ function botUpdate(bot, dt, now) {
     sfxShoot(sight.dist, "maa1");
     // Hit test cone: bot hits player if aim close enough
     const toP = player.pos.clone().sub(from).normalize();
-    if (dir.dot(toP) > 0.993) damagePlayer(bot.state === "strafe" ? 6 : 10);
+    if (dir.dot(toP) > 0.993) damagePlayer(bot.state === "strafe" ? 6 : 10, from);
   }
 }
 
@@ -2850,6 +2896,13 @@ function shoot(now) {
   lastShotAt = now; ammo[currentWeapon]--; updateAmmoHUD();
   gunKick = 0.08; flash.material.opacity = 1; flash.rotation.z = Math.random()*Math.PI;
   muzzleLight.intensity = 3;
+  shakeMag = Math.min(0.12, shakeMag + (player.ads ? 0.03 : 0.06));
+  {
+    const ld = lookDir();
+    const right = new THREE.Vector3().crossVectors(ld, new THREE.Vector3(0,1,0)).normalize();
+    const origin = player.pos.clone().addScaledVector(ld, 0.5).addScaledVector(right, 0.25); origin.y -= 0.1;
+    ejectCasing(origin, right);
+  }
   const spread = player.ads ? 0.35 : 1;
   player.recoil = Math.min(0.25, player.recoil + w.recoil * (player.ads ? 0.6 : 1));
   player.fovKick = Math.min(6, player.fovKick + 2);
@@ -2895,12 +2948,19 @@ function throwGrenade() {
   mesh.position.copy(pos); scene.add(mesh);
   grenades.set(id, { mesh, vel:v, pos, timer:2, owner:"player" });
 }
-function damagePlayer(dmg) {
+function damagePlayer(dmg, fromWorld) {
   if (player.dead) return;
   player.hp = Math.max(0, player.hp - dmg);
   const vig = document.getElementById("vignette");
   vig.style.boxShadow = `inset 0 0 220px 60px rgba(255,0,0,0.6)`;
   setTimeout(() => vig.style.boxShadow = "inset 0 0 200px 40px rgba(255,0,0,0)", 120);
+  shakeMag = Math.min(0.35, shakeMag + Math.min(0.28, dmg * 0.012));
+  if (fromWorld) {
+    const dx = fromWorld.x - player.pos.x, dz = fromWorld.z - player.pos.z;
+    const worldAng = Math.atan2(dx, -dz);
+    dmgDirAngle = worldAng - player.yaw;
+    dmgDirTs = performance.now();
+  }
   sfxHit(0);
   if (player.hp === 0) {
     player.dead = true; sfxDeath();
@@ -3868,9 +3928,22 @@ function frame() {
   }
   for (const b of bots) botUpdate(b, dt, now);
   updateFx(dt);
+  updateCasings(dt);
   camera.position.copy(player.pos);
+  if (shakeMag > 0.0005) {
+    camera.position.x += (Math.random()-0.5) * shakeMag;
+    camera.position.y += (Math.random()-0.5) * shakeMag;
+    camera.position.z += (Math.random()-0.5) * shakeMag;
+    shakeMag *= Math.pow(0.001, dt);
+  } else shakeMag = 0;
   const ld = lookDir();
   camera.lookAt(player.pos.x + ld.x, player.pos.y + ld.y, player.pos.z + ld.z);
+  const dmgAge = now - dmgDirTs;
+  const dmgEl = document.getElementById("dmgDir");
+  if (dmgAge < 1400) {
+    dmgEl.style.opacity = String(1 - dmgAge/1400);
+    document.getElementById("dmgDirG").setAttribute("transform", `rotate(${(dmgDirAngle*180/Math.PI).toFixed(1)})`);
+  } else dmgEl.style.opacity = "0";
   camera.fov = (player.ads ? 40 : 70) + player.fovKick + (keys.has("ShiftLeft")||keys.has("ShiftRight") ? 5 : 0);
   camera.updateProjectionMatrix();
   const moving = keys.has("KeyW")||keys.has("KeyS")||keys.has("KeyA")||keys.has("KeyD");
