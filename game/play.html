@@ -820,10 +820,20 @@ const roofTexture = makeRoofTexture();
 // SCENE (cinematic golden-hour Rome)
 // ======================================================================
 const scene = new THREE.Scene();
-{
+try {
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-}
+} catch(e) { console.warn("PMREM env failed:", e); }
+window.addEventListener("error", (ev) => {
+  const el = document.getElementById("loading");
+  if (el) el.textContent = "ERR: " + (ev.message || ev.error?.message || "unknown");
+  const btn = document.getElementById("playBtn");
+  if (btn) { btn.disabled = false; btn.innerHTML = '<span class="plabel">Gioca ora</span>'; }
+});
+window.addEventListener("unhandledrejection", (ev) => {
+  const el = document.getElementById("loading");
+  if (el) el.textContent = "ERR: " + (ev.reason?.message || String(ev.reason));
+});
 scene.fog = new THREE.FogExp2(0xa8bcc8, 0.0012);
 const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.05, 1500);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", stencil: false });
@@ -834,8 +844,8 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.VSMShadowMap;
-renderer.physicallyCorrectLights = true;
-renderer.useLegacyLights = false;
+try { renderer.physicallyCorrectLights = true; } catch(e){}
+try { renderer.useLegacyLights = false; } catch(e){}
 document.body.appendChild(renderer.domElement);
 addEventListener("resize", () => {
   camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
@@ -3492,6 +3502,16 @@ async function fetchColosseoBbox(onProgress) {
 
 let currentSpawn = null;
 async function bootstrap() {
+  try { await bootstrapInner(); }
+  catch (err) {
+    console.error("bootstrap fatal:", err);
+    loadEl.textContent = "Errore: " + err.message + " — clicca Gioca comunque.";
+    playBtn.disabled = false;
+    playBtn.innerHTML = `<div><div class="plabel">Gioca ora</div><div class="ptxt">Entra in battaglia</div></div>`;
+    playBtn.onclick = playHandler;
+  }
+}
+async function bootstrapInner() {
   loadEl.textContent = `Preparo l'area del Colosseo...`;
   loadBar.style.width = "10%";
   playBtn.disabled = true;
@@ -3502,7 +3522,7 @@ async function bootstrap() {
 
   // Always add the hand-modelled landmarks first (Colosseum, Arco, Foro Romano)
   // — these aren't in OSM as 3D data
-  addColosseum(0, 0);
+  try { addColosseum(0, 0); } catch(e){ console.error("addColosseum failed:", e); }
   loadBar.style.width = "20%";
   scatterProps();
   addForoRomanoRuins();

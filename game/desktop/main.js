@@ -27,6 +27,9 @@ function createWindow() {
   });
   win.setMenuBarVisibility(false);
   win.loadFile(PLAY_HTML);
+  win.webContents.on("did-fail-load", (_e, code, desc, url) => {
+    console.error("did-fail-load", code, desc, url);
+  });
   win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: "deny" }; });
 }
 
