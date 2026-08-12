@@ -776,14 +776,14 @@ const roofTexture = makeRoofTexture();
 // SCENE (cinematic golden-hour Rome)
 // ======================================================================
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0xd2c8b8, 0.0018);
+scene.fog = new THREE.FogExp2(0xa8bcc8, 0.0012);
 const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.05, 1500);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 0.9;
 document.body.appendChild(renderer.domElement);
 addEventListener("resize", () => {
   camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
@@ -798,33 +798,33 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
-// ---- Sky sphere: bright daytime Rome (hazy blue like the aerial photo) ----
+// ---- Sky: DEEP BLUE clear Roman sky (like the reference photos) ----
 function makeSkyTexture() {
   const c = document.createElement("canvas");
   c.width = 2048; c.height = 1024;
   const ctx = c.getContext("2d");
   const g = ctx.createLinearGradient(0, 0, 0, 1024);
-  g.addColorStop(0.0, "#9ab8d4"); // deep clear blue at zenith
-  g.addColorStop(0.35, "#b6c8db");
-  g.addColorStop(0.55, "#d0d8dc"); // horizon haze
-  g.addColorStop(0.72, "#dcd4c4");
-  g.addColorStop(0.85, "#c8b6a0");
-  g.addColorStop(1.0, "#a8988a"); // slightly warm ground haze
+  g.addColorStop(0.0, "#1e4a82"); // deep cobalt at zenith
+  g.addColorStop(0.30, "#2f6db0");
+  g.addColorStop(0.55, "#4a8ecc"); // mid blue
+  g.addColorStop(0.75, "#7db0d8"); // lighter toward horizon
+  g.addColorStop(0.88, "#a8c6dc"); // hazy horizon
+  g.addColorStop(1.0, "#b0c0c8");
   ctx.fillStyle = g; ctx.fillRect(0, 0, 2048, 1024);
-  // Bright sun disc
-  const sunX = 2048*0.55, sunY = 1024*0.28;
-  const rg = ctx.createRadialGradient(sunX, sunY, 20, sunX, sunY, 220);
-  rg.addColorStop(0, "rgba(255,255,240,1)");
-  rg.addColorStop(0.25, "rgba(255,250,220,0.4)");
+  // Subtle small sun (not overpowering)
+  const sunX = 2048*0.72, sunY = 1024*0.20;
+  const rg = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 120);
+  rg.addColorStop(0, "rgba(255,255,240,0.85)");
+  rg.addColorStop(0.4, "rgba(255,250,230,0.15)");
   rg.addColorStop(1, "rgba(255,255,220,0)");
-  ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(sunX, sunY, 220, 0, Math.PI*2); ctx.fill();
-  // White fluffy clouds
-  ctx.fillStyle = "rgba(255,255,255,0.65)";
-  for (let i = 0; i < 30; i++) {
-    const x = Math.random()*2048, y = 100 + Math.random()*400;
-    for (let j = 0; j < 8; j++) {
+  ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(sunX, sunY, 120, 0, Math.PI*2); ctx.fill();
+  // Very few, very sparse clouds
+  ctx.fillStyle = "rgba(255,255,255,0.25)";
+  for (let i = 0; i < 6; i++) {
+    const x = Math.random()*2048, y = 300 + Math.random()*300;
+    for (let j = 0; j < 5; j++) {
       ctx.beginPath();
-      ctx.ellipse(x + j*35, y + Math.sin(j)*10, 45 + Math.random()*35, 14 + Math.random()*10, 0, 0, Math.PI*2);
+      ctx.ellipse(x + j*40, y + Math.sin(j)*8, 60 + Math.random()*30, 12 + Math.random()*6, 0, 0, Math.PI*2);
       ctx.fill();
     }
   }
@@ -1237,7 +1237,8 @@ let _colosseumTex = null;
 function colosseumTex() { return _colosseumTex ||= makeColosseumTexture(); }
 
 // ---- Build one arch bay geometry (pillar frame with arch cutout) ----
-function makeArchBayGeometry(bayW, bayH, wallDepth, archRatio = 0.65) {
+// Wider arches (~78% of bay), thin pilaster pier on each side — matches real Colosseum proportions
+function makeArchBayGeometry(bayW, bayH, wallDepth, archRatio = 0.78) {
   const halfW = bayW / 2;
   const archW = bayW * archRatio;
   const archH = archW / 2;
@@ -1248,14 +1249,14 @@ function makeArchBayGeometry(bayW, bayH, wallDepth, archRatio = 0.65) {
   shape.lineTo(-halfW, bayH);
   shape.closePath();
   const hole = new THREE.Path();
-  const archBottomY = 0.5;
-  const archTopY = bayH - 1.2;
+  const archBottomY = 0.3;
+  const archTopY = bayH - 0.8;
   const springY = archTopY - archH;
   const halfArchW = archW / 2;
   hole.moveTo(-halfArchW, archBottomY);
   hole.lineTo(halfArchW, archBottomY);
   hole.lineTo(halfArchW, springY);
-  const N = 14;
+  const N = 18;
   for (let i = 1; i <= N; i++) {
     const t = (i / N) * Math.PI;
     hole.lineTo(halfArchW - archW/2 * (1 - Math.cos(t)), springY + archH * Math.sin(t));
@@ -1287,12 +1288,15 @@ function addColosseum(x=0, z=0) {
   const stoneMat = new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0xd0a870 });
   const shadowMat = new THREE.MeshLambertMaterial({ map: colosseumStoneTex, color: 0xa07c50 });
 
-  // Ruined section: real Colosseum lost outer wall on ~SE quadrant
+  // Ruined section: real Colosseum lost outer wall on SE (stair-stepped collapse)
+  // As you go around from intact NW toward SE, upper tiers disappear first, then middle, finally ground floor
   const ruined = (i, ti) => {
     const deg = (i / nArches) * 360;
-    if (ti >= 2) return deg > 170 && deg < 350; // upper 2 tiers mostly gone
-    if (ti === 1) return deg > 200 && deg < 320;
-    return deg > 235 && deg < 285; // ground floor mostly intact except small gap
+    // Symmetric ruin between ~150° and ~360°; higher tiers collapse over wider arc
+    if (ti === 3) return deg > 120 && deg < 360; // attic almost gone
+    if (ti === 2) return deg > 155 && deg < 350; // 3rd tier gone
+    if (ti === 1) return deg > 200 && deg < 320; // 2nd tier partially gone
+    return deg > 240 && deg < 290;               // ground: small gap only
   };
 
   const bayGeoms = tiers.map(t => t.hasArch ? makeArchBayGeometry(7.2, t.h, wallDepth) : null);
@@ -1327,19 +1331,16 @@ function addColosseum(x=0, z=0) {
         max: new THREE.Vector3(x + A + wallDepth, tier.y + tier.h, z + B + wallDepth),
       });
     } else {
-      // Attic: full ellipse ring wall (only NW half to reflect ruin)
+      // Attic: solid ellipse ring wall (only intact half — 0° to 120°)
       const shape = new THREE.Shape();
-      const seg = 48;
-      // Only draw the arc that's NOT ruined
-      const startDeg = 350, endDeg = 170 + 360; // wrap
+      const seg = 60;
+      const startDeg = 0, endDeg = 120;
       const startRad = startDeg * Math.PI / 180, endRad = endDeg * Math.PI / 180;
-      // Outer arc
       shape.moveTo((A + wallDepth/2) * Math.cos(startRad), (B + wallDepth/2) * Math.sin(startRad));
       for (let i = 1; i <= seg; i++) {
         const t = startRad + (endRad - startRad) * (i / seg);
         shape.lineTo((A + wallDepth/2) * Math.cos(t), (B + wallDepth/2) * Math.sin(t));
       }
-      // Inner arc backward
       for (let i = seg; i >= 0; i--) {
         const t = startRad + (endRad - startRad) * (i / seg);
         shape.lineTo((A - wallDepth/2) * Math.cos(t), (B - wallDepth/2) * Math.sin(t));
@@ -1352,6 +1353,52 @@ function addColosseum(x=0, z=0) {
       scene.add(mesh);
       geo.computeBoundingBox();
       buildings.push({ mesh, min: geo.boundingBox.min.clone(), max: geo.boundingBox.max.clone() });
+
+      // Attic windows: small rectangular DARK windows every other bay on the intact arc
+      const winInst = new THREE.InstancedMesh(
+        new THREE.BoxGeometry(1.8, 3.2, 0.4),
+        new THREE.MeshBasicMaterial({ color: 0x0a0805 }),
+        Math.floor(nArches / 3)
+      );
+      let wk = 0;
+      for (let i = 0; i < nArches; i += 3) {
+        const deg = (i / nArches) * 360;
+        if (deg > 115) break;
+        const theta = (i / nArches) * Math.PI * 2;
+        const px = (A + wallDepth/2 - 0.1) * Math.cos(theta);
+        const pz = (B + wallDepth/2 - 0.1) * Math.sin(theta);
+        const dummy = new THREE.Object3D();
+        dummy.position.set(x + px, tier.y + tier.h / 2, z + pz);
+        dummy.rotation.y = -Math.atan2(pz, px) + Math.PI / 2;
+        dummy.updateMatrix();
+        winInst.setMatrixAt(wk++, dummy.matrix);
+      }
+      winInst.count = wk;
+      winInst.instanceMatrix.needsUpdate = true;
+      scene.add(winInst);
+
+      // Corinthian pilaster strips at bay boundaries on attic (thin flat pilasters)
+      const pilasterInst = new THREE.InstancedMesh(
+        new THREE.BoxGeometry(0.4, tier.h - 1, 0.35),
+        stoneMat,
+        Math.floor(nArches / 3) + 1
+      );
+      let pk = 0;
+      for (let i = 0; i < nArches; i += 3) {
+        const deg = (i / nArches) * 360;
+        if (deg > 118) break;
+        const theta = (i / nArches) * Math.PI * 2;
+        const px = (A + wallDepth/2 - 0.15) * Math.cos(theta);
+        const pz = (B + wallDepth/2 - 0.15) * Math.sin(theta);
+        const dummy = new THREE.Object3D();
+        dummy.position.set(x + px, tier.y + tier.h / 2, z + pz);
+        dummy.rotation.y = -Math.atan2(pz, px) + Math.PI / 2;
+        dummy.updateMatrix();
+        pilasterInst.setMatrixAt(pk++, dummy.matrix);
+      }
+      pilasterInst.count = pk;
+      pilasterInst.instanceMatrix.needsUpdate = true;
+      scene.add(pilasterInst);
     }
   }
 
