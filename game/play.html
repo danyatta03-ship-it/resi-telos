@@ -851,8 +851,46 @@ fillLight.position.set(-100, 200, -80);
 scene.add(fillLight);
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000),
-  new THREE.MeshLambertMaterial({ map: groundDiffuse, color: 0x9a8a76 }));
+  new THREE.MeshLambertMaterial({ map: groundDiffuse, color: 0x8a7862 }));
 ground.rotation.x = -Math.PI / 2; scene.add(ground);
+
+// ---- SANPIETRINI PAVEMENT: real Roman cobblestone fan pattern ----
+function makeSanpietriniTexture() {
+  const c = document.createElement("canvas"); c.width = c.height = 1024;
+  const ctx = c.getContext("2d");
+  // Base darker gray
+  ctx.fillStyle = "#4a4642"; ctx.fillRect(0, 0, 1024, 1024);
+  // Radial fan pattern of small cubes (sanpietrini reali della Piazza)
+  ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.lineWidth = 1;
+  for (let arc = 0; arc < 20; arc++) {
+    const r0 = arc * 50 + 20;
+    const r1 = r0 + 50;
+    const arcSegments = Math.max(20, Math.floor(r0 / 4));
+    for (let i = 0; i < arcSegments; i++) {
+      const th = (i / arcSegments) * Math.PI * 2;
+      const thN = ((i + 1) / arcSegments) * Math.PI * 2;
+      // Cobble stone
+      const shade = 50 + Math.random() * 40;
+      ctx.fillStyle = `rgb(${shade},${shade-3},${shade-6})`;
+      ctx.beginPath();
+      ctx.moveTo(512 + r0 * Math.cos(th), 512 + r0 * Math.sin(th));
+      ctx.lineTo(512 + r1 * Math.cos(th), 512 + r1 * Math.sin(th));
+      ctx.lineTo(512 + r1 * Math.cos(thN), 512 + r1 * Math.sin(thN));
+      ctx.lineTo(512 + r0 * Math.cos(thN), 512 + r0 * Math.sin(thN));
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // Highlight
+      if (Math.random() < 0.3) {
+        ctx.fillStyle = "rgba(255,240,220,0.08)";
+        ctx.fillRect(512 + r0 * Math.cos(th) + 1, 512 + r0 * Math.sin(th) + 1, 2, 2);
+      }
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const sanpietriniTex = makeSanpietriniTexture();
 
 // ======================================================================
 // BUILDINGS
@@ -910,7 +948,70 @@ function buildBuildingMesh(ring, height, _tint) {
   const mesh = new THREE.Mesh(geo, [capMat, wallMat]);
   scene.add(mesh);
   buildings.push({ mesh, min: new THREE.Vector3(bb.min.x, bb.min.y, bb.min.z), max: new THREE.Vector3(bb.max.x, bb.max.y, bb.max.z) });
+
+  // ---- ITALIAN PALAZZO ADD-ONS: sloped tile roof + top cornice ----
+  const cx = (bb.min.x + bb.max.x) / 2;
+  const cz = (bb.min.z + bb.max.z) / 2;
+  const w = bb.max.x - bb.min.x;
+  const d = bb.max.z - bb.min.z;
+
+  // Prominent stone cornice at top (protruding band above facade)
+  const cornice = new THREE.Mesh(
+    new THREE.BoxGeometry(w + 0.6, 0.5, d + 0.6),
+    new THREE.MeshLambertMaterial({ color: 0xb8a480 })
+  );
+  cornice.position.set(cx, height - 0.25, cz);
+  scene.add(cornice);
+
+  // Terracotta sloped roof: 4-sided pyramidal hipped roof
+  const roofRidgeH = Math.min(w, d) * 0.15;
+  // Simplify: two overlapping triangular prisms crossed = hipped roof
+  const roofMat = new THREE.MeshLambertMaterial({ color: 0x8b3f18 });
+  // Use a box scaled + tilted as a hipped roof cap
+  const roofCap = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, roofRidgeH, d * 0.8), roofMat);
+  roofCap.position.set(cx, height + roofRidgeH / 2 + 0.1, cz);
+  scene.add(roofCap);
+  // Angled overhang pieces on each side (fake sloped tiles)
+  const overhangMat = new THREE.MeshLambertMaterial({ color: 0x7a3818 });
+  for (const [sx, sz, rotAxis, sign] of [[1,0,'z',1], [-1,0,'z',-1], [0,1,'x',-1], [0,-1,'x',1]]) {
+    const sl = rotAxis === 'z' ? d : w;
+    const slope = new THREE.Mesh(new THREE.BoxGeometry(rotAxis === 'z' ? 0.5 : w + 0.4, 0.3, rotAxis === 'z' ? d + 0.4 : 0.5), overhangMat);
+    slope.position.set(cx + sx * (w/2 + 0.1), height + roofRidgeH * 0.3, cz + sz * (d/2 + 0.1));
+    if (rotAxis === 'z') slope.rotation.z = sign * 0.35;
+    else slope.rotation.x = sign * 0.35;
+    scene.add(slope);
+  }
+
   return mesh;
+}
+
+// Zebra crossing (thick white stripes on asphalt at intersections)
+function addZebraCrossing(cx, cz, width, rotY = 0) {
+  const stripeCount = 6;
+  const stripeW = width / (stripeCount * 2 - 1);
+  const totalLen = 4; // meters (across street)
+  const grp = new THREE.Group();
+  for (let i = 0; i < stripeCount; i++) {
+    const stripe = new THREE.Mesh(
+      new THREE.PlaneGeometry(stripeW, totalLen),
+      new THREE.MeshBasicMaterial({ color: 0xf0f0f0 })
+    );
+    stripe.rotation.x = -Math.PI/2;
+    stripe.position.set(-width/2 + stripeW/2 + i * stripeW * 2, 0.04, 0);
+    grp.add(stripe);
+  }
+  grp.position.set(cx, 0, cz);
+  grp.rotation.y = rotY;
+  scene.add(grp);
+}
+// Bollard (paletti in metallo lungo i marciapiedi)
+function addBollard(x, z) {
+  const b = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.12, 0.14, 0.9, 8),
+    new THREE.MeshLambertMaterial({ color: 0x2a2a2c })
+  );
+  b.position.set(x, 0.45, z);
+  scene.add(b);
 }
 // ======================================================================
 // SCENE PROPS (trees, lamps, barriers, columns) — spawned around city
@@ -1613,6 +1714,62 @@ function addColosseum(x=0, z=0) {
   meta.position.set(x - 100, 3, z + 10);
   scene.add(meta);
   buildings.push({ mesh: meta, min: new THREE.Vector3(x-105, 0, z+5), max: new THREE.Vector3(x-95, 6, z+15) });
+
+  // ---- Sanpietrini piazza: circular cobblestone plaza around the Colosseum ----
+  const piazzaR = 155;
+  const piazza = new THREE.Mesh(
+    new THREE.CircleGeometry(piazzaR, 96),
+    new THREE.MeshLambertMaterial({ map: sanpietriniTex, color: 0x9a9088 })
+  );
+  piazza.rotation.x = -Math.PI/2;
+  piazza.position.set(x, 0.03, z);
+  sanpietriniTex.repeat.set(6, 6);
+  scene.add(piazza);
+
+  // ---- Metal safety fence around the Colosseum (visible modern barrier) ----
+  const fenceR = A + 12;
+  const fenceMat = new THREE.MeshLambertMaterial({ color: 0x2a2a2c });
+  const postGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.6, 6);
+  const railGeo = new THREE.BoxGeometry(2.8, 0.05, 0.02);
+  const barGeo = new THREE.BoxGeometry(0.015, 1.4, 0.015);
+  const fencePosts = 60;
+  for (let i = 0; i < fencePosts; i++) {
+    const deg = (i / fencePosts) * 360;
+    if (deg > 240 && deg < 290) continue; // open gap at main entrance
+    const theta = deg * Math.PI / 180;
+    const fx = x + (A + 12) * Math.cos(theta);
+    const fz = z + (B + 12) * Math.sin(theta);
+    const post = new THREE.Mesh(postGeo, fenceMat);
+    post.position.set(fx, 0.8, fz);
+    scene.add(post);
+    // Rails between posts
+    if (i > 0) {
+      const prevDeg = ((i-1) / fencePosts) * 360;
+      if (!(prevDeg > 240 && prevDeg < 290)) {
+        const pDeg = (i - 0.5) / fencePosts * 360;
+        const pTheta = pDeg * Math.PI / 180;
+        const midX = x + (A + 12) * Math.cos(pTheta);
+        const midZ = z + (B + 12) * Math.sin(pTheta);
+        // Horizontal rails (top + middle)
+        for (const ry of [0.5, 1.4]) {
+          const rail = new THREE.Mesh(railGeo, fenceMat);
+          rail.position.set(midX, ry, midZ);
+          rail.rotation.y = -pTheta + Math.PI/2;
+          scene.add(rail);
+        }
+        // Vertical bars every 20cm
+        for (let b = 0; b < 15; b++) {
+          const bTheta = (i - 1 + (b + 0.5) / 15) / fencePosts * 2 * Math.PI * (360/fencePosts) / 360;
+          const barTheta = ((i - 1) / fencePosts + (b + 0.5) / 15 / fencePosts) * Math.PI * 2;
+          const bx = x + (A + 12) * Math.cos(barTheta);
+          const bz = z + (B + 12) * Math.sin(barTheta);
+          const bar = new THREE.Mesh(barGeo, fenceMat);
+          bar.position.set(bx, 0.9, bz);
+          scene.add(bar);
+        }
+      }
+    }
+  }
 
   landmarkPos.set(x, totalH, z);
 }
@@ -3322,6 +3479,36 @@ function buildRomaColosseoArea() {
       .map(([x, z]) => [cx + x*c - z*s, cz + x*s + z*c]);
     corners.push(corners[0]);
     buildBuildingMesh(corners, h, pickFacadeTint());
+  }
+
+  // ---- Zebra crossings at 4 main intersections around Piazza del Colosseo ----
+  addZebraCrossing(-125,  55, 8, Math.PI / 4);   // NW pedestrian crossing (Fori Imperiali)
+  addZebraCrossing( 125, -55, 8, Math.PI / 4);   // NE pedestrian crossing (Labicana)
+  addZebraCrossing( 75, 115, 8, 0);              // S pedestrian crossing (San Gregorio)
+  addZebraCrossing(-100, -55, 8, 0);             // Fori Imperiali crossing
+
+  // ---- Bollards along sidewalks — real Roma has these everywhere ----
+  // Line along Via dei Fori Imperiali sidewalk
+  for (let i = 0; i < 12; i++) {
+    const t = i / 11;
+    const px = -135 + t * (-330 + 135);
+    const pz = -30 + t * (-220 + 30);
+    // Perpendicular offset (sidewalk side)
+    addBollard(px + 15, pz - 10);
+  }
+  // Line along Via Labicana
+  for (let i = 0; i < 10; i++) {
+    const t = i / 9;
+    const px = 140 + t * (400 - 140);
+    const pz = -30 + t * (-100 + 30);
+    addBollard(px, pz + 12);
+  }
+  // Line along Via San Gregorio
+  for (let i = 0; i < 10; i++) {
+    const t = i / 9;
+    const px = 60 + t * (110 - 60);
+    const pz = 120 + t * (400 - 120);
+    addBollard(px - 15, pz);
   }
 }
 
