@@ -49,6 +49,14 @@
 ════════════════════════════════════════════════════════════════════════════
 -->
 <style>
+/* v35q — Font brand Inter (self-hosted, ~120KB WOFF2 latin subset, 5 pesi).
+   Coperto da CSP font-src 'self'. font-display:swap → nessun FOIT su prima
+   visita: system-ui compare subito, Inter si sostituisce quando pronto. */
+@font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/Inter-400.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:500;font-display:swap;src:url('fonts/Inter-500.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:600;font-display:swap;src:url('fonts/Inter-600.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:700;font-display:swap;src:url('fonts/Inter-700.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:800;font-display:swap;src:url('fonts/Inter-800.woff2') format('woff2')}
 :root{--bg:#080808;--bg1:#111111;--bg2:#1a1a1a;--bg3:#222222;--brd:#2a2a2a;--brd2:#333333;--txt:#FFFFFF;--txt2:#E0E0E0;--txt3:#999999;--grn:#3B9FD4;--grn2:#2980B9;--blu:#3B9FD4;--red:#E05555;--yel:#5BB8E0;--ora:#3B9FD4;--pur:#E0E0E0;--rad:10px;--rad2:7px}
 /* PC/tablet largo: alzo la luminosita' e il contrasto — su monitor grandi il tema mobile molto scuro risulta smorto. Sotto 900px resta come prima (mobile). */
 @media (min-width:900px){:root{--bg:#101015;--bg1:#1a1a20;--bg2:#26262e;--bg3:#2f2f36;--brd:#3e3e46;--brd2:#4a4a54;--txt:#FFFFFF;--txt2:#F0F0F0;--txt3:#B8B8C0;--blu:#4FB0E5;--yel:#7ACAE8}}
@@ -150,7 +158,7 @@ html[data-theme="light"] #mfuBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #resiCycleBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #pickBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #notifList div[style*="border-bottom:1px solid #1a1a1a"]{border-bottom-color:#000!important}
-/* v35p — Modali cicli aggiuntivi: assicura fondo bianco per box container e ricerca */
+/* v35q — Modali cicli aggiuntivi: assicura fondo bianco per box container e ricerca */
 html[data-theme="light"] #resiCycleBox>div,
 html[data-theme="light"] #pickBox>div{background:#ffffff!important;border-color:#3B9FD4!important;color:#000!important}
 html[data-theme="light"] #resiCycleSrch{background:#ffffff!important;color:#000!important}
@@ -424,7 +432,9 @@ html[data-theme="light"] div[style*="border:1px solid #2a2a2a"]{border-color:#3B
 /* Cursore sui due pallini header per indicare che sono cliccabili */
 .cdot, .sdot{cursor:pointer}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:16px;overflow:hidden}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Inter','Inter Fallback',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,Roboto,sans-serif;font-size:16px;overflow:hidden;font-feature-settings:"cv11","ss01","ss03";-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+/* v35q — Tabular nums su ovunque cifre in colonna (prezzi, date, codici, KPI, badge). */
+.ac-price,.ac-date,.ac-cod,.chip,.sc-n,.badge,.count,.metric .v,.reso-price,.tnums{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 
 /* POPUP */
 .popup-wrap{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -1080,7 +1090,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35p · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35q · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1745,7 +1755,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35p</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35q</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -3625,7 +3635,7 @@ function renderList(){
     if(r._who)html+='<div class="ac-who">\ud83d\udc64 '+xe(r._who)+(r._lastEdit&&r._lastEdit!==r._who?' \u00b7 \u270e '+xe(r._lastEdit):'')+' <span style="color:var(--txt3);font-size:8px">'+xe(r.fase||'')+'</span>'+(r._log&&r._log.length?' <span style="color:var(--txt3)">·'+r._log.length+' mod.</span>':'')+'</div>';
     html+='<div style="display:flex;justify-content:space-between"><div>';
     html+='<div class="ac-sogg">'+xe(r.sogg||'\u2014')+'</div>';
-    // v35p \u2014 Foto bolla OCR: miniatura cliccabile+zoomabile.
+    // v35q \u2014 Foto bolla OCR: miniatura cliccabile+zoomabile.
     //   Priorita': bollaPhoto (salvata in OCR ricevimento) > photoThumb (foto pezzo).
     var _phBoll = r.bollaPhoto || r.photoThumb || '';
     var _phBadge = '';
@@ -5204,7 +5214,7 @@ function showResiByCycle(cicloName, fase){
       var _hasPh = !!(r.photoThumb||r.photo);
       var _thumb = r.photoThumb ? '<img src="'+xe(r.photoThumb)+'" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0">' :
                                    '<div style="width:44px;height:44px;border-radius:6px;background:var(--bg3);color:var(--txt3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0" title="Nessuna foto">📷</div>';
-      // v35p — attributo data-srch usato dalla search dedicata dentro il modale ciclo
+      // v35q — attributo data-srch usato dalla search dedicata dentro il modale ciclo
       var _srch = xe([r.cod, r.pre, r.forn, r.sogg, r.causale, r.stato, r.rma, r.note, r.ubic]
                       .filter(function(x){return x!=null && x!=='';})
                       .join(' ').toLowerCase());
@@ -5220,7 +5230,7 @@ function showResiByCycle(cicloName, fase){
     });
   }
   var totPh = flt.filter(function(r){return r.photoThumb||r.photo;}).length;
-  // v35p — barra di ricerca dedicata al modale del ciclo: filtra le righe visibili
+  // v35q — barra di ricerca dedicata al modale del ciclo: filtra le righe visibili
   //         mantenendo attivo il filtro ciclo+fase.
   var searchBar =
     '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;background:var(--bg2);border:1px solid '+color+'55;border-radius:10px;padding:6px 10px">'+
@@ -5246,7 +5256,7 @@ function showResiByCycle(cicloName, fase){
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
-// v35p — Filtro in-place delle righe dentro il modale ciclo: nasconde/mostra
+// v35q — Filtro in-place delle righe dentro il modale ciclo: nasconde/mostra
 //         via style.display senza rebuild della lista (mantiene lo scroll).
 function _resiCycleFilter(q){
   var box = document.getElementById('resiCycleList'); if(!box) return;
@@ -5826,7 +5836,7 @@ function editRow(key){
   }
   html+='<div class="r2">'+fld('VETTORE USCITA',sl('vetUsc',['CIPI/PIEMME','CITYLINE','MITTENTE/DESTINATARIO','INTERCOMPANY','NAZ/INT','CATI','UPS','GLS','BRT','DHL'],r.vetUsc))+fld('DATA STATO',inp('datSta',r.datSta,'','date'))+'</div>';
   // ── MAGAZZINO: N. colli + tipologia imballo + foto pacco chiuso + bolla firmata
-  // v35p — Aggiunta foto BOLLA FIRMATA anche in MAGAZZINO (riusa _photoFin,
+  // v35q — Aggiunta foto BOLLA FIRMATA anche in MAGAZZINO (riusa _photoFin,
   //   lo stesso campo usato in FINALE, cosi' persiste tra le fasi).
   html += '<div id="ei_magFields" style="'+(r.fase==='MAGAZZINO'?'':'display:none')+';margin-top:6px">'+
     '<div class="r2">'+
@@ -5837,7 +5847,7 @@ function editRow(key){
       (r._photoPez ? '✓ Foto pacco chiuso (tocca per sostituire) — imposta PRESA LOGISTICA' : '📦 Foto pacco chiuso → PRESA LOGISTICA')+
     '</button>'+
     (r._photoPez ? '<img src="'+xe(r._photoPez)+'" onclick="openPhotoZoom(this.src,\'Pacco chiuso — '+xe((r.cod||'').replace(/\'/g,""))+'\')" style="max-width:100%;border-radius:8px;border:1px solid #3fbf6f;margin-top:6px;display:block;cursor:zoom-in">' : '')+
-    // v35p — Foto bolla firmata anche in MAGAZZINO (utile prima di passare a FINALE).
+    // v35q — Foto bolla firmata anche in MAGAZZINO (utile prima di passare a FINALE).
     '<button type="button" onclick="_pickFotoWorkflow(\''+key+'\',\'fin\')" style="width:100%;background:var(--bg2);color:'+(r._photoFin?'#3fbf6f':'#3B9FD4')+';border:1.5px solid '+(r._photoFin?'#3fbf6f':'#3B9FD4')+';padding:10px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:6px">'+
       (r._photoFin ? '✓ Foto bolla firmata (tocca per sostituire)' : '📝 Foto bolla firmata corriere')+
     '</button>'+
@@ -5864,7 +5874,7 @@ function editRow(key){
   html+=fld('VETTORE RIC.',sl('vetRic',['PIEMME','CIPI','AGENTE','COLLEGA','AD','DIEMME','GLS','VINCA','BANCO','PIENNE','BRT','UPS','DHL','TNT','LGT','CITYLINE','NUOVA DEMOS'],r.vetRic));
   html+='<div class="sh-section">NOTE</div>';
   html+=fld('NOTE','<textarea id="ei_note" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:var(--rad2);outline:none;resize:none;min-height:52px;font-family:inherit;margin-bottom:7px">'+xe(r.note||'')+'</textarea>');
-  // v35p — Foto bolla (OCR ricevimento): visibile + zoomable nella sheet di edit.
+  // v35q — Foto bolla (OCR ricevimento): visibile + zoomable nella sheet di edit.
   var _bImg = r.bollaPhoto || r.photoThumb || '';
   if(_bImg) html+='<div style="font-size:9px;color:var(--txt3);letter-spacing:.5px;margin:6px 0 3px;font-weight:700">📄 FOTO BOLLA</div>'+
                    '<img src="'+xe(_bImg)+'" onclick="openPhotoZoom(this.src,\'Bolla — '+xe((r.cod||'').replace(/\'/g,""))+'\')" style="max-width:100%;border-radius:8px;border:1px solid #3B9FD4;margin-bottom:7px;display:block;cursor:zoom-in">';
@@ -5929,7 +5939,7 @@ function _pickFotoWorkflow(key, kind){
       // Ridimensiono a max 1024px lato lungo per non gonfiare il record
       var img = new Image();
       img.onload = function(){
-        // v35p — compressione aggressiva (Firebase-friendly): 800px lato lungo, JPEG 0.55.
+        // v35q — compressione aggressiva (Firebase-friendly): 800px lato lungo, JPEG 0.55.
         var mx=800, w=img.width, h=img.height;
         if(w>mx||h>mx){ if(w>h){ h=Math.round(h*mx/w); w=mx; } else { w=Math.round(w*mx/h); h=mx; } }
         var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
@@ -5993,7 +6003,7 @@ function svEdit(key){
   var _cur = rows[key] || {};
   if(_cur._photoPez){ ch._photoPez=_cur._photoPez; ch._photoPezTs=_cur._photoPezTs||Date.now(); }
   if(_cur._photoFin){ ch._photoFin=_cur._photoFin; ch._photoFinTs=_cur._photoFinTs||Date.now(); }
-  // v35p — preserva anche la foto della bolla OCR (ricevimento) tra le modifiche
+  // v35q — preserva anche la foto della bolla OCR (ricevimento) tra le modifiche
   if(_cur.bollaPhoto){ ch.bollaPhoto=_cur.bollaPhoto; ch.bollaPhotoTs=_cur.bollaPhotoTs||Date.now(); }
   // ── BLOCCO: passaggio a FINALE richiede foto bolla firmata corriere.
   //   Eccezione: vettore uscita = GLS (foto senza firma tollerata, ma comunque foto).
@@ -10562,7 +10572,7 @@ function renderChatMsgs(msgs){
     var br=isMe?'18px 4px 18px 18px':'4px 18px 18px 18px';
     var brd=isMe?'rgba(59,159,212,.3)':'#2a2a2a';
     html+='<div style="max-width:78%;background:'+bg+';border:1px solid '+brd+';border-radius:'+br+';padding:8px 12px;position:relative">';
-    // v35p — HARDENING XSS chat: allow-list schemi. Un peer con accesso al DB
+    // v35q — HARDENING XSS chat: allow-list schemi. Un peer con accesso al DB
     //   potrebbe iniettare "javascript:..." nel campo m.photo/m.file.
     //   Accetto solo data:image/... e https:// (blob:/http: rifiutati).
     function _safeMediaUrl(u, forImg){
@@ -11523,7 +11533,7 @@ function ocrCropShow(dataUrl, cb){
   img.src=dataUrl;
 }
 
-// v35p — Helper universale di compressione immagine.
+// v35q — Helper universale di compressione immagine.
 //   Ridimensiona a maxW lato lungo (default 800px, come Firebase-friendly),
 //   ricomprime a JPEG con qualita' data (default 0.55 ~ ottima resa e piccolo)
 //   e risolve una dataUrl. Fallback: ritorna la dataUrl originale se qualcosa
@@ -11552,7 +11562,7 @@ function _imgCompress(dataUrl, maxW, quality){
   });
 }
 
-// v35p — Viewer fullscreen zoomabile universale per una singola foto.
+// v35q — Viewer fullscreen zoomabile universale per una singola foto.
 //   Usa pinch/tap-to-zoom nativo. Un tap sul fondo chiude; tap sull'immagine
 //   zoomma (scala 2x). Riutilizzato dalla LISTA per la bolla salvata.
 function openPhotoZoom(url, caption){
@@ -12010,7 +12020,7 @@ function showOcrConfirm(res, photoUrl, source){
         '</div>';
 
   // v35g — tap sulla thumbnail apre la foto in overlay fullscreen (zoom-out per chiudere)
-  // v35p — Prepara SUBITO la thumbnail compressa che verra' salvata su ogni riga
+  // v35q — Prepara SUBITO la thumbnail compressa che verra' salvata su ogni riga
   //        (~800px JPEG 0.55) cosi' e' pronta quando l'utente conferma.
   if(photoUrl){
     window._ocrConfPhotoUrl = photoUrl;
@@ -12446,7 +12456,7 @@ function applyOcrConfirm(allArticles){
     if(added>0){
       var _newKeys = Object.keys(rows||{}).filter(function(k){ return !_keysBefore[k]; });
       try{ if(typeof pushUndoBatch==='function') pushUndoBatch(_newKeys); }catch(e){}
-      // v35p — Allega la foto bolla (compressa ~800px JPEG 0.55) a ogni riga
+      // v35q — Allega la foto bolla (compressa ~800px JPEG 0.55) a ogni riga
       //   appena inserita. Salvata come campo bollaPhoto per la thumbnail in
       //   LISTA e per il viewer zoomabile. Fallback silenzioso se non pronta.
       try{
@@ -13068,7 +13078,7 @@ function admSha256(txt){
   });
 }
 
-// v35p — PBKDF2-SHA256 su PIN admin per bloccare brute-force offline.
+// v35q — PBKDF2-SHA256 su PIN admin per bloccare brute-force offline.
 //   Prima il PIN era SHA-256 nudo (hardcoded nel JS pubblico): con una
 //   wordlist qualsiasi era brute-forceabile in secondi. Ora derivo con
 //   PBKDF2 + salt casuale + 200k iterazioni → cost per tentativo ~50ms.
@@ -13114,7 +13124,7 @@ function admVerify(pin, stored){
   return Promise.resolve(false);
 }
 
-// v35p — Throttle brute-force lato client sul PIN admin.
+// v35q — Throttle brute-force lato client sul PIN admin.
 //   Progressive delay: 500ms dopo il 1° fallito, 1s, 2s, 4s, 8s.
 //   Lockout: dopo 5 fallimenti consecutivi blocco per 5 minuti.
 //   NB: solo mitigazione lato client (l'attaccante determinato userebbe
@@ -14009,7 +14019,7 @@ function admRender_security(){
       '<div style="max-height:340px;overflow-y:auto" id="secModList">Caricamento…</div>' +
     '</div>' +
 
-    // v35p — Bottone per copiare le regole Firebase suggerite da incollare nella Console.
+    // v35q — Bottone per copiare le regole Firebase suggerite da incollare nella Console.
     '<div class="admCard"><h3>🔥 Regole Firebase RTDB suggerite</h3>' +
       '<div class="sub" style="line-height:1.6">Regole hardened da incollare in Firebase Console → Realtime Database → Regole. Bloccano l\'accesso root, aprono ogni sottoalbero solo agli utenti autenticati (anon-auth compreso), validano schema+dimensioni (es. chat foto solo data:image/ o https:// max 400KB), rendono security_log append-only. Vedi anche docs/SECURITY.md.</div>' +
       '<button class="admBtn ok" onclick="admCopyFirebaseRules()" style="margin-top:8px">📋 Copia regole Firebase</button>' +
@@ -14024,7 +14034,7 @@ function admRender_security(){
   return h;
 }
 
-// v35p — Fetch + copy delle regole Firebase suggerite (firebase-rules.json).
+// v35q — Fetch + copy delle regole Firebase suggerite (firebase-rules.json).
 function admCopyFirebaseRules(){
   fetch('firebase-rules.json?ts='+Date.now()).then(function(r){ return r.text(); }).then(function(txt){
     if(!txt) throw new Error('vuoto');

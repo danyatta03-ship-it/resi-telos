@@ -3,7 +3,7 @@
 // App shell: network-first (aggiornamenti subito, offline dal cache)
 // Dati anagrafica/storico: cache-first con refresh in background
 // ═══════════════════════════════════════════════════════
-var CACHE = 'resi-telos-v35p';
+var CACHE = 'resi-telos-v35q';
 
 // v34g3: rispondi a SKIP_WAITING dal client per attivare subito la nuova versione
 self.addEventListener('message', function(e){
@@ -30,7 +30,12 @@ var PRECACHE = [
   './admin-config.json',
   './jsqr.js',
   './qrcode.min.js',
-  './firebase-rules.json'
+  './firebase-rules.json',
+  './fonts/Inter-400.woff2',
+  './fonts/Inter-500.woff2',
+  './fonts/Inter-600.woff2',
+  './fonts/Inter-700.woff2',
+  './fonts/Inter-800.woff2'
 ];
 
 self.addEventListener('install', function(e) {
