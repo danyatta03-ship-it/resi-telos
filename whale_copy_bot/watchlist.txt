@@ -1,0 +1,2 @@
+# Hyperliquid wallet addresses to monitor (one per line, comments allowed).
+# Seed via: python scripts/refresh_watchlist.py --top 50 --symbol BTC --min-usd 30000000
