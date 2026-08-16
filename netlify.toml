@@ -7,3 +7,34 @@
   to = "/.netlify/functions/gemini"
   status = 200
   force = true
+
+# v35o — Security headers (audit cybersec).
+# Applicati a TUTTE le route dell'app; le SPA le vedono sulle response del CDN Netlify.
+# NB: durante lo sviluppo locale (python3 -m http.server / dev-server.js) questi
+# header NON vengono applicati — vale solo il deploy Netlify.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # HSTS: 1 anno + subdomini + preload (una volta abilitato non tornare piu' indietro)
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    # No sniff MIME (blocca certi trick di XSS che caricano JS da immagini)
+    X-Content-Type-Options = "nosniff"
+    # Anti-clickjacking (belt & suspenders con frame-ancestors nel CSP)
+    X-Frame-Options = "DENY"
+    # Referrer minimo per privacy senza rompere link interni
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Permission Policy: solo camera+geolocation dal proprio origine; disabilita il resto
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=(self), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()"
+    # CSP: Firebase SDK da gstatic, Tesseract/html5-qrcode/qrcode fallback da unpkg+cdnjs,
+    #   AI upstream via generativelanguage (solo per fallback diretto) e via /api/gemini
+    #   proxy, RTDB su wss://*.firebasedatabase.app + https REST, api.openai.com fallback.
+    #   'unsafe-inline' su script/style resta necessario perche' l'app usa onclick=..
+    #   e style="..." dappertutto (refactor pianificato).
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://*.googleapis.com https://api.openai.com; worker-src 'self'; child-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+
+# Il Service Worker deve stare a scope root e non essere cache-lock-in
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+    Service-Worker-Allowed = "/"
