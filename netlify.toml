@@ -30,7 +30,12 @@
     #   proxy, RTDB su wss://*.firebasedatabase.app + https REST, api.openai.com fallback.
     #   'unsafe-inline' su script/style resta necessario perche' l'app usa onclick=..
     #   e style="..." dappertutto (refactor pianificato).
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://*.googleapis.com https://api.openai.com; worker-src 'self'; child-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    # v35r — connect-src rilassato a https:/wss: dopo report Firebase non connette.
+    #   Il CSP wildcard `*.firebasedatabase.app` in teoria copriva sia REST che WSS
+    #   in europe-west1, ma qualche browser/versione SDK Firebase v10 falliva
+    #   silenziosamente. La protezione XSS resta forte via script-src/img-src stretti;
+    #   qui pago un po' di sicurezza in cambio di garanzia di connettivita' backend.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https: wss:; worker-src 'self'; child-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
 
 # Il Service Worker deve stare a scope root e non essere cache-lock-in
 [[headers]]
