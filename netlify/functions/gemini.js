@@ -7,9 +7,24 @@
 
 const UPSTREAM = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
-function corsHeaders(){
+// v35n — CORS ristretto agli origin autorizzati. Prima era "*" e chiunque poteva
+//   bruciare le chiavi Gemini da un altro sito. Configurabile via env
+//   ALLOWED_ORIGINS (lista separata da virgole). Se non impostato, ripiego sul
+//   dominio del deploy (URL/DEPLOY_PRIME_URL di Netlify). Solo in dev-locale
+//   (no env, no URL) apro a "*".
+function pickAllowedOrigin(reqOrigin){
+  const explicit = (process.env.ALLOWED_ORIGINS || '').split(/[,\s]+/).map(s=>s.trim()).filter(Boolean);
+  const netlifyDefaults = [process.env.URL, process.env.DEPLOY_PRIME_URL].filter(Boolean);
+  const allow = explicit.length ? explicit : netlifyDefaults;
+  if(!allow.length) return '*'; // dev fallback
+  if(!reqOrigin) return allow[0];
+  return allow.includes(reqOrigin) ? reqOrigin : allow[0];
+}
+
+function corsHeaders(reqOrigin){
   return {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': pickAllowedOrigin(reqOrigin),
+    'Vary': 'Origin',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Cache-Control': 'no-store'
@@ -22,7 +37,8 @@ function readEnvList(name, fallback){
 }
 
 exports.handler = async (event) => {
-  const H = corsHeaders();
+  const reqOrigin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
+  const H = corsHeaders(reqOrigin);
 
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: H, body: '' };
 
