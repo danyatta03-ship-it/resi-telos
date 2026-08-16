@@ -1,0 +1,101 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "returns": {
+      ".read": "auth != null",
+      "$key": {
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['cod']) || !newData.exists()",
+        "cod":  { ".validate": "newData.isString() && newData.val().length < 200" },
+        "note": { ".validate": "newData.isString() && newData.val().length < 5000" },
+        "$other": { ".validate": true }
+      }
+    },
+
+    "chat": {
+      ".read": "auth != null",
+      "$msgId": {
+        ".write": "auth != null && (!data.exists() || data.child('who').val() == newData.child('who').val())",
+        ".validate": "newData.hasChildren(['who','ts'])",
+        "who":   { ".validate": "newData.isString() && newData.val().length < 80" },
+        "role":  { ".validate": "newData.isString() && newData.val().length < 20" },
+        "text":  { ".validate": "newData.isString() && newData.val().length < 4000" },
+        "photo": { ".validate": "newData.isString() && (newData.val().matches(/^data:image\\//) || newData.val().matches(/^https:\\/\\//)) && newData.val().length < 400000" },
+        "file":  { ".validate": "newData.isString() && (newData.val().matches(/^data:/) || newData.val().matches(/^https:\\/\\//)) && newData.val().length < 400000" },
+        "fileName": { ".validate": "newData.isString() && newData.val().length < 200" },
+        "ts":    { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": true }
+      }
+    },
+
+    "presence": {
+      ".read": "auth != null",
+      "$user": {
+        ".write": "auth != null"
+      }
+    },
+
+    "admin": {
+      "pinHash": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".validate": "newData.isString() && newData.val().length > 10 && newData.val().length < 400"
+      },
+      "$sec": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+
+    "security_log": {
+      ".read": "auth != null",
+      "$k": {
+        ".write": "auth != null && !data.exists()",
+        ".validate": "newData.hasChildren(['ts','who'])",
+        "ts":  { ".validate": "newData.isNumber()" },
+        "who": { ".validate": "newData.isString() && newData.val().length < 80" },
+        "$other": { ".validate": true }
+      }
+    },
+
+    "notifEvents": {
+      ".read": "auth != null",
+      "$k": { ".write": "auth != null" }
+    },
+
+    "notif": {
+      ".read": "auth != null",
+      "$k": { ".write": "auth != null" }
+    },
+
+    "ocrLive": {
+      ".read": "auth != null",
+      "$k": { ".write": "auth != null" }
+    },
+
+    "mailFollowups": {
+      ".read": "auth != null",
+      "$k": { ".write": "auth != null" }
+    },
+
+    "pkgphotos": {
+      ".read": "auth != null",
+      "$k": {
+        ".write": "auth != null",
+        ".validate": "!newData.exists() || newData.child('dataUrl').val().length < 4000000"
+      }
+    },
+
+    "_backups": {
+      ".read": "auth != null",
+      "$k": { ".write": "auth != null" }
+    },
+
+    "_killswitch": {
+      ".read": true,
+      ".write": "auth != null"
+    }
+  }
+}
