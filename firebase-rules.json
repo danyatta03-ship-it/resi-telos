@@ -93,6 +93,14 @@
       "$k": { ".write": "auth != null" }
     },
 
+    "codeMem": {
+      ".read": "auth != null",
+      "$cod": {
+        ".write": "auth != null",
+        ".validate": "!newData.exists() || (newData.hasChild('pre') && newData.child('pre').isString() && newData.child('pre').val().length < 10)"
+      }
+    },
+
     "_killswitch": {
       ".read": true,
       ".write": "auth != null"
