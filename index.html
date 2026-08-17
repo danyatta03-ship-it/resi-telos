@@ -111,6 +111,16 @@ html[data-theme="light"] .srch,
 html[data-theme="light"] .db-search,
 html[data-theme="light"] .flt-inp,
 html[data-theme="light"] .flt-sel{background:#ffffff!important;color:#000!important;border-color:#000!important}
+/* v35v — ricerca ovunque in light mode: catch-all per input con placeholder Cerca* */
+html[data-theme="light"] input#dbSrch,
+html[data-theme="light"] input#globalSearchInput,
+html[data-theme="light"] input#resiCycleSrch,
+html[data-theme="light"] input[placeholder^="Cerca"],
+html[data-theme="light"] input[placeholder^="\U0001F50D"]{background:#ffffff!important;color:#000000!important;border:1px solid #8b95a1!important;-webkit-text-fill-color:#000!important}
+html[data-theme="light"] input#dbSrch::placeholder,
+html[data-theme="light"] input#globalSearchInput::placeholder,
+html[data-theme="light"] input#resiCycleSrch::placeholder,
+html[data-theme="light"] input[placeholder^="Cerca"]::placeholder{color:#6b7684!important;opacity:1!important}
 /* Righe articolo in LISTA: bianco con bordo nero, testo nero */
 html[data-theme="light"] .ac{background:#ffffff!important;border:1.5px solid #000!important;color:#000!important}
 html[data-theme="light"] .ac.locked{background:#f5f5f7!important;border-color:#333!important}
@@ -1146,7 +1156,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35u · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35v · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1811,7 +1821,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35u</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35v</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -2939,7 +2949,9 @@ function addRow() {
       toast('Serve almeno il CODICE ARTICOLO','r'); return;
     }
   } else {
-    var checks=[{id:'hArr',v:datArr},{id:'hVet',v:vetRic},{id:'cCod',v:cod},{id:'cFor',v:forno},{id:'cCau',v:causale},{id:'cFas',v:fase},{id:'cSta',v:stato},{id:'cDatAcqForn',v:datAcqForn}];
+    // v35v — cDatAcqForn NON piu' mandatorio all'insert (il RIC/UFF non ce l'ha
+    //   sempre). Il gate rimane su transizione UFF→MAGAZZINO in svEdit.
+    var checks=[{id:'hArr',v:datArr},{id:'hVet',v:vetRic},{id:'cCod',v:cod},{id:'cFor',v:forno},{id:'cCau',v:causale},{id:'cFas',v:fase},{id:'cSta',v:stato}];
     checks.push({id:'cDoc',v:gv('cDoc')});
     var ok=true,fe=null;
     for(var i=0;i<checks.length;i++){if(!checks[i].v){var el=document.getElementById(checks[i].id);if(el){el.classList.add('err');if(!fe)fe=el;}ok=false;}}
@@ -2976,12 +2988,9 @@ function addRow() {
     if(pb)pb.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
-  // v35u — GARANZIA: verifica documenti. Ora l'UFF al PC ha in mano i documenti
-  //   fisici (arrivati col pezzo dal RIC). Popup checklist con SPUNTE per confermare:
-  //   se un doc è presente/corretto → spunta; foto opzionale per archivio digitale.
-  //   Solo dopo aver spuntato TUTTI i doc reali (BOLLA, MODULO, LIBRETTO, ecc.)
-  //   si può procedere con l'inserimento.
-  if(String(causale||'').toUpperCase().indexOf('GARANZIA')===0){
+  // v35v — GARANZIA gate: se flusso === ANOMALIA il PC ha gia' scelto "Non ho tutto"
+  //   nel popup, quindi il reso entra come anomalia da risolvere. Salto il gate.
+  if(String(causale||'').toUpperCase().indexOf('GARANZIA')===0 && String(_fluV||'').toUpperCase() !== 'ANOMALIA'){
     var _garMissing = garanziaDocsMissing(forno);
     if(_garMissing.length){
       toast('⛔ GARANZIA '+forno+': spunta i documenti presenti — '+_garMissing.slice(0,3).join(', ')+(_garMissing.length>3?' (+'+(_garMissing.length-3)+')':''),'r');
@@ -6052,64 +6061,35 @@ function _archPhOpen(idx){
 // salvataggio effettivo passa comunque da svEdit.
 function _pickFotoWorkflow(key, kind){
   // v35 — Anche i record del PREGRESSO (tri_*) possono ricevere foto.
-  // Se il record vive in DB_TRI, salviamo la foto negli override TRI_OVR
-  // cosi' persiste attraverso i reload senza toccare DB_TRI (read-only).
   var _isTri = String(key||'').indexOf('tri_')===0;
   if(!key) return;
   if(!_isTri && !rows[key]) return;
-  var inp = document.createElement('input');
-  inp.type='file'; inp.accept='image/*'; inp.capture='environment';
-  inp.style.display='none';
-  document.body.appendChild(inp);
-  inp.onchange = function(){
-    var f = inp.files && inp.files[0]; if(!f){ inp.remove(); return; }
-    var rd = new FileReader();
-    rd.onload = function(){
-      var url = rd.result;
-      // Ridimensiono a max 1024px lato lungo per non gonfiare il record
-      var img = new Image();
-      img.onload = function(){
-        // v35u — compressione minima (Firebase-friendly): 500px lato lungo, JPEG 0.42.
-        //   ~3 KB per foto invece di ~6 KB (dimezzato). Storage FB ottimizzato.
-        var mx=500, w=img.width, h=img.height;
-        if(w>mx||h>mx){ if(w>h){ h=Math.round(h*mx/w); w=mx; } else { w=Math.round(w*mx/h); h=mx; } }
-        var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
-        cv.getContext('2d').drawImage(img,0,0,w,h);
-        var dataUrl = cv.toDataURL('image/jpeg',0.42);
-        // v35 — Storage: rows[key] per record vivi, TRI_OVR[key] per pregresso
-        var r;
-        if(_isTri){
-          if(typeof TRI_OVR==='undefined') { inp.remove(); return; }
-          if(!TRI_OVR[key]) TRI_OVR[key] = {};
-          r = TRI_OVR[key];
-        } else {
-          r = rows[key]; if(!r){ inp.remove(); return; }
-        }
-        if(kind==='pez'){
-          r._photoPez = dataUrl;
-          r._photoPezTs = Date.now();
-          // Auto-transizione a PRESA LOGISTICA (fase resta MAGAZZINO)
-          var fsel=document.getElementById('ei_fase'); if(fsel){ fsel.value='MAGAZZINO'; refiSt(); }
-          var ssel=document.getElementById('ei_stato');
-          if(ssel){ for(var i=0;i<ssel.options.length;i++){ if(ssel.options[i].text==='PRESA LOGISTICA'){ ssel.selectedIndex=i; break; } } }
-          if(typeof toast==='function') toast('✓ Foto pezzo salvata · stato → PRESA LOGISTICA','g');
-        } else if(kind==='fin'){
-          r._photoFin = dataUrl;
-          r._photoFinTs = Date.now();
-          if(typeof toast==='function') toast('✓ Foto bolla firmata salvata','g');
-        }
-        if(_isTri){ try{ saveTriOvr(); }catch(e){} }
-        // Refresh dell'edit form per mostrare la nuova preview / colori
-        try { if(typeof editRow==='function') editRow(key); } catch(e){}
-        inp.remove();
-      };
-      img.onerror = function(){ inp.remove(); };
-      img.src = url;
-    };
-    rd.onerror = function(){ inp.remove(); };
-    rd.readAsDataURL(f);
-  };
-  inp.click();
+  // v35v — usa _captureImage universale (camera overlay o fallback file picker).
+  _captureImage(function(dataUrl){
+    if(!dataUrl) return;
+    var r;
+    if(_isTri){
+      if(typeof TRI_OVR==='undefined') return;
+      if(!TRI_OVR[key]) TRI_OVR[key] = {};
+      r = TRI_OVR[key];
+    } else {
+      r = rows[key]; if(!r) return;
+    }
+    if(kind==='pez'){
+      r._photoPez = dataUrl;
+      r._photoPezTs = Date.now();
+      var fsel=document.getElementById('ei_fase'); if(fsel){ fsel.value='MAGAZZINO'; refiSt(); }
+      var ssel=document.getElementById('ei_stato');
+      if(ssel){ for(var i=0;i<ssel.options.length;i++){ if(ssel.options[i].text==='PRESA LOGISTICA'){ ssel.selectedIndex=i; break; } } }
+      if(typeof toast==='function') toast('✓ Foto pacco chiuso salvata · stato → PRESA LOGISTICA','g');
+    } else if(kind==='fin'){
+      r._photoFin = dataUrl;
+      r._photoFinTs = Date.now();
+      if(typeof toast==='function') toast('✓ Foto bolla firmata salvata','g');
+    }
+    if(_isTri){ try{ saveTriOvr(); }catch(e){} }
+    try { if(typeof editRow==='function') editRow(key); } catch(e){}
+  });
 }
 
 function gei(id){var el=document.getElementById('ei_'+id);return el?el.value.trim():'';}
@@ -8886,12 +8866,15 @@ function showGaranziaDocsPopup(fornOverride){
   h+='<div style="font-size:11px;color:var(--txt3);margin-bottom:12px">'+(forn?('Fornitore: <b style="color:var(--txt)">'+xe(fornU)+'</b>'):'Inserisci il fornitore per i documenti specifici')+((g&&g.giorni&&g.giorni!=='X'&&g.giorni!=='0')?(' · entro <b style="color:var(--txt)">'+xe(g.giorni)+' giorni</b>'):'')+'</div>';
   if(g&&g.giorni==='X'){ h+='<div style="background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.4);border-radius:8px;padding:10px;font-size:12px;font-weight:700;margin-bottom:10px">⛔ Reso in garanzia NON accettato da questo fornitore</div>'; }
   h+='<div style="font-size:10px;color:var(--txt3);margin-bottom:8px;letter-spacing:.3px;line-height:1.5">✓ <b>Spunta</b> ogni documento fisico che hai ricevuto insieme al pezzo. La foto e\' opzionale (utile per archivio digitale).</div>';
+  // v35v — Reset spunte a VUOTE ad ogni apertura popup: chi verifica deve
+  //   sempre spuntare fisicamente ogni doc, non ereditare stato precedente.
+  try{ window._garDocsChecked[fornU] = {}; }catch(e){}
   var checked = window._garDocsChecked[fornU] || {};
   for(var i=0;i<docs.length;i++){
     var d = String(docs[i]);
     var dSafe = d.replace(/\'/g,"\\'").replace(/"/g,'&quot;');
     var isReal = _garIsRealDoc(d);
-    var isChecked = !!checked[d];
+    var isChecked = false; // sempre unchecked al render
     var uploadedPhoto = (window._garDocsUploaded||[]).some(function(u){ return String(u.doc||'').toUpperCase()===d.toUpperCase(); });
     h+='<label class="garDocRow" data-doc="'+xe(d)+'" style="display:flex;gap:8px;align-items:center;padding:9px 10px;background:'+(isChecked?'rgba(46,204,113,.08)':'var(--bg2)')+';border:1.5px solid '+(isChecked?'#3fbf6f':'var(--brd)')+';border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .15s,border-color .15s">'+
         (isReal ? ('<input type="checkbox" '+(isChecked?'checked':'')+' onclick="event.stopPropagation()" onchange="_garTickDoc(\''+xe(fornU)+'\',\''+dSafe+'\',this.checked);this.closest(\'.garDocRow\').style.background=this.checked?\'rgba(46,204,113,.08)\':\'var(--bg2)\';this.closest(\'.garDocRow\').style.borderColor=this.checked?\'#3fbf6f\':\'var(--brd)\'" style="width:18px;height:18px;flex-shrink:0;accent-color:#3fbf6f;cursor:pointer">')
@@ -8903,8 +8886,9 @@ function showGaranziaDocsPopup(fornOverride){
       '</label>';
   }
   h+='<input type="file" id="garDocInput" accept="image/*" style="display:none" onchange="garDocHandleFile(this)">';
-  // Bottone "Ho verificato tutti" — abilitato solo quando tutti i doc reali sono spuntati
+  // v35v — Due esiti espliciti: ho tutto → vai avanti · non ho tutto → metti in ANOMALIA
   h+='<button id="garDocsOk" onclick="_garDocsConfirm(\''+xe(fornU)+'\')" style="width:100%;background:#3B9FD4;color:#fff;border:none;padding:12px;font-size:14px;font-weight:800;border-radius:10px;cursor:pointer;margin-top:10px">✓ Ho verificato tutti — vai avanti</button>';
+  h+='<button onclick="_garDocsAnomalia(\''+xe(fornU)+'\')" style="width:100%;background:rgba(224,85,85,.12);color:#E05555;border:1.5px solid #E05555;padding:11px;font-size:12px;font-weight:800;border-radius:10px;cursor:pointer;margin-top:6px">⚠ Non ho tutto — metti in ANOMALIA</button>';
   h+='<button onclick="document.getElementById(\'garDocsBox\').remove()" style="width:100%;background:none;color:var(--txt3);border:none;padding:9px;font-size:12px;cursor:pointer;margin-top:4px">Annulla</button>';
   h+='</div>';
   box.innerHTML=h; document.body.appendChild(box);
@@ -8919,6 +8903,47 @@ function _garDocsConfirm(fornU){
   }
   try{ document.getElementById('garDocsBox').remove(); }catch(e){}
   if(typeof toast==='function') toast('✅ Documenti garanzia verificati — puoi procedere','g');
+}
+
+// v35v — "Non ho tutto → metti in ANOMALIA": forza flusso ANOMALIA + stato ANOMALIA
+//   RICEVIMENTO nel form corrente. addRow poi salta il gate garanzia perche' il flow
+//   e' anomalia esplicita. Nel record resta traccia dei docs mancanti.
+function _garDocsAnomalia(fornU){
+  try{
+    // Marca TUTTI i doc reali di questo fornitore come "TICKED" per bypassare
+    // il gate garanzia — ma flagga anche il flusso ANOMALIA nel form.
+    var g = (typeof getGaranziaInfo==='function') ? getGaranziaInfo(fornU) : null;
+    if(g && g.documenti){
+      window._garDocsChecked[fornU] = window._garDocsChecked[fornU] || {};
+      g.documenti.forEach(function(d){
+        if(_garIsRealDoc(d)) window._garDocsChecked[fornU][d] = { ts:Date.now(), by:(typeof deviceName!=='undefined'?deviceName:'?'), anomaliaBypass:true };
+      });
+      _garSaveChecked();
+    }
+    var fluEl = document.getElementById('cFlu');
+    if(fluEl){ fluEl.value = 'ANOMALIA'; try{ if(typeof ce==='function') ce(fluEl); if(typeof onFluChange==='function') onFluChange(fluEl); }catch(e){} }
+    var staEl = document.getElementById('cSta');
+    if(staEl){
+      // Cerca l'opzione ANOMALIA RICEVIMENTO in cSta
+      var opt=null;
+      for(var i=0;i<staEl.options.length;i++){
+        if(String(staEl.options[i].value).toUpperCase()==='ANOMALIA RICEVIMENTO'){ opt=staEl.options[i]; break; }
+      }
+      if(opt){ staEl.value = opt.value; try{ if(typeof ce==='function') ce(staEl); }catch(e){} }
+    }
+    var fasEl = document.getElementById('cFas');
+    if(fasEl){ fasEl.value = 'RICEVIMENTO'; try{ if(typeof fillStato==='function') fillStato('cFas','cSta'); if(typeof ce==='function') ce(fasEl); }catch(e){} }
+    // Anche negli OCR row correnti (se il popup e' scattato dentro flow OCR)
+    try{
+      var ocrRows = document.querySelectorAll('#ocrArtList .ocrRow');
+      ocrRows.forEach(function(row){
+        var fEl = row.querySelector('.ocrRowFlu');
+        if(fEl){ fEl.value = 'ANOMALIA'; }
+      });
+    }catch(e){}
+  }catch(e){}
+  try{ document.getElementById('garDocsBox').remove(); }catch(e){}
+  if(typeof toast==='function') toast('⚠ Reso messo in ANOMALIA — mancano documenti garanzia','y');
 }
 
 // v34r — Upload foto documenti garanzia
@@ -11713,6 +11738,84 @@ function ocrCropShow(dataUrl, cb){
 //   ricomprime a JPEG con qualita' data (default 0.55 ~ ottima resa e piccolo)
 //   e risolve una dataUrl. Fallback: ritorna la dataUrl originale se qualcosa
 //   fallisce. Sincrono via Promise per usare await/then nei call site.
+// v35v — Camera overlay custom con getUserMedia. Bypassa il file-picker di MIUI/Xiaomi
+//   che non offre la camera direttamente. Se getUserMedia fallisce (permessi negati,
+//   desktop senza camera, PWA senza HTTPS), fallback a un input file dinamico.
+function _openCameraOverlay(cb, opts){
+  opts = opts || {};
+  var facing = opts.facing || 'environment';
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ cb(null,'no-api'); return; }
+  var box = document.createElement('div');
+  box.id = '_camOverlay';
+  box.style.cssText = 'position:fixed;inset:0;background:#000;z-index:2400;display:flex;flex-direction:column;touch-action:none';
+  box.innerHTML =
+    '<div style="flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">'+
+      '<video id="_camVideo" autoplay playsinline muted style="max-width:100%;max-height:100%;object-fit:contain"></video>'+
+    '</div>'+
+    '<div style="display:flex;gap:12px;justify-content:center;align-items:center;padding:16px 12px 24px;background:rgba(0,0,0,.85)">'+
+      '<button id="_camClose" style="width:52px;height:52px;background:rgba(255,255,255,.14);color:#fff;border:1.5px solid #666;border-radius:26px;font-size:22px;cursor:pointer">✕</button>'+
+      '<button id="_camShot" style="width:78px;height:78px;background:#fff;border:5px solid #3B9FD4;border-radius:39px;cursor:pointer;font-size:28px">📸</button>'+
+      '<button id="_camFlip" title="Cambia camera" style="width:52px;height:52px;background:rgba(255,255,255,.14);color:#fff;border:1.5px solid #666;border-radius:26px;font-size:22px;cursor:pointer">🔄</button>'+
+    '</div>';
+  document.body.appendChild(box);
+  var stream = null, video = document.getElementById('_camVideo');
+  var currentFacing = facing;
+  function stop(){ try{ if(stream) stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} }
+  function close(dataUrl, err){
+    stop();
+    try{ box.remove(); }catch(e){}
+    if(typeof cb==='function') cb(dataUrl||null, err||null);
+  }
+  function start(facingMode){
+    stop();
+    navigator.mediaDevices.getUserMedia({ video:{ facingMode: facingMode, width:{ideal:1600}, height:{ideal:1200} }, audio:false })
+      .then(function(s){ stream = s; video.srcObject = s; })
+      .catch(function(err){ close(null, err && err.name || 'gum-fail'); });
+  }
+  start(currentFacing);
+  document.getElementById('_camClose').onclick = function(){ close(null, 'user-cancel'); };
+  document.getElementById('_camFlip').onclick = function(){
+    currentFacing = (currentFacing==='environment') ? 'user' : 'environment';
+    start(currentFacing);
+  };
+  document.getElementById('_camShot').onclick = function(){
+    try{
+      var cv = document.createElement('canvas');
+      cv.width = video.videoWidth || 1280;
+      cv.height = video.videoHeight || 960;
+      cv.getContext('2d').drawImage(video, 0, 0, cv.width, cv.height);
+      var raw = cv.toDataURL('image/jpeg', 0.85);
+      _imgCompress(raw, 700, 0.60).then(function(small){
+        close(small || raw, null);
+      }).catch(function(){ close(raw, null); });
+    }catch(e){ close(null, e.message||'canvas-fail'); }
+  };
+}
+
+// v35v — _captureImage(cb): tenta camera custom, fallback a file picker.
+//   Universale, usare al posto di document.getElementById('X').click() sui file input.
+function _captureImage(cb, opts){
+  _openCameraOverlay(function(dataUrl, err){
+    if(dataUrl){ cb(dataUrl); return; }
+    // Fallback file picker
+    var inp = document.createElement('input');
+    inp.type='file'; inp.accept='image/*'; inp.style.display='none';
+    document.body.appendChild(inp);
+    inp.onchange = function(){
+      var f = inp.files && inp.files[0];
+      inp.remove();
+      if(!f){ cb(null); return; }
+      var rd = new FileReader();
+      rd.onload = function(){
+        _imgCompress(rd.result, 700, 0.60).then(function(small){ cb(small || rd.result); }).catch(function(){ cb(rd.result); });
+      };
+      rd.onerror = function(){ cb(null); };
+      rd.readAsDataURL(f);
+    };
+    inp.click();
+  }, opts);
+}
+
 function _imgCompress(dataUrl, maxW, quality){
   maxW = maxW || 800; quality = (quality==null) ? 0.55 : quality;
   return new Promise(function(res){
@@ -11745,22 +11848,104 @@ function openPhotoZoom(url, caption){
   var old = document.getElementById('photoZoomBox'); if(old) old.remove();
   var box = document.createElement('div');
   box.id = 'photoZoomBox';
-  box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:2100;display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto;cursor:zoom-out;-webkit-overflow-scrolling:touch';
+  box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:2100;display:flex;align-items:center;justify-content:center;padding:14px;overflow:hidden;-webkit-overflow-scrolling:touch;touch-action:none';
   var safeUrl = String(url).replace(/"/g,'&quot;');
   var fname = 'foto-'+String(caption||'resi').replace(/[^A-Za-z0-9]+/g,'_').slice(0,40)+'.jpg';
-  var lbl = caption ? '<div style="position:absolute;top:12px;left:14px;color:#fff;font-size:12px;font-weight:700;background:rgba(0,0,0,.5);padding:4px 10px;border-radius:6px;max-width:55vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+xe(caption)+'</div>' : '';
-  // v35u — barra azioni: scarica + copia + chiudi
-  var actions = '<div style="position:absolute;top:12px;right:14px;display:flex;gap:6px;align-items:center">'+
+  var lbl = caption ? '<div style="position:absolute;top:12px;left:14px;color:#fff;font-size:12px;font-weight:700;background:rgba(0,0,0,.5);padding:4px 10px;border-radius:6px;max-width:55vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none">'+xe(caption)+'</div>' : '';
+  var hint = '<div style="position:absolute;bottom:14px;left:50%;transform:translateX(-50%);color:#fff;font-size:11px;background:rgba(0,0,0,.55);padding:5px 12px;border-radius:8px;pointer-events:none">Rotella/pinch = zoom · Trascina = sposta · Doppio tap = reset</div>';
+  var actions = '<div style="position:absolute;top:12px;right:14px;display:flex;gap:6px;align-items:center;z-index:2">'+
     '<a href="'+safeUrl+'" download="'+xe(fname)+'" onclick="event.stopPropagation()" title="Scarica" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid #666;border-radius:20px;width:40px;height:40px;font-size:18px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none">⬇</a>'+
     '<button onclick="event.stopPropagation();_photoCopy(this.previousElementSibling.href)" title="Copia negli appunti" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid #666;border-radius:20px;width:40px;height:40px;font-size:16px;cursor:pointer">⎘</button>'+
     '<button onclick="event.stopPropagation();document.getElementById(\'photoZoomBox\').remove()" title="Chiudi" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid #666;border-radius:22px;width:40px;height:40px;font-size:22px;cursor:pointer">×</button>'+
   '</div>';
-  box.innerHTML = lbl + actions +
-    '<img id="photoZoomImg" src="'+safeUrl+'" '+
-      'onclick="event.stopPropagation();var s=this.dataset.z==\'1\'?\'1\':\'2\';this.style.transform=\'scale(\'+s+\')\';this.style.transformOrigin=\'center\';this.dataset.z=(s==\'2\'?\'1\':\'0\');" '+
-      'style="max-width:100%;max-height:100%;border-radius:8px;transition:transform .2s ease;transform-origin:center;cursor:zoom-in">';
-  box.onclick = function(){ box.remove(); };
+  box.innerHTML = lbl + actions + hint +
+    '<img id="photoZoomImg" src="'+safeUrl+'" draggable="false" style="max-width:100%;max-height:100%;border-radius:8px;transform-origin:center;transition:transform .12s ease-out;will-change:transform;user-select:none;-webkit-user-drag:none;touch-action:none;cursor:grab">';
   document.body.appendChild(box);
+  // v35v — Zoom vero: wheel + pinch + drag-to-pan + doppio-tap reset.
+  var img = document.getElementById('photoZoomImg');
+  var state = { scale:1, tx:0, ty:0, lastTap:0, dragging:false, dragSx:0, dragSy:0, dragOx:0, dragOy:0, pinchDist0:0, pinchScale0:1 };
+  function apply(){
+    img.style.transform = 'translate('+state.tx+'px,'+state.ty+'px) scale('+state.scale+')';
+    img.style.cursor = state.scale>1 ? 'grab' : 'zoom-in';
+  }
+  function clamp(v,min,max){ return Math.min(max,Math.max(min,v)); }
+  // Wheel = zoom in/out (desktop)
+  box.addEventListener('wheel', function(e){
+    e.preventDefault();
+    var delta = -e.deltaY * 0.0015;
+    var ns = clamp(state.scale + delta, 1, 6);
+    state.scale = ns;
+    if(state.scale<=1){ state.tx=0; state.ty=0; }
+    apply();
+  }, { passive:false });
+  // Touch: 1 dito = drag, 2 dita = pinch
+  img.addEventListener('touchstart', function(e){
+    if(e.touches.length===2){
+      var dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY;
+      state.pinchDist0 = Math.hypot(dx,dy);
+      state.pinchScale0 = state.scale;
+    } else if(e.touches.length===1){
+      state.dragging = true;
+      state.dragSx = e.touches[0].clientX; state.dragSy = e.touches[0].clientY;
+      state.dragOx = state.tx; state.dragOy = state.ty;
+      // Doppio tap = reset
+      var now = Date.now();
+      if(now - state.lastTap < 300){ state.scale=1; state.tx=0; state.ty=0; apply(); state.lastTap=0; return; }
+      state.lastTap = now;
+    }
+  }, { passive:true });
+  img.addEventListener('touchmove', function(e){
+    if(e.touches.length===2){
+      e.preventDefault();
+      var dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY;
+      var d = Math.hypot(dx,dy);
+      if(state.pinchDist0){
+        state.scale = clamp(state.pinchScale0 * (d/state.pinchDist0), 1, 6);
+        if(state.scale<=1){ state.tx=0; state.ty=0; }
+        apply();
+      }
+    } else if(e.touches.length===1 && state.dragging && state.scale>1){
+      e.preventDefault();
+      state.tx = state.dragOx + (e.touches[0].clientX - state.dragSx);
+      state.ty = state.dragOy + (e.touches[0].clientY - state.dragSy);
+      apply();
+    }
+  }, { passive:false });
+  img.addEventListener('touchend', function(e){
+    if(e.touches.length<2) state.pinchDist0 = 0;
+    if(e.touches.length===0) state.dragging = false;
+  });
+  // Mouse drag (desktop)
+  img.addEventListener('pointerdown', function(e){
+    if(e.pointerType==='touch') return;
+    if(state.scale<=1) return;
+    state.dragging = true;
+    state.dragSx = e.clientX; state.dragSy = e.clientY;
+    state.dragOx = state.tx; state.dragOy = state.ty;
+    img.style.cursor = 'grabbing';
+    try{ img.setPointerCapture(e.pointerId); }catch(err){}
+  });
+  img.addEventListener('pointermove', function(e){
+    if(!state.dragging || e.pointerType==='touch') return;
+    state.tx = state.dragOx + (e.clientX - state.dragSx);
+    state.ty = state.dragOy + (e.clientY - state.dragSy);
+    apply();
+  });
+  img.addEventListener('pointerup', function(e){
+    if(e.pointerType==='touch') return;
+    state.dragging = false; img.style.cursor='grab';
+  });
+  // Doppio click desktop = reset zoom
+  img.addEventListener('dblclick', function(e){
+    e.stopPropagation();
+    if(state.scale>1){ state.scale=1; state.tx=0; state.ty=0; }
+    else { state.scale=2.5; }
+    apply();
+  });
+  // Click sul FONDO chiude, click sull'img no
+  box.addEventListener('click', function(e){
+    if(e.target === box) box.remove();
+  });
 }
 // v35u — copia dataURL immagine come blob nell'appunti (Clipboard API async).
 function _photoCopy(url){
@@ -12118,19 +12303,9 @@ function showOcrConfirm(res, photoUrl, source){
   }catch(e){}
   // Memoria OCR: se un codice è già noto e la lettura non ha trovato il PRE, lo riempie dal ricordo
   try{ if(typeof loadCodeMem==='function')loadCodeMem(); for(var _ci=0;_ci<res.articoli.length;_ci++){ var _ca=res.articoli[_ci], _cc=(_ca.cod||'').toUpperCase(); if(_cc && !_ca.pre && CODE_MEM[_cc] && CODE_MEM[_cc].pre){ _ca.pre=CODE_MEM[_cc].pre; } } }catch(e){}
-  // v34y — Auto-fornitore per articolo dal codice (mappa storica cod→forn).
-  // Se l'AI non ha compilato il fornitore, lo cerchiamo nello storico/rows.
-  try{
-    if(typeof fornForCod==='function'){
-      for(var _fi=0;_fi<res.articoli.length;_fi++){
-        var _fa = res.articoli[_fi];
-        if(!_fa) continue;
-        if((_fa.fornitore||'').toString().trim()) continue;
-        var _ff = fornForCod(_fa.pre||'', _fa.cod||'');
-        if(_ff) _fa.fornitore = _ff;
-      }
-    }
-  }catch(e){}
+  // v35v — RIMOSSO auto-fornitore da OCR. Chi sta al PC deve inserirlo manualmente
+  //   dopo aver visto la foto bolla. La funzione fornForCod resta usata dal form
+  //   manuale RIC (autofillFromHist) ma non piu' dallo scanner OCR.
   // v34ac — Se il SOGGETTO ricade su un codice cliente con filiale != "01",
   // forziamo il flusso di ogni articolo a "FILIALE IN" (default modificabile).
   try{
@@ -12237,20 +12412,17 @@ function showOcrConfirm(res, photoUrl, source){
   // NOTE testuali (in fondo)
   html+=lab('NOTE')+'<input id="ocrNote" value="'+xe(res.note||'')+'" placeholder="annotazioni libere" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">';
 
-  // v35u — Compressione + storage: prepara SUBITO la thumb ridotta (500px q0.42
-  //   ~3 KB/foto). La foto full-res photoUrl resta per la preview grande in
-  //   fondo al modal; su Firebase salviamo solo la thumb.
+  // v35v — Prepara la thumb (700px q0.60 ~5 KB, leggibile) per salvarla su
+  //   Firebase su ogni riga. La preview grande la mostra showOcrConfirm IN CIMA
+  //   al modal (v35t) - qui NON ne renderizziamo una seconda in fondo.
   if(photoUrl){
     window._ocrConfPhotoUrl = photoUrl;
     window._ocrBollaThumb = '';
     try{
-      _imgCompress(photoUrl, 500, 0.42).then(function(small){
+      _imgCompress(photoUrl, 700, 0.60).then(function(small){
         window._ocrBollaThumb = small || photoUrl;
       });
     }catch(e){ window._ocrBollaThumb = photoUrl; }
-    // Thumb piccola in fondo, come riferimento (la principale ora sta in cima).
-    html+='<div style="font-size:9px;color:var(--txt3);letter-spacing:.5px;margin:6px 0 3px;font-weight:700">📄 FOTO BOLLA (originale)</div>'+
-          '<img src="'+photoUrl+'" onclick="_ocrOpenPhotoFull()" title="Tocca per ingrandire" style="width:100%;max-height:180px;object-fit:contain;border-radius:8px;background:var(--bg);margin-bottom:12px;cursor:zoom-in;border:1px solid var(--brd)">';
   }
 
   // v34s/v34aa: SCA (via ROLE o mode-picker) vede "Invia al PC" (skippa validazioni), gli altri "Aggiungi tutti alla lista"
@@ -12261,11 +12433,98 @@ function showOcrConfirm(res, photoUrl, source){
   if(!_isScaUi){
     html+='<button onclick="applyOcrConfirm(false)" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1.5px solid #3B9FD4;padding:10px;font-size:12px;font-weight:700;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">Precompila solo il form (senza inserire)</button>';
   }
-  html+='<button onclick="document.getElementById(\'ocrConfBox\').remove()" style="width:100%;background:none;color:#555;border:none;padding:9px;font-size:13px;cursor:pointer;font-family:inherit;-webkit-appearance:none">Annulla</button>';
+  // v35v \u2014 Annulla: se stiamo lavorando su una scan in arrivo (RPC), offriamo di
+  //   salvare come BOZZA su Firebase invece di perdere tutto. Se e' SCA (mobile),
+  //   Annulla resta un semplice chiudi (non ha senso creare bozze dal telefono).
+  var _canDraft = !_isScaUi && (source === 'live' || !!window._ocrDraftId);
+  if(_canDraft){
+    html+='<button onclick="_ocrCancelSaveDraft()" style="width:100%;background:rgba(240,180,60,.12);color:#f0b43c;border:1.5px solid #f0b43c;padding:10px;font-size:12px;font-weight:700;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">\ud83d\udcdd Salva come BOZZA e chiudi</button>';
+  }
+  html+='<button onclick="_ocrCancelClose()" style="width:100%;background:none;color:#555;border:none;padding:9px;font-size:13px;cursor:pointer;font-family:inherit;-webkit-appearance:none">Annulla senza salvare</button>';
 
   inner.innerHTML=html; box.appendChild(inner); document.body.appendChild(box);
   try{ ocrSoggLookup(document.getElementById('ocrSogg')); }catch(e){}
   if(!nArt){ toast('\u26a0 Nessun codice riconosciuto \u2014 inserisci a mano','y'); }
+  // v35v \u2014 Banner "stai riprendendo una bozza" se apertura da draft
+  if(window._ocrDraftIsDraft){
+    try{
+      var _dh = document.createElement('div');
+      _dh.style.cssText = 'background:rgba(240,180,60,.15);border:1.5px solid #f0b43c;color:#f0b43c;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;font-weight:700';
+      _dh.innerHTML = '\ud83d\udcdd Stai riprendendo una BOZZA salvata';
+      inner.insertBefore(_dh, inner.firstChild);
+    }catch(e){}
+  }
+}
+
+// v35v \u2014 Chiudi il modal OCR SENZA salvare, resettando lo stato di bozza.
+function _ocrCancelClose(){
+  try{ var b=document.getElementById('ocrConfBox'); if(b) b.remove(); }catch(e){}
+  try{
+    window._ocrDraftId = null;
+    window._ocrDraftIsDraft = false;
+    window._ocrRes = null;
+    window._ocrPezzoPhotos = {};
+    window._ocrBollaThumb = '';
+    window._ocrConfPhotoUrl = '';
+  }catch(e){}
+}
+
+// v35v \u2014 Salva lo stato corrente del modal come BOZZA su Firebase (ocrLive/<id>
+//   con _draft:true). Se l'apertura era da live/draft, usa lo stesso id; altrimenti
+//   ne crea uno nuovo. Cosi' il PC puo' riprendere dopo \u2014 pausa pranzo, telefonata, ecc.
+function _ocrCancelSaveDraft(){
+  var g = function(id){ var e=document.getElementById(id); return e ? (e.value||'').trim() : ''; };
+  var articoli = (typeof ocrCollectRows==='function') ? ocrCollectRows() : [];
+  var payload = {
+    articoli: articoli,
+    sogg: g('ocrSogg'),
+    vetRic: g('ocrVet'),
+    data: g('ocrDataDdt'),
+    dataListato: g('ocrData'),
+    rma: g('ocrRma'),
+    note: g('ocrNote'),
+    anomaliaRilevata: !!(window._ocrRes && window._ocrRes.anomaliaRilevata),
+    motivoAnomalia: (window._ocrRes && window._ocrRes.motivoAnomalia) || '',
+    bollaPhoto: (window._ocrBollaThumb || window._ocrConfPhotoUrl || ''),
+    pezzoPhotos: (window._ocrPezzoPhotos || {}),
+    ts: Date.now(),
+    sender: (typeof deviceName!=='undefined' && deviceName) || 'RPC',
+    _draft: true,
+    _draftBy: (typeof deviceName!=='undefined' && deviceName) || 'RPC',
+    _draftTs: Date.now()
+  };
+  try{ if(typeof _ocrLiveInit==='function') _ocrLiveInit(); }catch(e){}
+  var id = window._ocrDraftId;
+  var done = function(){
+    try{ document.getElementById('ocrConfBox').remove(); }catch(e){}
+    window._ocrDraftId = null;
+    window._ocrDraftIsDraft = false;
+    window._ocrRes = null;
+    window._ocrPezzoPhotos = {};
+    window._ocrBollaThumb = '';
+    window._ocrConfPhotoUrl = '';
+    if(typeof toast==='function') toast('\ud83d\udcdd Bozza salvata \u2014 la ritrovi in cima al pannello scansioni','g');
+  };
+  var fail = function(err){
+    if(typeof toast==='function') toast('\u26a0 Salvataggio bozza: '+((err&&err.message)||err),'r');
+  };
+  try{
+    if(typeof OCR_LIVE_REF!=='undefined' && OCR_LIVE_REF){
+      if(id){
+        OCR_LIVE_REF.child(id).set(payload).then(done).catch(fail);
+      } else {
+        OCR_LIVE_REF.push(payload).then(done).catch(fail);
+      }
+    } else {
+      // Nessun FB: fallback localStorage
+      try{
+        var buf = JSON.parse(localStorage.getItem('_ocrDraftBuf')||'{}');
+        buf[id || ('d_'+Date.now())] = payload;
+        localStorage.setItem('_ocrDraftBuf', JSON.stringify(buf));
+      }catch(e){}
+      done();
+    }
+  }catch(e){ fail(e); }
 }
 
 // Aggancio codice cliente <-> nome (come il campo Soggetto del form), su CLI_DATA
@@ -12345,7 +12604,8 @@ function ocrRowHtml(i, a){
   var sta=(a.stato||'DA GESTIRE \u23f3').toString();
   var doc=(a.tipoDoc||'').toString();
   var flu=(a.flusso||'STANDARD').toString();
-  var datAcq=(a.datAcqForn||'').toString();
+  // v35v — datAcqForn ora e' input testo con mask gg/mm/aaaa (no bug sub-field date).
+  var datAcq = (typeof _dateIsoToIt==='function') ? _dateIsoToIt((a.datAcqForn||'').toString()) : (a.datAcqForn||'').toString();
   function xe2(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   // v34q: TUTTI i campi decisionali PER RIGA (causale, fornitore, flusso, doc, fase, stato, dataAcqForn)
   var _cauL=(typeof CAULIST!=='undefined')?CAULIST:[];
@@ -12364,8 +12624,8 @@ function ocrRowHtml(i, a){
   return '<div class="ocrRow" data-i="'+i+'" style="border:1px solid #1e2530;background:rgba(59,159,212,.03);border-radius:9px;padding:8px;margin-bottom:6px">'+
     '<div style="display:flex;gap:5px;align-items:center;margin-bottom:6px">'+
       '<div style="width:22px;color:#3B9FD4;font-size:12px;font-weight:800;text-align:right">'+(i+1)+'.</div>'+
-      '<input class="ocrRowPre" value="'+xe2(pre)+'" placeholder="PRE" oninput="_upcase(this)" onchange="ocrRowAutoForn(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:56px;background:#111;color:#3B9FD4;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;font-weight:700;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:center">'+
-      '<input class="ocrRowCod" value="'+xe2(cod)+'" placeholder="codice" oninput="_upcase(this)" onchange="ocrRowAutoForn(this)" onblur="ocrRowAutoForn(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="flex:1;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 8px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;min-width:0">'+
+      '<input class="ocrRowPre" value="'+xe2(pre)+'" placeholder="PRE" oninput="_upcase(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:56px;background:#111;color:#3B9FD4;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;font-weight:700;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:center">'+
+      '<input class="ocrRowCod" value="'+xe2(cod)+'" placeholder="codice" oninput="_upcase(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="flex:1;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 8px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;min-width:0">'+
       '<input class="ocrRowQty" type="number" min="1" value="'+qty+'" title="Quantità" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:44px;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 4px;font-size:12px;border-radius:7px;outline:none;font-family:inherit;-webkit-appearance:none;text-align:center">'+
       '<input class="ocrRowPrc" type="number" step="0.01" value="'+(prc===''?'':prc)+'" placeholder="€" title="Prezzo" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:64px;background:#111;color:#5BB8E0;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:right">'+
       '<button type="button" onclick="ocrDelRow(this)" title="Elimina" style="width:26px;height:32px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;padding:0">×</button>'+
@@ -12391,7 +12651,7 @@ function ocrRowHtml(i, a){
       '<select class="ocrRowDoc" onchange="ocrRowFocusNext(this)" style="'+_selCss+'" title="Tipo documento">'+_mkOpts(_docL, doc, '— tipo doc —')+'</select>'+
       '<select class="ocrRowFas" onchange="ocrRowRefreshStato(this);ocrRowFocusNext(this)" style="'+_selCss+'" title="Fase">'+_mkOpts(_fasL, fas, '')+'</select>'+
       '<select class="ocrRowSta" onchange="ocrRowFocusNext(this)" style="'+_selCss+'" title="Stato">'+_mkOpts(_staL, sta, '— stato —')+'</select>'+
-      '<input class="ocrRowDatAcq" type="date" value="'+xe2(datAcq)+'" onchange="ocrRowFocusNext(this)" title="Data acquisto dal fornitore" style="'+_inpCss+'">'+
+      '<input class="ocrRowDatAcq" type="text" inputmode="numeric" placeholder="gg/mm/aaaa" maxlength="10" value="'+xe2(datAcq)+'" oninput="_dateMaskInput(this)" onblur="_dateMaskBlur(this)" title="Data acquisto dal fornitore" style="'+_inpCss+'">'+
     '</div>'+
     '</div>';
 }
@@ -12469,34 +12729,23 @@ function ocrAddRow(){
 //   La foto viene compressa (800px, JPEG 0.55) e salvata in window._ocrPezzoPhotos[i].
 //   Al confirm applyOcrConfirm la propaga in ogni row inserita come pezzoPhoto.
 window._ocrPezzoPhotos = window._ocrPezzoPhotos || {};
+// v35v — Usa _captureImage universale (camera overlay o fallback file picker)
 function ocrPickPezzo(btn, i){
-  var inp = document.createElement('input');
-  inp.type='file'; inp.accept='image/*'; inp.style.display='none';
-  document.body.appendChild(inp);
-  inp.onchange = function(){
-    var f = inp.files && inp.files[0]; if(!f){ inp.remove(); return; }
-    var rd = new FileReader();
-    rd.onload = function(){
-      _imgCompress(rd.result, 500, 0.42).then(function(small){
-        window._ocrPezzoPhotos[i] = small || rd.result;
-        var host = btn.closest('.ocrRowPezzoBox');
-        if(host){
-          host.querySelector('button').style.color='#3fbf6f';
-          host.querySelector('button').style.borderColor='#3fbf6f';
-          host.querySelector('button').textContent='✓ Foto pezzo (tocca per sostituire)';
-          var thumbHost = host.querySelector('.ocrRowPezzoThumb');
-          if(thumbHost){
-            thumbHost.innerHTML='<img src="'+window._ocrPezzoPhotos[i].replace(/"/g,'&quot;')+'" onclick="openPhotoZoom(this.src,\'Pezzo #'+(i+1)+'\')" style="width:36px;height:36px;object-fit:cover;border-radius:5px;border:1.5px solid #3fbf6f;cursor:zoom-in">';
-          }
-        }
-        try{ toast('📷 Foto pezzo #'+(i+1)+' pronta','g'); }catch(e){}
-      });
-      inp.remove();
-    };
-    rd.onerror = function(){ inp.remove(); };
-    rd.readAsDataURL(f);
-  };
-  inp.click();
+  _captureImage(function(dataUrl){
+    if(!dataUrl) return;
+    window._ocrPezzoPhotos[i] = dataUrl;
+    var host = btn.closest('.ocrRowPezzoBox');
+    if(host){
+      host.querySelector('button').style.color='#3fbf6f';
+      host.querySelector('button').style.borderColor='#3fbf6f';
+      host.querySelector('button').textContent='✓ Foto pezzo (tocca per sostituire)';
+      var thumbHost = host.querySelector('.ocrRowPezzoThumb');
+      if(thumbHost){
+        thumbHost.innerHTML='<img src="'+String(dataUrl).replace(/"/g,'&quot;')+'" onclick="openPhotoZoom(this.src,\'Pezzo #'+(i+1)+'\')" style="width:36px;height:36px;object-fit:cover;border-radius:5px;border:1.5px solid #3fbf6f;cursor:zoom-in">';
+      }
+    }
+    try{ toast('📷 Foto pezzo #'+(i+1)+' pronta','g'); }catch(e){}
+  });
 }
 
 // v35u — Multi-bolla stesso cliente: apre camera per una nuova bolla,
@@ -12574,7 +12823,9 @@ function ocrCollectRows(){
     var doc=(rows[i].querySelector('.ocrRowDoc')||{}).value||'';
     var fas=(rows[i].querySelector('.ocrRowFas')||{}).value||'';
     var sta=(rows[i].querySelector('.ocrRowSta')||{}).value||'';
-    var datAcq=(rows[i].querySelector('.ocrRowDatAcq')||{}).value||'';
+    var datAcqRaw=(rows[i].querySelector('.ocrRowDatAcq')||{}).value||'';
+    // v35v — la ocrRowDatAcq e' text con mask gg/mm/aaaa: converto a ISO per uso interno
+    var datAcq = (typeof _dateItToIso==='function') ? _dateItToIso(datAcqRaw) : datAcqRaw;
     pre=pre.toUpperCase().trim(); cod=cod.toUpperCase().trim();
     forn=forn.toUpperCase().trim();
     if(!pre && !cod) continue;
@@ -12835,11 +13086,14 @@ function applyOcrConfirm(allArticles){
     if(added===articoli.length){
       // v35g — successo pieno: chiudi popup e vai in lista
       try{ document.getElementById('ocrConfBox').remove(); }catch(e){}
+      // v35v — reset stato bozza (non deve piu' comparire nel pannello)
+      try{ window._ocrDraftId = null; window._ocrDraftIsDraft = false; }catch(e){}
       gTab('pgIns');
       // Toast normale silenziato: mostra invece il toast UNDO (pushUndoBatch)
     } else if(added>0){
       // Successo parziale: chiudi comunque perche' altre andranno riprocessate
       try{ document.getElementById('ocrConfBox').remove(); }catch(e){}
+      try{ window._ocrDraftId = null; window._ocrDraftIsDraft = false; }catch(e){}
       gTab('pgIns');
       toast('⚠ Aggiunti '+added+'/'+articoli.length+' (fallite righe: '+failed.join(', ')+'). Controlla data acq. fornitore, coerenza flusso/documento e permessi.','y');
     } else {
@@ -15298,6 +15552,25 @@ function undoLastInsert(){
 }
 
 // v34u — Panel SCA con icona camera SVG + pulsante "Cambia modalità"
+// v35v — Scatta bolla scanner mobile: tenta camera custom (bypass MIUI), fallback file input.
+function _scaScattaBolla(){
+  _captureImage(function(dataUrl){
+    if(!dataUrl) return;
+    // Simula come se fosse arrivato da ocrInput: chiamo ocrDocument con un fake input
+    var fakeInp = { files:[dataUrlToFile(dataUrl,'bolla.jpg')], value:'' };
+    if(typeof ocrDocument==='function') ocrDocument(fakeInp);
+  });
+}
+// Helper: dataURL → File (per compat con ocrDocument che si aspetta un file)
+function dataUrlToFile(dataUrl, name){
+  try{
+    var arr = dataUrl.split(','), mime = arr[0].match(/:(.*?);/)[1];
+    var bstr = atob(arr[1]), n = bstr.length, u8 = new Uint8Array(n);
+    while(n--) u8[n] = bstr.charCodeAt(n);
+    return new File([u8], name||'photo.jpg', {type:mime});
+  }catch(e){ return null; }
+}
+
 function renderScaPanel(){
   if(typeof _isMode !== 'function' || !_isMode('SCA')) return;
   var pg = document.getElementById('pgIns'); if(!pg) return;
@@ -15315,7 +15588,7 @@ function renderScaPanel(){
     '<button class="mp-back" onclick="backToModePicker()">← Cambia modalità</button>'+
     '<div class="sca-title">SCANNER BOLLE</div>'+
     '<div class="sca-sub">Fotografa la bolla o il DDT.<br>L\'AI legge i codici e li invia in tempo reale al ricevimento PC.</div>'+
-    '<button class="sca-big" onclick="document.getElementById(\'ocrInput\').click()" title="Foto bolla / DDT">'+
+    '<button class="sca-big" onclick="_scaScattaBolla()" title="Foto bolla / DDT">'+
       camSvg + '<span>Foto bolla</span>'+
     '</button>'+
     '<div class="sca-hint">📶 Serve connessione — sync via Firebase</div>';
@@ -15440,20 +15713,27 @@ function renderOcrLivePanel(){
     var when = d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
     var nArt = (r.articoli||[]).length;
     // v35u — Thumbnail bolla + conteggio foto pezzo, entrambi zoomabili prima di elaborare.
-    var _bollaThumb = r.bollaPhoto ? '<img src="'+xe(r.bollaPhoto).replace(/\'/g,'&#39;')+'" onclick="event.stopPropagation();openPhotoZoom(this.src,\'Bolla scan\')" title="Anteprima bolla — tocca per ingrandire" style="width:52px;height:52px;object-fit:cover;border-radius:6px;border:1.5px solid #3B9FD4;cursor:zoom-in;flex-shrink:0">' : '<div style="width:52px;height:52px;border-radius:6px;background:var(--bg2);border:1px dashed var(--brd);display:flex;align-items:center;justify-content:center;color:var(--txt3);font-size:18px;flex-shrink:0" title="Nessuna foto bolla">📄</div>';
+    // v35v — Bozze: card gialla, label BOZZA, bottone RIPRENDI al posto di ELABORA.
+    var _isDraft = !!r._draft;
+    var _bordCol = _isDraft ? '#f0b43c' : '#3B9FD4';
+    var _bgCol   = _isDraft ? 'rgba(240,180,60,.10)' : '#0a1e3a';
+    var _bollaThumb = r.bollaPhoto ? '<img src="'+xe(r.bollaPhoto).replace(/\'/g,'&#39;')+'" onclick="event.stopPropagation();openPhotoZoom(this.src,\'Bolla scan\')" title="Anteprima bolla — tocca per ingrandire" style="width:52px;height:52px;object-fit:cover;border-radius:6px;border:1.5px solid '+_bordCol+';cursor:zoom-in;flex-shrink:0">' : '<div style="width:52px;height:52px;border-radius:6px;background:var(--bg2);border:1px dashed var(--brd);display:flex;align-items:center;justify-content:center;color:var(--txt3);font-size:18px;flex-shrink:0" title="Nessuna foto bolla">📄</div>';
     var _nPez = (r.pezzoPhotos && typeof r.pezzoPhotos==='object') ? Object.keys(r.pezzoPhotos).length : 0;
     var _pezBadge = _nPez ? '<span style="background:rgba(63,191,111,.14);color:#3fbf6f;border:1px solid #3fbf6f;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:800;margin-left:4px">🔧 '+_nPez+'</span>' : '';
-    html += '<div style="background:#0a1e3a;border:1px solid rgba(59,159,212,.4);border-radius:9px;padding:10px 12px;margin-bottom:6px;display:flex;gap:10px">'+
+    var _draftBadge = _isDraft ? '<span style="background:rgba(240,180,60,.20);color:#f0b43c;border:1px solid #f0b43c;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:800;margin-right:4px">📝 BOZZA</span>' : '';
+    var _senderIcon = _isDraft ? '💾' : '📱';
+    var _btnMainLbl = _isDraft ? '▶ Riprendi' : '▶ ELABORA';
+    html += '<div style="background:'+_bgCol+';border:1px solid '+_bordCol+';border-radius:9px;padding:10px 12px;margin-bottom:6px;display:flex;gap:10px">'+
       _bollaThumb +
       '<div style="flex:1;min-width:0">'+
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
-          '<div style="font-size:12px;font-weight:800;color:#3B9FD4">📱 '+xe(r.sender||'SCA')+' · '+when+'</div>'+
+          '<div style="font-size:12px;font-weight:800;color:'+_bordCol+'">'+_draftBadge+_senderIcon+' '+xe(r.sender||'SCA')+' · '+when+'</div>'+
           '<div style="font-size:11px;color:#888">'+nArt+' articoli'+_pezBadge+'</div>'+
         '</div>'+
         (r.sogg?'<div style="font-size:11px;color:#ccc;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Sogg: '+xe(r.sogg)+'</div>':'')+
         (r.forn?'<div style="font-size:11px;color:#ccc;margin-bottom:3px">Forn: '+xe(r.forn)+'</div>':'')+
         '<div style="display:flex;gap:6px;margin-top:6px">'+
-          '<button onclick="ocrLiveElabora(\''+xe(k)+'\')" style="flex:1;background:#3B9FD4;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">▶ ELABORA</button>'+
+          '<button onclick="ocrLiveElabora(\''+xe(k)+'\')" style="flex:1;background:'+_bordCol+';color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">'+_btnMainLbl+'</button>'+
           '<button onclick="ocrLiveScarta(\''+xe(k)+'\')" title="Scarta" style="width:38px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">🗑</button>'+
         '</div>'+
       '</div>'+
@@ -15466,6 +15746,9 @@ function renderOcrLivePanel(){
 // RPC: clicca "Elabora" su una scansione in arrivo → riapre showOcrConfirm
 function ocrLiveElabora(id){
   var r = OCR_LIVE_LOCAL[id]; if(!r) return;
+  // v35v — Stash l'id per poter risalvare come BOZZA se l'utente clicca Annulla
+  window._ocrDraftId = id;
+  window._ocrDraftIsDraft = !!r._draft;
   // Rimuovi da FB per non elaborarla due volte (locking soft)
   try{ if(OCR_LIVE_REF) OCR_LIVE_REF.child(id).remove(); }catch(e){}
   // v35u — Ripristina la foto bolla + le foto pezzo per riga inviate dal telefono
