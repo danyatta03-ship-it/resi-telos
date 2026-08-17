@@ -1177,7 +1177,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36a · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36b · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1842,7 +1842,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36a</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36b</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -7654,6 +7654,13 @@ function saveAnomalia(row) {
     role:     ROLE||'',
     photoKey: row.photo||'',
     photoKeys:(row.photoKeys&&row.photoKeys.length)?row.photoKeys.slice():(row.photo?[row.photo]:[]),
+    // v36b — porta anche BOLLA e PEZZO dal ricevimento OCR, cosi' vanno nel PDF mail
+    bollaPhoto:   row.bollaPhoto||'',
+    bollaPhotoTs: row.bollaPhotoTs||0,
+    pezzoPhoto:   row.pezzoPhoto||'',
+    pezzoPhotoTs: row.pezzoPhotoTs||0,
+    // Chiave del row sorgente: serve al fallback in generateAnoMail per foto tardive
+    _rowKey:  row._key||'',
     rma:      row.rma||'',
     anomalia: row.anomalia||''
   };
@@ -9694,9 +9701,24 @@ function generateAnoMail(a, who) {
   //   dataURL, non IDB keys). Il PDF finale conterrà: pezzo + bolla + eventuali
   //   foto anomalia caricate manualmente. Cosi' con un click il fornitore/agente
   //   ha tutto: bolla di ricezione, foto del pezzo e la spiegazione via mail.
+  // v36b — Fallback per anomalie vecchie senza le foto copiate:
+  //   se a.bollaPhoto/a.pezzoPhoto mancano, cerca nel row sorgente per _rowKey
+  //   (nuove anomalie) o per cod+rma (anomalie vecchie senza rowKey).
+  var _srcRow = null;
+  if(typeof rows==='object' && rows){
+    if(a._rowKey && rows[a._rowKey]) _srcRow = rows[a._rowKey];
+    if(!_srcRow){
+      for(var _rk in rows){
+        var _rr = rows[_rk];
+        if(_rr && _rr.cod===a.cod && ((_rr.rma||'')===(a.rma||''))){ _srcRow = _rr; break; }
+      }
+    }
+  }
+  var _bp = a.bollaPhoto || (_srcRow && _srcRow.bollaPhoto) || '';
+  var _pp = a.pezzoPhoto || (_srcRow && _srcRow.pezzoPhoto) || '';
   var _extraPhotos = [];
-  if(a.pezzoPhoto && typeof a.pezzoPhoto==='string' && a.pezzoPhoto.indexOf('data:image/')===0) _extraPhotos.push(a.pezzoPhoto);
-  if(a.bollaPhoto && typeof a.bollaPhoto==='string' && a.bollaPhoto.indexOf('data:image/')===0) _extraPhotos.push(a.bollaPhoto);
+  if(_pp && typeof _pp==='string' && _pp.indexOf('data:image/')===0) _extraPhotos.push(_pp);
+  if(_bp && typeof _bp==='string' && _bp.indexOf('data:image/')===0) _extraPhotos.push(_bp);
   function doOpen(finalBody){
     // Mostra l'anteprima: l'apertura di Outlook parte da un CLICK dell'utente
     // (necessario: dopo la generazione AI asincrona il "gesto utente" è scaduto
@@ -9735,13 +9757,12 @@ function showMailPreview(email, subj, bodyText, photos, ctx){
   h+='<input id="mpSubj" value="'+xe(subj||'')+'" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;margin-bottom:8px;display:block">';
   h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:3px">TESTO</div>';
   h+='<textarea id="mpBody" style="width:100%;height:200px;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 11px;font-size:13px;border-radius:8px;outline:none;resize:vertical;font-family:inherit;margin-bottom:10px;display:block">'+xe(bodyText||'')+'</textarea>';
+  // v36b — Pannello PDF SEMPRE visibile: se non ci sono foto, avviso chiaro
+  //   invece di sparire (l'utente cosi' sa che sta mandando la mail senza allegato).
   if(photos&&photos.length){
     h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:4px">📎 ALLEGATO PDF — bolla + pezzo + foto anomalia ('+photos.length+' pagine)</div>';
-    // v36a — Anteprima PDF inline: iframe con blob URL del PDF vero (quello che
-    //   verrà allegato all'invio). Genero SUBITO e riuso in mpOpenOutlook/mpOpenWeb.
     h+='<div id="mpPdfPreviewBox" style="margin-bottom:8px;background:#0a0a0a;border:1.5px solid #3B9FD4;border-radius:8px;overflow:hidden;height:280px;display:flex;align-items:center;justify-content:center;color:#666;font-size:12px">📄 preparazione anteprima PDF…</div>';
     h+='<button onclick="mpDownloadPdf()" style="width:100%;background:rgba(59,159,212,.15);color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:10px">⬇ Scarica PDF</button>';
-    // Thumbnail piccole delle singole foto (per download/copia individuale)
     h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:4px">SINGOLE FOTO ('+photos.length+')</div>';
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">';
     for(var pi=0;pi<photos.length;pi++){
@@ -9752,6 +9773,14 @@ function showMailPreview(email, subj, bodyText, photos, ctx){
       h+='</div></div>';
     }
     h+='</div>';
+  } else {
+    // Nessuna foto: mostra placeholder e istruzioni per attaccare
+    h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:4px">📎 ALLEGATO PDF</div>';
+    h+='<div style="margin-bottom:10px;background:rgba(240,180,60,.10);border:1.5px dashed #f0b43c;color:#f0b43c;border-radius:8px;padding:14px 12px;text-align:center;font-size:12px;line-height:1.5">'+
+       '⚠ <b>Nessuna foto disponibile</b> per questo reso.<br>'+
+       '<span style="color:var(--txt3);font-size:11px;font-weight:400">Il record non ha foto bolla ne foto pezzo agganciate<br>(inserito prima del sync foto, o ricevuto senza OCR).<br>'+
+       'La mail parte senza allegato PDF.</span>'+
+    '</div>';
   }
   var ctx = window._mpCtx||{};
   var agFull = ctx.agenteFullName||ctx.agenteNome||'';
