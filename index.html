@@ -1177,7 +1177,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35z · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36a · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1842,7 +1842,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35z</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36a</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -9736,7 +9736,13 @@ function showMailPreview(email, subj, bodyText, photos, ctx){
   h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:3px">TESTO</div>';
   h+='<textarea id="mpBody" style="width:100%;height:200px;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 11px;font-size:13px;border-radius:8px;outline:none;resize:vertical;font-family:inherit;margin-bottom:10px;display:block">'+xe(bodyText||'')+'</textarea>';
   if(photos&&photos.length){
-    h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:4px">FOTO ANOMALIA ('+photos.length+') — verranno unite in un PDF e allegate automaticamente all\'invio 📄</div>';
+    h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:4px">📎 ALLEGATO PDF — bolla + pezzo + foto anomalia ('+photos.length+' pagine)</div>';
+    // v36a — Anteprima PDF inline: iframe con blob URL del PDF vero (quello che
+    //   verrà allegato all'invio). Genero SUBITO e riuso in mpOpenOutlook/mpOpenWeb.
+    h+='<div id="mpPdfPreviewBox" style="margin-bottom:8px;background:#0a0a0a;border:1.5px solid #3B9FD4;border-radius:8px;overflow:hidden;height:280px;display:flex;align-items:center;justify-content:center;color:#666;font-size:12px">📄 preparazione anteprima PDF…</div>';
+    h+='<button onclick="mpDownloadPdf()" style="width:100%;background:rgba(59,159,212,.15);color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:10px">⬇ Scarica PDF</button>';
+    // Thumbnail piccole delle singole foto (per download/copia individuale)
+    h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:4px">SINGOLE FOTO ('+photos.length+')</div>';
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">';
     for(var pi=0;pi<photos.length;pi++){
       h+='<div style="width:88px"><img src="'+photos[pi]+'" style="width:88px;height:88px;object-fit:cover;border-radius:8px;border:1px solid #333;display:block">';
@@ -9758,6 +9764,47 @@ function showMailPreview(email, subj, bodyText, photos, ctx){
   if(agFull) h+='<button onclick="mpAgentEdit(\''+xe(agFull).replace(/\x27/g,"\\\'")+'\')" style="width:100%;background:none;color:#888;border:1px dashed #333;padding:9px;font-size:11px;border-radius:8px;cursor:pointer;-webkit-appearance:none;margin-bottom:6px">👤 Rubrica agente: '+xe(agFull)+' — aggiungi/modifica email e cellulare</button>';
   h+='<div style="font-size:10px;color:#666;text-align:center">WhatsApp usa il numero salvato nella rubrica agente. "Outlook (PC)" apre il client email predefinito, "Web" nel browser.</div>';
   inner.innerHTML=h; box.appendChild(inner); document.body.appendChild(box);
+  // v36a — Genera il PDF SUBITO e mostralo in anteprima (iframe blob).
+  //   Cache in window._mpPdfBlob + _mpPdfUrl per riusarlo in mpOpenOutlook/Web.
+  //   Cleanup a chiusura modal (revokeObjectURL).
+  try{
+    if(photos && photos.length && typeof photosToPdfBlob==='function'){
+      // Cleanup blob URL precedente se presente
+      try{ if(window._mpPdfUrl){ URL.revokeObjectURL(window._mpPdfUrl); window._mpPdfUrl=null; window._mpPdfBlob=null; } }catch(e){}
+      photosToPdfBlob(photos, {subject: subj||''}).then(function(blob){
+        if(!blob){ var _pb=document.getElementById('mpPdfPreviewBox'); if(_pb) _pb.textContent='⚠ PDF non generato'; return; }
+        window._mpPdfBlob = blob;
+        window._mpPdfUrl  = URL.createObjectURL(blob);
+        var _pb = document.getElementById('mpPdfPreviewBox');
+        if(_pb){
+          _pb.innerHTML = '<iframe src="'+window._mpPdfUrl+'#view=FitH" style="width:100%;height:100%;border:0;background:#fff" title="Anteprima PDF"></iframe>';
+        }
+      }).catch(function(err){
+        var _pb=document.getElementById('mpPdfPreviewBox');
+        if(_pb) _pb.textContent = '⚠ PDF non visualizzabile ('+((err&&err.message)||err)+') — usa Scarica';
+      });
+    }
+    // Hook di cleanup: quando l'utente chiude il modal (✕), revoca il blob URL.
+    var _observer = new MutationObserver(function(mut, obs){
+      if(!document.getElementById('mailPrevBox')){
+        try{ if(window._mpPdfUrl){ URL.revokeObjectURL(window._mpPdfUrl); window._mpPdfUrl=null; window._mpPdfBlob=null; } }catch(e){}
+        obs.disconnect();
+      }
+    });
+    _observer.observe(document.body, {childList:true, subtree:false});
+  }catch(e){}
+}
+
+// v36a — Scarica il PDF anteprima (bolla+pezzo+anomalia) come file separato.
+function mpDownloadPdf(){
+  var blob = window._mpPdfBlob;
+  if(!blob){ if(typeof toast==='function') toast('PDF non pronto — riprova tra un attimo','y'); return; }
+  var url = window._mpPdfUrl || URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  var sub = ((window._mpCtx||{}).anoCod || 'allegato');
+  a.download = 'reso_'+sub.replace(/[^A-Za-z0-9_-]/g,'_')+'.pdf';
+  document.body.appendChild(a); a.click(); a.remove();
 }
 // ══════════════════════════════════════════════════════════════════
 // v34m — CONVERSIONE FOTO → PDF + AUTO-ALLEGATO NELLE MAIL
@@ -9995,7 +10042,15 @@ function mpOpenOutlook(){
   var body=((document.getElementById('mpBody')||{}).value||'').slice(0,1500);
   var photos = window._mpPhotos || [];
   // v34m: se ci sono foto, converti in PDF e usa share/download → auto-allegato
+  // v36a: se il PDF e' gia' stato generato per l'anteprima, riusalo (no doppia composizione)
   if(photos.length){
+    var _cached = window._mpPdfBlob;
+    if(_cached){
+      _sharePdfOrMailto(_cached, _pdfFilename(), to, subj, body);
+      mpRegisterSend('Outlook+PDF');
+      _mpTrackFollowup(to, subj, body);
+      return;
+    }
     try{ toast('📄 Sto creando il PDF con '+photos.length+' foto…','b'); }catch(e){}
     photosToPdfBlob(photos, { subject: subj }).then(function(blob){
       if(!blob){
@@ -10210,10 +10265,16 @@ function mpOpenWeb(){
   // v34m: se ci sono foto, scarico il PDF così l'utente lo trascina nella
   // finestra Outlook Web (Outlook Web non accetta allegati via URL).
   if(photos.length){
-    try{ toast('📄 Sto creando il PDF con '+photos.length+' foto…','b'); }catch(e){}
-    photosToPdfBlob(photos, { subject: subj }).then(function(blob){
-      if(blob) _downloadAndMailto(blob, _pdfFilename(), to, subj, body);
-    });
+    // v36a: riusa il PDF gia' generato per l'anteprima (no doppia composizione)
+    var _cached = window._mpPdfBlob;
+    if(_cached){
+      _downloadAndMailto(_cached, _pdfFilename(), to, subj, body);
+    } else {
+      try{ toast('📄 Sto creando il PDF con '+photos.length+' foto…','b'); }catch(e){}
+      photosToPdfBlob(photos, { subject: subj }).then(function(blob){
+        if(blob) _downloadAndMailto(blob, _pdfFilename(), to, subj, body);
+      });
+    }
     var url='https://outlook.office.com/mail/deeplink/compose?to='+encodeURIComponent(to)+'&subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
     setTimeout(function(){ window.open(url,'_blank'); }, 800);
     mpRegisterSend('Outlook Web+PDF');
@@ -12441,10 +12502,12 @@ function showOcrConfirm(res, photoUrl, source){
     html+=ocrRowHtml(i, res.articoli[i]);
   }
   html+='</div>'+
-    '<div style="display:flex;gap:6px;margin-bottom:12px">'+
-      '<button type="button" onclick="ocrAddRow()" style="flex:1;background:#0a1e3a;color:#3B9FD4;border:1px dashed rgba(59,159,212,.5);border-radius:9px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">+ Aggiungi riga vuota</button>'+
+    '<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'+
+      '<button type="button" onclick="ocrAddRow()" style="flex:1;min-width:130px;background:#0a1e3a;color:#3B9FD4;border:1px dashed rgba(59,159,212,.5);border-radius:9px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">+ Aggiungi riga vuota</button>'+
+      // v36a — Rimuovi ultima riga (paired con +Aggiungi, cosi' l'utente non deve cercare la ✕ per-riga)
+      '<button type="button" onclick="ocrRemoveLastRow()" style="flex:0 0 auto;background:rgba(224,85,85,.10);color:#E05555;border:1px dashed rgba(224,85,85,.5);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">− Rimuovi ultima riga</button>'+
       // v35u — Multi-bolla stesso cliente
-      '<button type="button" onclick="ocrAddAltraBolla()" style="flex:1;background:rgba(46,204,113,.10);color:#3fbf6f;border:1px dashed #3fbf6f;border-radius:9px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">📸 Altra bolla stesso cliente</button>'+
+      '<button type="button" onclick="ocrAddAltraBolla()" style="flex:1;min-width:130px;background:rgba(46,204,113,.10);color:#3fbf6f;border:1px dashed #3fbf6f;border-radius:9px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">📸 Altra bolla stesso cliente</button>'+
     '</div>';
 
   html+='<div style="height:1px;background:#222;margin:6px 0 10px"></div>';
@@ -12701,7 +12764,7 @@ function ocrRowHtml(i, a){
       '<input class="ocrRowCod" value="'+xe2(cod)+'" placeholder="codice" oninput="_upcase(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="flex:1;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 8px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;min-width:0">'+
       '<input class="ocrRowQty" type="number" min="1" value="'+qty+'" title="Quantità" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:44px;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 4px;font-size:12px;border-radius:7px;outline:none;font-family:inherit;-webkit-appearance:none;text-align:center">'+
       '<input class="ocrRowPrc" type="number" step="0.01" value="'+(prc===''?'':prc)+'" placeholder="€" title="Prezzo" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:64px;background:#111;color:#5BB8E0;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:right">'+
-      '<button type="button" onclick="ocrDelRow(this)" title="Elimina" style="width:26px;height:32px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;padding:0">×</button>'+
+      '<button type="button" onclick="ocrDelRow(this)" title="Elimina riga" style="width:36px;height:40px;background:rgba(224,85,85,.25);color:#E05555;border:1.5px solid #E05555;border-radius:7px;font-size:18px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;padding:0;flex-shrink:0">×</button>'+
     '</div>'+
     // v35u — Foto pezzo per singola riga: obbligatoria da telefono, poi il PC la
     //   vede in lista senza doverla rifare (bolla + pezzo sono giá state fatte).
@@ -12796,6 +12859,19 @@ function ocrAddRow(){
   ocrRelabelRows();
   var rows=list.querySelectorAll('.ocrRow'); var last=rows[rows.length-1];
   if(last){ last.scrollIntoView({block:'nearest'}); var c=last.querySelector('.ocrRowCod'); if(c) c.focus(); }
+}
+// v36a — Rimuovi ultima riga della lista OCR (pair del + Aggiungi riga vuota).
+//   Non tocca ocrDelRow (la ✕ per-riga esistente), da' solo un modo esplicito
+//   di sbagliarsi meno quando si aggiungono righe vuote per errore.
+function ocrRemoveLastRow(){
+  var list=document.getElementById('ocrArtList'); if(!list) return;
+  var rows=list.querySelectorAll('.ocrRow');
+  if(rows.length<=1){ if(typeof toast==='function') toast('Devi tenere almeno una riga','y'); return; }
+  var last = rows[rows.length-1];
+  var pre=(last.querySelector('.ocrRowPre')||{}).value||'';
+  var cod=(last.querySelector('.ocrRowCod')||{}).value||'';
+  if((pre||cod) && !confirm('L’ultima riga contiene "'+(pre?pre+' ':'')+cod+'". Rimuoverla?')) return;
+  last.remove(); ocrRelabelRows();
 }
 
 // v35u — Foto pezzo per singola riga OCR. Aggiorna la thumb + pulsante.
@@ -15596,32 +15672,87 @@ function undoLastInsert(){
   var stack = window._insertUndoStack || [];
   if(!stack.length){ if(typeof toast==='function') toast('Nessuna operazione da annullare','y'); return; }
   var batch = stack.pop();
-  var removed = 0;
-  // v35e — Undo bypassa la permission check di ROLE_PERMS.canDelete perche'
-  //   l'utente sta annullando SOLO cio' che ha appena inserito. Puliamo
-  //   direttamente in locale + Firebase + coda offline; evitiamo sendMsg che
-  //   respinge i non-ADM (toast "Non autorizzato" e la cancellazione salta).
-  batch.keys.forEach(function(k){
-    if(rows[k]){
-      try{
-        if(typeof FB_REF!=='undefined' && FB_REF){
-          FB_REF.child(k).remove().catch(function(){});
-          try{ if(typeof secLog==='function') secLog('undo-insert', k, {}); }catch(e){}
-        } else if(typeof _ofpPush==='function'){
-          // Offline: metti in coda la remove, verra' replayata al login
-          _ofpPush({type:'remove', key:k});
-        }
-      }catch(e){}
-      delete rows[k]; removed++;
-    }
+  // v36a — Prima di rimuovere, RICOSTRUISCI il batch come UNA BOZZA su ocrLive/.
+  //   Cosi' l'utente ritrova tutto nel pannello RICEVIMENTO PC (card gialla
+  //   "📝 BOZZA") pronto da riprendere. Zero perdita di lavoro.
+  var srcRows = batch.keys.map(function(k){ return rows[k]; }).filter(Boolean);
+  var first = srcRows[0] || {};
+  var articoliPayload = srcRows.map(function(r){
+    return {
+      pre: r.pre||'', cod: r.cod||'', qty: r.qty||1, prc: r.prc||0,
+      causale: r.causale||'', fornitore: r.forn||'', flusso: r.flusso||'',
+      tipoDoc: r.tipoDoc||'', fase: r.fase||'', stato: r.stato||'',
+      datAcqForn: r.datAcqForn||''
+    };
   });
-  try{ if(typeof idbSet==='function') idbSet('td', JSON.stringify(rows)); }catch(e){}
-  try{ if(typeof renderList==='function') renderList(); }catch(e){}
-  try{ if(typeof renderQueue==='function') renderQueue(); }catch(e){}
-  try{ if(typeof updBS==='function') updBS(); }catch(e){}
-  var box = document.getElementById('undoToast'); if(box) box.remove();
-  if(typeof toast==='function') toast('↶ Annullato: '+removed+' articoli rimossi','g');
-  try{ if(typeof notifLog==='function') notifLog('mod', 'undo OCR ('+removed+' righe)'); }catch(e){}
+  // Mappa pezzo per indice (bolla e' unica, condivisa dalle righe della batch)
+  var pezzoMap = {};
+  srcRows.forEach(function(r, i){ if(r && r.pezzoPhoto) pezzoMap[i] = r.pezzoPhoto; });
+  var draftPayload = {
+    articoli: articoliPayload,
+    sogg: first.sogg||'',
+    vetRic: first.vetRic||'',
+    data: first.datBolla||'',
+    dataListato: first.datArr||'',
+    rma: first.rma||'',
+    note: first.note||'',
+    bollaPhoto: first.bollaPhoto||'',
+    pezzoPhotos: pezzoMap,
+    ts: Date.now(),
+    sender: ((typeof deviceName!=='undefined' && deviceName) || 'RPC') + ' (undo)',
+    _draft: true,
+    _draftBy: (typeof deviceName!=='undefined' && deviceName) || 'RPC',
+    _draftTs: Date.now(),
+    _undoOf: srcRows.length
+  };
+  // Push su ocrLive/ (o buffer locale se FB non pronto)
+  try{ if(typeof _ocrLiveInit==='function') _ocrLiveInit(); }catch(e){}
+  var finishRemoval = function(){
+    // v35e — Undo bypassa ROLE_PERMS.canDelete: l'utente annulla SOLO cio' che
+    //   ha appena inserito. Puliamo direttamente locale + Firebase + coda offline.
+    var removed = 0;
+    batch.keys.forEach(function(k){
+      if(rows[k]){
+        try{
+          if(typeof FB_REF!=='undefined' && FB_REF){
+            FB_REF.child(k).remove().catch(function(){});
+            try{ if(typeof secLog==='function') secLog('undo-insert', k, {}); }catch(e){}
+          } else if(typeof _ofpPush==='function'){
+            _ofpPush({type:'remove', key:k});
+          }
+        }catch(e){}
+        delete rows[k]; removed++;
+      }
+    });
+    try{ if(typeof idbSet==='function') idbSet('td', JSON.stringify(rows)); }catch(e){}
+    try{ if(typeof renderList==='function') renderList(); }catch(e){}
+    try{ if(typeof renderQueue==='function') renderQueue(); }catch(e){}
+    try{ if(typeof updBS==='function') updBS(); }catch(e){}
+    var box = document.getElementById('undoToast'); if(box) box.remove();
+    if(typeof toast==='function') toast('↶ Rimessi in bozza ('+removed+' articoli) — riprendili dal pannello RICEVIMENTO PC','g');
+    try{ if(typeof notifLog==='function') notifLog('mod', 'undo OCR ('+removed+' righe) → BOZZA'); }catch(e){}
+  };
+  try{
+    if(typeof OCR_LIVE_REF!=='undefined' && OCR_LIVE_REF){
+      OCR_LIVE_REF.push(draftPayload).then(finishRemoval).catch(function(err){
+        // Salvataggio bozza fallito: NON rimuoviamo la lista — l'utente non deve perdere dati.
+        // Ri-metti il batch sullo stack in modo che possa riprovare.
+        stack.push(batch);
+        if(typeof toast==='function') toast('⚠ Impossibile salvare bozza ('+((err&&err.message)||err)+'). Riprova o mantieni in lista.','r');
+      });
+    } else {
+      // FB non pronto: buffer localStorage (come ocrLiveSend)
+      try{
+        var buf = JSON.parse(localStorage.getItem('_ocrLiveBuf')||'[]');
+        buf.push(draftPayload);
+        localStorage.setItem('_ocrLiveBuf', JSON.stringify(buf.slice(-20)));
+      }catch(e){}
+      finishRemoval();
+    }
+  }catch(e){
+    stack.push(batch);
+    if(typeof toast==='function') toast('⚠ Salvataggio bozza fallito: '+e.message,'r');
+  }
 }
 
 // v34u — Panel SCA con icona camera SVG + pulsante "Cambia modalità"
@@ -15804,19 +15935,28 @@ function renderOcrLivePanel(){
     var _bollaThumb = r.bollaPhoto ? '<img src="'+xe(r.bollaPhoto).replace(/\'/g,'&#39;')+'" onclick="event.stopPropagation();openPhotoZoom(this.src,\'Bolla scan\')" title="Anteprima bolla — tocca per ingrandire" style="width:52px;height:52px;object-fit:cover;border-radius:6px;border:1.5px solid '+_bordCol+';cursor:zoom-in;flex-shrink:0">' : '<div style="width:52px;height:52px;border-radius:6px;background:var(--bg2);border:1px dashed var(--brd);display:flex;align-items:center;justify-content:center;color:var(--txt3);font-size:18px;flex-shrink:0" title="Nessuna foto bolla">📄</div>';
     var _nPez = (r.pezzoPhotos && typeof r.pezzoPhotos==='object') ? Object.keys(r.pezzoPhotos).length : 0;
     var _pezBadge = _nPez ? '<span style="background:rgba(63,191,111,.14);color:#3fbf6f;border:1px solid #3fbf6f;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:800;margin-left:4px">🔧 '+_nPez+'</span>' : '';
-    var _draftBadge = _isDraft ? '<span style="background:rgba(240,180,60,.20);color:#f0b43c;border:1px solid #f0b43c;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:800;margin-right:4px">📝 BOZZA</span>' : '';
+    // v36a — Card riorganizzata: badge BOZZA in alto a destra; SOGGETTO
+    //   e N° BOLLA in evidenza (13-14px, grassetto colore accento); sender/ora
+    //   sotto in piccolo. Cosi' l'utente riconosce al volo qual e' quale.
+    var _draftBadge = _isDraft ? '<span style="background:rgba(240,180,60,.25);color:#8a5a10;border:1.5px solid #f0b43c;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:900;letter-spacing:.5px;white-space:nowrap;flex-shrink:0">📝 BOZZA</span>' : '';
     var _senderIcon = _isDraft ? '💾' : '📱';
     var _btnMainLbl = _isDraft ? '▶ Riprendi' : '▶ ELABORA';
-    html += '<div style="background:'+_bgCol+';border:1px solid '+_bordCol+';border-radius:9px;padding:10px 12px;margin-bottom:6px;display:flex;gap:10px">'+
+    var _soggLine = r.sogg ? '<div style="font-size:14px;font-weight:800;color:'+_bordCol+';margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+xe(r.sogg)+'">👤 '+xe(r.sogg)+'</div>' : '';
+    var _rmaLine  = r.rma  ? '<div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:2px;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+xe(r.rma)+'">📄 '+xe(r.rma)+'</div>' : '';
+    var _metaLine = '<div style="font-size:10px;color:var(--txt3);margin-bottom:2px">'+_senderIcon+' '+xe(r.sender||'SCA')+' · '+when+(r.forn?' · Forn: '+xe(r.forn):'')+'</div>';
+    html += '<div style="background:'+_bgCol+';border:1.5px solid '+_bordCol+';border-radius:9px;padding:10px 12px;margin-bottom:6px;display:flex;gap:10px">'+
       _bollaThumb +
       '<div style="flex:1;min-width:0">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
-          '<div style="font-size:12px;font-weight:800;color:'+_bordCol+'">'+_draftBadge+_senderIcon+' '+xe(r.sender||'SCA')+' · '+when+'</div>'+
-          '<div style="font-size:11px;color:#888">'+nArt+' articoli'+_pezBadge+'</div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px">'+
+          '<div style="flex:1;min-width:0">'+
+            _soggLine +
+            _rmaLine +
+            _metaLine +
+          '</div>'+
+          _draftBadge +
         '</div>'+
-        (r.sogg?'<div style="font-size:11px;color:#ccc;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Sogg: '+xe(r.sogg)+'</div>':'')+
-        (r.forn?'<div style="font-size:11px;color:#ccc;margin-bottom:3px">Forn: '+xe(r.forn)+'</div>':'')+
-        '<div style="display:flex;gap:6px;margin-top:6px">'+
+        '<div style="font-size:10px;color:var(--txt3);margin-bottom:6px">'+nArt+' articoli'+_pezBadge+'</div>'+
+        '<div style="display:flex;gap:6px">'+
           '<button onclick="ocrLiveElabora(\''+xe(k)+'\')" style="flex:1;background:'+_bordCol+';color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">'+_btnMainLbl+'</button>'+
           '<button onclick="ocrLiveScarta(\''+xe(k)+'\')" title="Scarta" style="width:38px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">🗑</button>'+
         '</div>'+
