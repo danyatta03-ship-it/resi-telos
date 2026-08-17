@@ -1177,7 +1177,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35x · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35y · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1842,7 +1842,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35x</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35y</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -12487,14 +12487,16 @@ function showOcrConfirm(res, photoUrl, source){
   if(!_isScaUi){
     html+='<button onclick="applyOcrConfirm(false)" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1.5px solid #3B9FD4;padding:10px;font-size:12px;font-weight:700;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">Precompila solo il form (senza inserire)</button>';
   }
-  // v35v \u2014 Annulla: se stiamo lavorando su una scan in arrivo (RPC), offriamo di
-  //   salvare come BOZZA su Firebase invece di perdere tutto. Se e' SCA (mobile),
-  //   Annulla resta un semplice chiudi (non ha senso creare bozze dal telefono).
-  var _canDraft = !_isScaUi && (source === 'live' || !!window._ocrDraftId);
-  if(_canDraft){
-    html+='<button onclick="_ocrCancelSaveDraft()" style="width:100%;background:rgba(240,180,60,.12);color:#f0b43c;border:1.5px solid #f0b43c;padding:10px;font-size:12px;font-weight:700;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">\ud83d\udcdd Salva come BOZZA e chiudi</button>';
+  // v35y \u2014 "Annulla" salva SEMPRE come bozza automaticamente (mai perdere lavoro).
+  //   Su SCA non ha senso (il telefono invia al PC in tempo reale, non compila),
+  //   li' resta un semplice chiudi.
+  //   Un bottone separato "\ud83d\uddd1 Scarta" esplicito per chi vuole davvero buttare via.
+  if(!_isScaUi){
+    html+='<button onclick="_ocrCancelSaveDraft()" style="width:100%;background:rgba(240,180,60,.12);color:#f0b43c;border:1.5px solid #f0b43c;padding:11px;font-size:13px;font-weight:800;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">\u2715 Annulla \u2192 salva come BOZZA</button>';
+    html+='<button onclick="_ocrCancelDiscard()" style="width:100%;background:none;color:#888;border:none;padding:7px;font-size:11px;cursor:pointer;font-family:inherit;-webkit-appearance:none">\ud83d\uddd1 Scarta e chiudi (perdi tutto)</button>';
+  } else {
+    html+='<button onclick="_ocrCancelClose()" style="width:100%;background:none;color:#555;border:none;padding:9px;font-size:13px;cursor:pointer;font-family:inherit;-webkit-appearance:none">Annulla</button>';
   }
-  html+='<button onclick="_ocrCancelClose()" style="width:100%;background:none;color:#555;border:none;padding:9px;font-size:13px;cursor:pointer;font-family:inherit;-webkit-appearance:none">Annulla senza salvare</button>';
 
   inner.innerHTML=html; box.appendChild(inner); document.body.appendChild(box);
   try{ ocrSoggLookup(document.getElementById('ocrSogg')); }catch(e){}
@@ -12521,6 +12523,19 @@ function _ocrCancelClose(){
     window._ocrBollaThumb = '';
     window._ocrConfPhotoUrl = '';
   }catch(e){}
+}
+
+// v35y \u2014 Scarta esplicito: chiede conferma, poi chiude senza salvare.
+//   Se il modal era aperto su una BOZZA gia' esistente, la rimuove anche da FB.
+function _ocrCancelDiscard(){
+  if(!confirm('\u26a0 Sicuro di scartare TUTTO?\n\nPerdi articoli letti, foto, e ogni modifica non salvata.\nUsa "Annulla" per salvare come BOZZA e riprenderla dopo.')) return;
+  try{
+    if(window._ocrDraftId && typeof OCR_LIVE_REF!=='undefined' && OCR_LIVE_REF){
+      OCR_LIVE_REF.child(window._ocrDraftId).remove().catch(function(){});
+    }
+  }catch(e){}
+  _ocrCancelClose();
+  if(typeof toast==='function') toast('\ud83d\uddd1 Scansione scartata','y');
 }
 
 // v35v \u2014 Salva lo stato corrente del modal come BOZZA su Firebase (ocrLive/<id>
@@ -12657,7 +12672,13 @@ function ocrRowHtml(i, a){
   //   lista oppure passaggio fase manuale). Auto-jump rimosso in addRow.
   var fas=(a.fase||'RICEVIMENTO').toString();
   var sta=(a.stato||'DA GESTIRE \u23f3').toString();
-  var doc=(a.tipoDoc||'').toString();
+  // v35y — Default TIPO DOC = VENDITA. Non piu' vuoto / BL/TRA. Le BL/TRA/FIM/RNC
+  //   sono etichette del DDT stampato, non un "tipo documento" utile per
+  //   l'archivio Telos — il default utile e' VENDITA (caso piu' frequente).
+  //   Se l'AI ha letto un tipo specifico non-BL, lo rispetta.
+  var _rawDoc = (a.tipoDoc||'').toString().toUpperCase().trim();
+  var _blLike = (_rawDoc === 'BL/TRA' || _rawDoc === 'BL/FIM' || _rawDoc === 'BL/RNC' || _rawDoc === 'BL/FLO' || _rawDoc === 'BOLLA' || _rawDoc === 'DDT');
+  var doc = (!_rawDoc || _blLike) ? 'VENDITA' : _rawDoc;
   var flu=(a.flusso||'STANDARD').toString();
   // v35v — datAcqForn ora e' input testo con mask gg/mm/aaaa (no bug sub-field date).
   var datAcq = (typeof _dateIsoToIt==='function') ? _dateIsoToIt((a.datAcqForn||'').toString()) : (a.datAcqForn||'').toString();
