@@ -49,7 +49,7 @@
 ════════════════════════════════════════════════════════════════════════════
 -->
 <style>
-/* v35t — Font brand Inter (self-hosted, ~120KB WOFF2 latin subset, 5 pesi).
+/* v35u — Font brand Inter (self-hosted, ~120KB WOFF2 latin subset, 5 pesi).
    Coperto da CSP font-src 'self'. font-display:swap → nessun FOIT su prima
    visita: system-ui compare subito, Inter si sostituisce quando pronto. */
 @font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/Inter-400.woff2') format('woff2')}
@@ -145,7 +145,7 @@ html[data-theme="light"] #mfuBox>div>div,
 html[data-theme="light"] #scadBox>div>div,
 html[data-theme="light"] #cyclesBox>div>div{background:#ffffff!important;border-color:#000!important;color:#000!important}
 
-/* v35t — Light-mode CATCH-ALL "una volta per tutte": qualsiasi hex scuro nelle
+/* v35u — Light-mode CATCH-ALL "una volta per tutte": qualsiasi hex scuro nelle
    inline styles di STORICO TRIMESTRE (#pgTri) e Admin (#admWrap) forzato a token light.
    Copre sia i formati "#111" testuali sia normalizzati "rgb(17, 17, 17)" da alcuni browser. */
 html[data-theme="light"] #pgTri,
@@ -214,7 +214,7 @@ html[data-theme="light"] #mfuBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #resiCycleBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #pickBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #notifList div[style*="border-bottom:1px solid #1a1a1a"]{border-bottom-color:#000!important}
-/* v35t — Modali cicli aggiuntivi: assicura fondo bianco per box container e ricerca */
+/* v35u — Modali cicli aggiuntivi: assicura fondo bianco per box container e ricerca */
 html[data-theme="light"] #resiCycleBox>div,
 html[data-theme="light"] #pickBox>div{background:#ffffff!important;border-color:#3B9FD4!important;color:#000!important}
 html[data-theme="light"] #resiCycleSrch{background:#ffffff!important;color:#000!important}
@@ -489,7 +489,7 @@ html[data-theme="light"] div[style*="border:1px solid #2a2a2a"]{border-color:#3B
 .cdot, .sdot{cursor:pointer}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Inter','Inter Fallback',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,Roboto,sans-serif;font-size:16px;overflow:hidden;font-feature-settings:"cv11","ss01","ss03";-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-/* v35t — Tabular nums su ovunque cifre in colonna (prezzi, date, codici, KPI, badge). */
+/* v35u — Tabular nums su ovunque cifre in colonna (prezzi, date, codici, KPI, badge). */
 .ac-price,.ac-date,.ac-cod,.chip,.sc-n,.badge,.count,.metric .v,.reso-price,.tnums{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 
 /* POPUP */
@@ -1146,7 +1146,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35t · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35u · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1811,7 +1811,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35t</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35u</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -2550,7 +2550,7 @@ function xe(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').r
 function gv(id){var el=document.getElementById(id);return el?el.value.trim():'';}
 function fd(iso){if(!iso)return '';var s=String(iso);if(s.indexOf('T')>0)s=s.slice(0,10);return s.split('-').reverse().join('/');}
 function uv(el){el.value=el.value.toUpperCase();}
-// v35t — Uppercase che PRESERVA la posizione del cursore.
+// v35u — Uppercase che PRESERVA la posizione del cursore.
 //   Prima: this.value = this.value.toUpperCase() → cursore saltava in fondo,
 //   se scrivevi in mezzo a un codice precompilato la lettera finiva alla fine.
 function _upcase(el){
@@ -2564,7 +2564,7 @@ function _upcase(el){
 }
 function ce(el){el.classList.remove('err');}
 
-// v35t — Maschera data testuale gg/mm/aaaa che elimina il bug dei sub-field
+// v35u — Maschera data testuale gg/mm/aaaa che elimina il bug dei sub-field
 //   di <input type=date> (dove typing "2026" nella parte gg auto-avanzava).
 //   Accetta "17082026" o "17/08/2026" o "17-08-2026". Su blur normalizza.
 function _dateMaskInput(el){
@@ -2927,7 +2927,7 @@ function fillStato(fi,si) {
 // ══════════════════════════════════════════════════
 function addRow() {
   var cod=gv('cCod'),forno=gv('cFor'),causale=gv('cCau'),fase=gv('cFas'),stato=gv('cSta'),datArr=gv('hArr'),vetRic=gv('hVet');
-  // v35t — datAcqForn ora e' un input text mascherato gg/mm/aaaa: converto a ISO per salvare
+  // v35u — datAcqForn ora e' un input text mascherato gg/mm/aaaa: converto a ISO per salvare
   var datAcqForn = (typeof _dateItToIso==='function') ? _dateItToIso(gv('cDatAcqForn')) : gv('cDatAcqForn');
   var _fluForCheck = gv('cFlu');
   // v34ac — FILIALE IN: nessun campo obbligatorio oltre al CODICE. La riga
@@ -2967,7 +2967,7 @@ function addRow() {
     return;
   }
   // ANOMALIA RICEVIMENTO: foto obbligatoria
-  //   v35t — Il gate accetta anche pendingPezzoPhoto (da OCR ricevimento con
+  //   v35u — Il gate accetta anche pendingPezzoPhoto (da OCR ricevimento con
   //   foto pezzo scattata per la riga): niente doppio-scatto lato PC.
   if(fase==='RICEVIMENTO'&&stato==='ANOMALIA RICEVIMENTO'&&!pendName&&!(window._pendingPezzoPhoto||'')){
     toast('&#9888; Anomalia Ricevimento: foto obbligatoria prima di procedere','r');
@@ -2976,7 +2976,7 @@ function addRow() {
     if(pb)pb.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
-  // v35t — GARANZIA: verifica documenti. Ora l'UFF al PC ha in mano i documenti
+  // v35u — GARANZIA: verifica documenti. Ora l'UFF al PC ha in mano i documenti
   //   fisici (arrivati col pezzo dal RIC). Popup checklist con SPUNTE per confermare:
   //   se un doc è presente/corretto → spunta; foto opzionale per archivio digitale.
   //   Solo dopo aver spuntato TUTTI i doc reali (BOLLA, MODULO, LIBRETTO, ecc.)
@@ -3750,7 +3750,7 @@ function renderList(){
     if(r._who)html+='<div class="ac-who">\ud83d\udc64 '+xe(r._who)+(r._lastEdit&&r._lastEdit!==r._who?' \u00b7 \u270e '+xe(r._lastEdit):'')+' <span style="color:var(--txt3);font-size:8px">'+xe(r.fase||'')+'</span>'+(r._log&&r._log.length?' <span style="color:var(--txt3)">·'+r._log.length+' mod.</span>':'')+'</div>';
     html+='<div style="display:flex;justify-content:space-between"><div>';
     html+='<div class="ac-sogg">'+xe(r.sogg||'\u2014')+'</div>';
-    // v35t \u2014 Foto bolla OCR: miniatura cliccabile+zoomabile.
+    // v35u \u2014 Foto bolla OCR: miniatura cliccabile+zoomabile.
     //   Priorita': bollaPhoto (salvata in OCR ricevimento) > photoThumb (foto pezzo).
     var _phBoll = r.bollaPhoto || r.photoThumb || '';
     var _phPez  = r.pezzoPhoto || '';
@@ -5329,7 +5329,7 @@ function showResiByCycle(cicloName, fase){
       var _hasPh = !!(r.photoThumb||r.photo);
       var _thumb = r.photoThumb ? '<img src="'+xe(r.photoThumb)+'" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0">' :
                                    '<div style="width:44px;height:44px;border-radius:6px;background:var(--bg3);color:var(--txt3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0" title="Nessuna foto">📷</div>';
-      // v35t — attributo data-srch usato dalla search dedicata dentro il modale ciclo
+      // v35u — attributo data-srch usato dalla search dedicata dentro il modale ciclo
       var _srch = xe([r.cod, r.pre, r.forn, r.sogg, r.causale, r.stato, r.rma, r.note, r.ubic]
                       .filter(function(x){return x!=null && x!=='';})
                       .join(' ').toLowerCase());
@@ -5345,7 +5345,7 @@ function showResiByCycle(cicloName, fase){
     });
   }
   var totPh = flt.filter(function(r){return r.photoThumb||r.photo;}).length;
-  // v35t — barra di ricerca dedicata al modale del ciclo: filtra le righe visibili
+  // v35u — barra di ricerca dedicata al modale del ciclo: filtra le righe visibili
   //         mantenendo attivo il filtro ciclo+fase.
   var searchBar =
     '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;background:var(--bg2);border:1px solid '+color+'55;border-radius:10px;padding:6px 10px">'+
@@ -5371,7 +5371,7 @@ function showResiByCycle(cicloName, fase){
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
-// v35t — Filtro in-place delle righe dentro il modale ciclo: nasconde/mostra
+// v35u — Filtro in-place delle righe dentro il modale ciclo: nasconde/mostra
 //         via style.display senza rebuild della lista (mantiene lo scroll).
 function _resiCycleFilter(q){
   var box = document.getElementById('resiCycleList'); if(!box) return;
@@ -5863,7 +5863,7 @@ function fornByCode(v){
 function onForn(el){
   var s=fornByCode(el.value);
   if(s){el.value=s.name;ce(el);toast('Fornitore: '+s.name,'b');}
-  // v35t — Se l'operatore ha impostato causale GARANZIA e sta inserendo il
+  // v35u — Se l'operatore ha impostato causale GARANZIA e sta inserendo il
   //   fornitore, apri il popup checklist docs. Non se il fornitore e' vuoto.
   try{
     var cauEl = document.getElementById('cCau');
@@ -5963,7 +5963,7 @@ function editRow(key){
   }
   html+='<div class="r2">'+fld('VETTORE USCITA',sl('vetUsc',['CIPI/PIEMME','CITYLINE','MITTENTE/DESTINATARIO','INTERCOMPANY','NAZ/INT','CATI','UPS','GLS','BRT','DHL'],r.vetUsc))+fld('DATA STATO',inp('datSta',r.datSta,'','date'))+'</div>';
   // ── MAGAZZINO: N. colli + tipologia imballo + foto pacco chiuso + bolla firmata
-  // v35t — Aggiunta foto BOLLA FIRMATA anche in MAGAZZINO (riusa _photoFin,
+  // v35u — Aggiunta foto BOLLA FIRMATA anche in MAGAZZINO (riusa _photoFin,
   //   lo stesso campo usato in FINALE, cosi' persiste tra le fasi).
   html += '<div id="ei_magFields" style="'+(r.fase==='MAGAZZINO'?'':'display:none')+';margin-top:6px">'+
     '<div class="r2">'+
@@ -5974,7 +5974,7 @@ function editRow(key){
       (r._photoPez ? '✓ Foto pacco chiuso (tocca per sostituire) — imposta PRESA LOGISTICA' : '📦 Foto pacco chiuso → PRESA LOGISTICA')+
     '</button>'+
     (r._photoPez ? '<img src="'+xe(r._photoPez)+'" onclick="openPhotoZoom(this.src,\'Pacco chiuso — '+xe((r.cod||'').replace(/\'/g,""))+'\')" style="max-width:100%;border-radius:8px;border:1px solid #3fbf6f;margin-top:6px;display:block;cursor:zoom-in">' : '')+
-    // v35t — Foto bolla firmata anche in MAGAZZINO (utile prima di passare a FINALE).
+    // v35u — Foto bolla firmata anche in MAGAZZINO (utile prima di passare a FINALE).
     '<button type="button" onclick="_pickFotoWorkflow(\''+key+'\',\'fin\')" style="width:100%;background:var(--bg2);color:'+(r._photoFin?'#3fbf6f':'#3B9FD4')+';border:1.5px solid '+(r._photoFin?'#3fbf6f':'#3B9FD4')+';padding:10px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:6px">'+
       (r._photoFin ? '✓ Foto bolla firmata (tocca per sostituire)' : '📝 Foto bolla firmata corriere')+
     '</button>'+
@@ -6001,7 +6001,7 @@ function editRow(key){
   html+=fld('VETTORE RIC.',sl('vetRic',['PIEMME','CIPI','AGENTE','COLLEGA','AD','DIEMME','GLS','VINCA','BANCO','PIENNE','BRT','UPS','DHL','TNT','LGT','CITYLINE','NUOVA DEMOS'],r.vetRic));
   html+='<div class="sh-section">NOTE</div>';
   html+=fld('NOTE','<textarea id="ei_note" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:var(--rad2);outline:none;resize:none;min-height:52px;font-family:inherit;margin-bottom:7px">'+xe(r.note||'')+'</textarea>');
-  // v35t — Foto bolla (OCR ricevimento): visibile + zoomable nella sheet di edit.
+  // v35u — Foto bolla (OCR ricevimento): visibile + zoomable nella sheet di edit.
   var _bImg = r.bollaPhoto || r.photoThumb || '';
   var _pImg = r.pezzoPhoto || '';
   if(_bImg) html+='<div style="font-size:9px;color:var(--txt3);letter-spacing:.5px;margin:6px 0 3px;font-weight:700">📄 FOTO BOLLA</div>'+
@@ -6069,7 +6069,7 @@ function _pickFotoWorkflow(key, kind){
       // Ridimensiono a max 1024px lato lungo per non gonfiare il record
       var img = new Image();
       img.onload = function(){
-        // v35t — compressione minima (Firebase-friendly): 500px lato lungo, JPEG 0.42.
+        // v35u — compressione minima (Firebase-friendly): 500px lato lungo, JPEG 0.42.
         //   ~3 KB per foto invece di ~6 KB (dimezzato). Storage FB ottimizzato.
         var mx=500, w=img.width, h=img.height;
         if(w>mx||h>mx){ if(w>h){ h=Math.round(h*mx/w); w=mx; } else { w=Math.round(w*mx/h); h=mx; } }
@@ -6134,9 +6134,9 @@ function svEdit(key){
   var _cur = rows[key] || {};
   if(_cur._photoPez){ ch._photoPez=_cur._photoPez; ch._photoPezTs=_cur._photoPezTs||Date.now(); }
   if(_cur._photoFin){ ch._photoFin=_cur._photoFin; ch._photoFinTs=_cur._photoFinTs||Date.now(); }
-  // v35t — preserva anche la foto della bolla OCR (ricevimento) tra le modifiche
+  // v35u — preserva anche la foto della bolla OCR (ricevimento) tra le modifiche
   if(_cur.bollaPhoto){ ch.bollaPhoto=_cur.bollaPhoto; ch.bollaPhotoTs=_cur.bollaPhotoTs||Date.now(); }
-  // v35t — preserva foto pezzo scattata dal RIC durante OCR (visibile su PC senza rifarla)
+  // v35u — preserva foto pezzo scattata dal RIC durante OCR (visibile su PC senza rifarla)
   if(_cur.pezzoPhoto){ ch.pezzoPhoto=_cur.pezzoPhoto; ch.pezzoPhotoTs=_cur.pezzoPhotoTs||Date.now(); }
   // ── BLOCCO: passaggio a FINALE richiede foto bolla firmata corriere.
   //   Eccezione: vettore uscita = GLS (foto senza firma tollerata, ma comunque foto).
@@ -8858,7 +8858,7 @@ function populateCauSelect(){
 // Popup documenti garanzia (in base al fornitore corrente).
 // v34y: se viene passato un fornitore esplicito (dalla riga OCR) lo usiamo,
 // altrimenti fallback al vecchio comportamento (#cFor globale).
-// v35t — Popup checklist garanzia: sul PC l'UFF ha i documenti FISICI arrivati
+// v35u — Popup checklist garanzia: sul PC l'UFF ha i documenti FISICI arrivati
 //   dal telefono (foto pezzo gia' fatta). Per ogni doc: checkbox PRESENTE + FOTO
 //   opzionale (se serve archivio digitale). Ticcando tutti si conferma e si va
 //   avanti. Stato memorizzato in _garDocsChecked[forn] e persistito.
@@ -8939,7 +8939,7 @@ function _garIsRealDoc(name){
   var U = String(name||'').toUpperCase().trim();
   if(!U) return false;
   if(U.length > 40) return false; // note lunghe non sono documenti
-  // v35t — Escludo esplicitamente note/condizioni/vettori che l'anagrafica GARANZIE_DB
+  // v35u — Escludo esplicitamente note/condizioni/vettori che l'anagrafica GARANZIE_DB
   //   spesso mischia con i doc reali (es. "SE BOSCH RICEVUTA...", "SOLO PER HOFFER",
   //   "CIPI/PIEMME", "GLS", "MITTENTE/DESTINATARIO", "NO GARANZIA", "DA VERIFICARE").
   if(/^(SE\s|SOLO\s|OLTRE\s|ACCUMULARE|COMPILARE\s|CHIAMARE|BISOGNA\s|DA\sVERIFICARE|NO\sGARANZIA|X$|CIPI|GLS|NAZ|CITY|MITTENTE|INTERCOMPANY|SMART\s)/.test(U)) return false;
@@ -8953,7 +8953,7 @@ function garanziaDocsMissing(forn){
     if(!g || !g.documenti || !g.documenti.length) return [];
     var fornU = String(forn||'').toUpperCase();
     var uploaded = (window._garDocsUploaded||[]).map(function(d){ return String(d.doc||'').toUpperCase(); });
-    // v35t — Ora accetta ANCHE i doc spuntati come "PRESENTE" via checklist
+    // v35u — Ora accetta ANCHE i doc spuntati come "PRESENTE" via checklist
     //   (il PC ha in mano i documenti fisici arrivati dal telefono col pezzo).
     var ticked = window._garDocsChecked && window._garDocsChecked[fornU] ? window._garDocsChecked[fornU] : {};
     var missing = [];
@@ -10747,7 +10747,7 @@ function renderChatMsgs(msgs){
     var br=isMe?'18px 4px 18px 18px':'4px 18px 18px 18px';
     var brd=isMe?'rgba(59,159,212,.3)':'#2a2a2a';
     html+='<div style="max-width:78%;background:'+bg+';border:1px solid '+brd+';border-radius:'+br+';padding:8px 12px;position:relative">';
-    // v35t — HARDENING XSS chat: allow-list schemi. Un peer con accesso al DB
+    // v35u — HARDENING XSS chat: allow-list schemi. Un peer con accesso al DB
     //   potrebbe iniettare "javascript:..." nel campo m.photo/m.file.
     //   Accetto solo data:image/... e https:// (blob:/http: rifiutati).
     function _safeMediaUrl(u, forImg){
@@ -11708,7 +11708,7 @@ function ocrCropShow(dataUrl, cb){
   img.src=dataUrl;
 }
 
-// v35t — Helper universale di compressione immagine.
+// v35u — Helper universale di compressione immagine.
 //   Ridimensiona a maxW lato lungo (default 800px, come Firebase-friendly),
 //   ricomprime a JPEG con qualita' data (default 0.55 ~ ottima resa e piccolo)
 //   e risolve una dataUrl. Fallback: ritorna la dataUrl originale se qualcosa
@@ -11737,7 +11737,7 @@ function _imgCompress(dataUrl, maxW, quality){
   });
 }
 
-// v35t — Viewer fullscreen zoomabile universale per una singola foto.
+// v35u — Viewer fullscreen zoomabile universale per una singola foto.
 //   Usa pinch/tap-to-zoom nativo. Un tap sul fondo chiude; tap sull'immagine
 //   zoomma (scala 2x). Riutilizzato dalla LISTA per la bolla salvata.
 function openPhotoZoom(url, caption){
@@ -11749,7 +11749,7 @@ function openPhotoZoom(url, caption){
   var safeUrl = String(url).replace(/"/g,'&quot;');
   var fname = 'foto-'+String(caption||'resi').replace(/[^A-Za-z0-9]+/g,'_').slice(0,40)+'.jpg';
   var lbl = caption ? '<div style="position:absolute;top:12px;left:14px;color:#fff;font-size:12px;font-weight:700;background:rgba(0,0,0,.5);padding:4px 10px;border-radius:6px;max-width:55vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+xe(caption)+'</div>' : '';
-  // v35t — barra azioni: scarica + copia + chiudi
+  // v35u — barra azioni: scarica + copia + chiudi
   var actions = '<div style="position:absolute;top:12px;right:14px;display:flex;gap:6px;align-items:center">'+
     '<a href="'+safeUrl+'" download="'+xe(fname)+'" onclick="event.stopPropagation()" title="Scarica" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid #666;border-radius:20px;width:40px;height:40px;font-size:18px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none">⬇</a>'+
     '<button onclick="event.stopPropagation();_photoCopy(this.previousElementSibling.href)" title="Copia negli appunti" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid #666;border-radius:20px;width:40px;height:40px;font-size:16px;cursor:pointer">⎘</button>'+
@@ -11762,7 +11762,7 @@ function openPhotoZoom(url, caption){
   box.onclick = function(){ box.remove(); };
   document.body.appendChild(box);
 }
-// v35t — copia dataURL immagine come blob nell'appunti (Clipboard API async).
+// v35u — copia dataURL immagine come blob nell'appunti (Clipboard API async).
 function _photoCopy(url){
   try{
     if(!navigator.clipboard || !window.ClipboardItem){
@@ -11990,7 +11990,7 @@ function normalizeAIResult(o){
   var _tdoc = (o.tipo_documento||'').toString().toUpperCase().trim();
   var _validTdoc = ['FLOTTA','SCONTRINO','FATTURA','VENDITA','ACQUISTO','VISIONE','RESO FILIALE','NOLEGGIO','BL/FIM','BL/TRA','NESSUNO'];
   if(_tdoc && _validTdoc.indexOf(_tdoc)<0){
-    // v35t — Normalizza SOLO varianti sicure (scontrino/fattura). Non forziamo piu'
+    // v35u — Normalizza SOLO varianti sicure (scontrino/fattura). Non forziamo piu'
     //   BOLLA/DDT → BL/TRA: lascio all'operatore o all'AI la scelta specifica
     //   (BL/TRA vs BL/FIM vs BL/RNC vs RESO FILIALE). Se l'AI restituisce un
     //   valore ambiguo, il campo resta vuoto e l'operatore lo compila a mano.
@@ -12011,7 +12011,7 @@ function normalizeAIResult(o){
 
   return {
     data:dnorm(o.data),
-    // v35t — data_listato = data del timbro blu Telos (aggiunta al prompt AI).
+    // v35u — data_listato = data del timbro blu Telos (aggiunta al prompt AI).
     //   Normalizzata a YYYY-MM-DD; l'AI puo' rispondere gia' in ISO o in gg/mm/aaaa.
     data_listato: dnorm(o.data_listato||o.dataListato||''),
     sogg:(o.soggetto||o.deposito_partenza||'').toString().toUpperCase(),
@@ -12181,7 +12181,7 @@ function showOcrConfirm(res, photoUrl, source){
   else if(source==='offline-fallback') _badge='<span style="background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:800">\u26a0 AI non disponibile \u2192 offline</span>';
   else if(source==='offline') _badge='<span style="background:rgba(255,255,255,.06);color:#999;border:1px solid #333;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700">\ud83d\udcf7 Offline (Tesseract) \u00b7 AI non attiva</span>';
   if(_badge) html+='<div style="margin-bottom:8px">'+_badge+'</div>';
-  // v35t — Preview foto bolla IN CIMA (max 220px), cosi' l'UFF al PC vede sempre
+  // v35u — Preview foto bolla IN CIMA (max 220px), cosi' l'UFF al PC vede sempre
   //   la bolla mentre compila il form. Tocca per ingrandire.
   if(photoUrl){
     var _safePh = String(photoUrl).replace(/"/g,'&quot;');
@@ -12214,7 +12214,7 @@ function showOcrConfirm(res, photoUrl, source){
   html+='</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:12px">'+
       '<button type="button" onclick="ocrAddRow()" style="flex:1;background:#0a1e3a;color:#3B9FD4;border:1px dashed rgba(59,159,212,.5);border-radius:9px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">+ Aggiungi riga vuota</button>'+
-      // v35t — Multi-bolla stesso cliente
+      // v35u — Multi-bolla stesso cliente
       '<button type="button" onclick="ocrAddAltraBolla()" style="flex:1;background:rgba(46,204,113,.10);color:#3fbf6f;border:1px dashed #3fbf6f;border-radius:9px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">📸 Altra bolla stesso cliente</button>'+
     '</div>';
 
@@ -12223,7 +12223,7 @@ function showOcrConfirm(res, photoUrl, source){
   // v34q: RIMOSSI Fornitore + Causale + Fase + Stato + TipoDoc + TipoFlusso + DataAcqForn
   // dai "comuni" — ora SONO TUTTI PER RIGA (codici diversi = valori diversi).
   // Rimangono comuni SOLO: VETTORE, DATA LISTATO, SOGGETTO, RMA, NOTE.
-  // v35t — DATA LISTATO = timbro blu Telos (data ricevimento); resta ocrData.
+  // v35u — DATA LISTATO = timbro blu Telos (data ricevimento); resta ocrData.
   //   DATA DDT DI RESO = data emissione bolla lato cliente; sposto qui il campo
   //   che prima era NOTE. Le NOTE testuali finiscono in basso col loro campo.
   html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
@@ -12237,7 +12237,7 @@ function showOcrConfirm(res, photoUrl, source){
   // NOTE testuali (in fondo)
   html+=lab('NOTE')+'<input id="ocrNote" value="'+xe(res.note||'')+'" placeholder="annotazioni libere" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">';
 
-  // v35t — Compressione + storage: prepara SUBITO la thumb ridotta (500px q0.42
+  // v35u — Compressione + storage: prepara SUBITO la thumb ridotta (500px q0.42
   //   ~3 KB/foto). La foto full-res photoUrl resta per la preview grande in
   //   fondo al modal; su Firebase salviamo solo la thumb.
   if(photoUrl){
@@ -12370,7 +12370,7 @@ function ocrRowHtml(i, a){
       '<input class="ocrRowPrc" type="number" step="0.01" value="'+(prc===''?'':prc)+'" placeholder="€" title="Prezzo" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:64px;background:#111;color:#5BB8E0;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:right">'+
       '<button type="button" onclick="ocrDelRow(this)" title="Elimina" style="width:26px;height:32px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;padding:0">×</button>'+
     '</div>'+
-    // v35t — Foto pezzo per singola riga: obbligatoria da telefono, poi il PC la
+    // v35u — Foto pezzo per singola riga: obbligatoria da telefono, poi il PC la
     //   vede in lista senza doverla rifare (bolla + pezzo sono giá state fatte).
     '<div class="ocrRowPezzoBox" data-i="'+i+'" style="display:flex;gap:6px;align-items:center;margin-bottom:5px">'+
       '<button type="button" onclick="ocrPickPezzo(this,'+i+')" style="flex:1;background:var(--bg2);color:'+(a && (a._pezzoPhoto || (window._ocrPezzoPhotos && window._ocrPezzoPhotos[i]))?'#3fbf6f':'#3B9FD4')+';border:1.5px solid '+(a && (a._pezzoPhoto || (window._ocrPezzoPhotos && window._ocrPezzoPhotos[i]))?'#3fbf6f':'#3B9FD4')+';padding:7px 10px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;-webkit-appearance:none;font-family:inherit">'+
@@ -12465,7 +12465,7 @@ function ocrAddRow(){
   if(last){ last.scrollIntoView({block:'nearest'}); var c=last.querySelector('.ocrRowCod'); if(c) c.focus(); }
 }
 
-// v35t — Foto pezzo per singola riga OCR. Aggiorna la thumb + pulsante.
+// v35u — Foto pezzo per singola riga OCR. Aggiorna la thumb + pulsante.
 //   La foto viene compressa (800px, JPEG 0.55) e salvata in window._ocrPezzoPhotos[i].
 //   Al confirm applyOcrConfirm la propaga in ogni row inserita come pezzoPhoto.
 window._ocrPezzoPhotos = window._ocrPezzoPhotos || {};
@@ -12499,7 +12499,7 @@ function ocrPickPezzo(btn, i){
   inp.click();
 }
 
-// v35t — Multi-bolla stesso cliente: apre camera per una nuova bolla,
+// v35u — Multi-bolla stesso cliente: apre camera per una nuova bolla,
 //   lancia OCR sulla nuova foto, e MERGIA i nuovi articoli in coda alla
 //   lista corrente (mantiene soggetto/vettore/data-listato invariati).
 function ocrAddAltraBolla(){
@@ -12599,7 +12599,7 @@ function applyOcrConfirm(allArticles){
   var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
   var sv=function(id,val){ var e=document.getElementById(id); if(e&&val!==''&&val!=null){ e.value=val; if(typeof ce==='function')ce(e); } };
 
-  // v35t — DATA LISTATO (ocrData) = timbro blu Telos → hArr.
+  // v35u — DATA LISTATO (ocrData) = timbro blu Telos → hArr.
   //         DATA DDT DI RESO (ocrDataDdt) = data emissione bolla → hBolla.
   //   Se DATA LISTATO e' vuota all'inserimento (l'AI non ha letto il timbro
   //   blu o e' assente), blocco con popup e chiedo di inserirla manualmente.
@@ -12661,12 +12661,20 @@ function applyOcrConfirm(allArticles){
                      (typeof _isMode==='function' && _isMode('SCA'));
     if(_isScaFast){
       if(typeof ocrLiveSend==='function'){
+        // v35u — Includi la foto bolla (thumbnail compressa 500px q0.42, ~3KB)
+        //   e la mappa pezzoPhotos[i] per ciascun articolo. Cosi' RPC al PC vede
+        //   la bolla in cima al modal + le foto pezzo per riga.
+        //   dataDdt (data emissione bolla, da ocrDataDdt) mandata separata.
         ocrLiveSend({
           articoli: articoli, sogg: g('ocrSogg'),
-          vetRic: g('ocrVet'), data: g('ocrData'),
+          vetRic: g('ocrVet'),
+          data: g('ocrDataDdt'),          // data DDT emissione bolla
+          dataListato: g('ocrData'),      // data listato (timbro blu)
           rma: g('ocrRma'), note: g('ocrNote'),
           anomaliaRilevata: !!(window._ocrRes && window._ocrRes.anomaliaRilevata),
-          motivoAnomalia: (window._ocrRes && window._ocrRes.motivoAnomalia) || ''
+          motivoAnomalia: (window._ocrRes && window._ocrRes.motivoAnomalia) || '',
+          bollaPhoto: (window._ocrBollaThumb || ''),
+          pezzoPhotos: (window._ocrPezzoPhotos || {})
         });
       }
       try{ document.getElementById('ocrConfBox').remove(); }catch(e){}
@@ -12754,7 +12762,7 @@ function applyOcrConfirm(allArticles){
       _capturedAddToasts.push({msg:String(msg||''), kind:kind||'b'});
       try{ _origToast(msg, kind); }catch(e){}
     };
-    // v35t — Traccia mapping articolo → chiave riga inserita, per allegare
+    // v35u — Traccia mapping articolo → chiave riga inserita, per allegare
     //   la foto pezzo corretta ad ogni riga (window._ocrPezzoPhotos[i] → row[k].pezzoPhoto).
     var _perRowKey = {};
     for(var i=0;i<articoli.length;i++){
@@ -12770,14 +12778,14 @@ function applyOcrConfirm(allArticles){
       _set('cSta', a.stato);
       var cauEl=document.getElementById('cCau');
       if(cauEl){ cauEl.value=a.causale||''; try{ if(typeof onCauChange==='function') onCauChange(cauEl); }catch(e){} }
-      // v35t — pre-riempo con formato gg/mm/aaaa (input mascherato)
+      // v35u — pre-riempo con formato gg/mm/aaaa (input mascherato)
       _set('cDatAcqForn', (typeof _dateIsoToIt==='function') ? _dateIsoToIt(a.datAcqForn) : a.datAcqForn);
       _set('cRma', cRmaVal);
       _set('cPre', a.pre);
       var cEl=document.getElementById('cCod'); if(cEl){cEl.value=a.cod; if(typeof ce==='function')ce(cEl);}
       _set('cQty', a.qty);
       var pEl=document.getElementById('cPrc'); if(pEl) pEl.value=parseFloat(a.prc)||0;
-      // v35t — comunica al successivo addRow la pending foto pezzo per QUESTA riga,
+      // v35u — comunica al successivo addRow la pending foto pezzo per QUESTA riga,
       //   cosi' addRow puo' saltare il gate "foto obbligatoria" (bolla+pezzo sono presenti).
       window._pendingPezzoPhoto = (window._ocrPezzoPhotos && window._ocrPezzoPhotos[i]) || '';
       var before=Object.keys(rows).length;
@@ -12800,7 +12808,7 @@ function applyOcrConfirm(allArticles){
     if(added>0){
       var _newKeys = Object.keys(rows||{}).filter(function(k){ return !_keysBefore[k]; });
       try{ if(typeof pushUndoBatch==='function') pushUndoBatch(_newKeys); }catch(e){}
-      // v35t — Allega la foto bolla (comune a tutte le righe) + la foto pezzo
+      // v35u — Allega la foto bolla (comune a tutte le righe) + la foto pezzo
       //   (specifica per riga) a ogni record inserito. Foto compressa a
       //   ~800px JPEG 0.55 per stare tranquilli col quota Firebase.
       try{
@@ -13429,7 +13437,7 @@ function admSha256(txt){
   });
 }
 
-// v35t — PBKDF2-SHA256 su PIN admin per bloccare brute-force offline.
+// v35u — PBKDF2-SHA256 su PIN admin per bloccare brute-force offline.
 //   Prima il PIN era SHA-256 nudo (hardcoded nel JS pubblico): con una
 //   wordlist qualsiasi era brute-forceabile in secondi. Ora derivo con
 //   PBKDF2 + salt casuale + 200k iterazioni → cost per tentativo ~50ms.
@@ -13475,7 +13483,7 @@ function admVerify(pin, stored){
   return Promise.resolve(false);
 }
 
-// v35t — Throttle brute-force lato client sul PIN admin.
+// v35u — Throttle brute-force lato client sul PIN admin.
 //   Progressive delay: 500ms dopo il 1° fallito, 1s, 2s, 4s, 8s.
 //   Lockout: dopo 5 fallimenti consecutivi blocco per 5 minuti.
 //   NB: solo mitigazione lato client (l'attaccante determinato userebbe
@@ -14370,7 +14378,7 @@ function admRender_security(){
       '<div style="max-height:340px;overflow-y:auto" id="secModList">Caricamento…</div>' +
     '</div>' +
 
-    // v35t — Bottone per copiare le regole Firebase suggerite da incollare nella Console.
+    // v35u — Bottone per copiare le regole Firebase suggerite da incollare nella Console.
     '<div class="admCard"><h3>🔥 Regole Firebase RTDB suggerite</h3>' +
       '<div class="sub" style="line-height:1.6">Regole hardened da incollare in Firebase Console → Realtime Database → Regole. Bloccano l\'accesso root, aprono ogni sottoalbero solo agli utenti autenticati (anon-auth compreso), validano schema+dimensioni (es. chat foto solo data:image/ o https:// max 400KB), rendono security_log append-only. Vedi anche docs/SECURITY.md.</div>' +
       '<button class="admBtn ok" onclick="admCopyFirebaseRules()" style="margin-top:8px">📋 Copia regole Firebase</button>' +
@@ -14385,7 +14393,7 @@ function admRender_security(){
   return h;
 }
 
-// v35t — Fetch + copy delle regole Firebase suggerite (firebase-rules.json).
+// v35u — Fetch + copy delle regole Firebase suggerite (firebase-rules.json).
 function admCopyFirebaseRules(){
   fetch('firebase-rules.json?ts='+Date.now()).then(function(r){ return r.text(); }).then(function(txt){
     if(!txt) throw new Error('vuoto');
@@ -15431,16 +15439,23 @@ function renderOcrLivePanel(){
     var d = new Date(r.ts||Date.now());
     var when = d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
     var nArt = (r.articoli||[]).length;
-    html += '<div style="background:#0a1e3a;border:1px solid rgba(59,159,212,.4);border-radius:9px;padding:10px 12px;margin-bottom:6px">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
-        '<div style="font-size:12px;font-weight:800;color:#3B9FD4">📱 '+xe(r.sender||'SCA')+' · '+when+'</div>'+
-        '<div style="font-size:11px;color:#888">'+nArt+' articoli</div>'+
-      '</div>'+
-      (r.sogg?'<div style="font-size:11px;color:#ccc;margin-bottom:3px">Sogg: '+xe(r.sogg)+'</div>':'')+
-      (r.forn?'<div style="font-size:11px;color:#ccc;margin-bottom:3px">Forn: '+xe(r.forn)+'</div>':'')+
-      '<div style="display:flex;gap:6px;margin-top:6px">'+
-        '<button onclick="ocrLiveElabora(\''+xe(k)+'\')" style="flex:1;background:#3B9FD4;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">▶ ELABORA</button>'+
-        '<button onclick="ocrLiveScarta(\''+xe(k)+'\')" title="Scarta" style="width:38px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">🗑</button>'+
+    // v35u — Thumbnail bolla + conteggio foto pezzo, entrambi zoomabili prima di elaborare.
+    var _bollaThumb = r.bollaPhoto ? '<img src="'+xe(r.bollaPhoto).replace(/\'/g,'&#39;')+'" onclick="event.stopPropagation();openPhotoZoom(this.src,\'Bolla scan\')" title="Anteprima bolla — tocca per ingrandire" style="width:52px;height:52px;object-fit:cover;border-radius:6px;border:1.5px solid #3B9FD4;cursor:zoom-in;flex-shrink:0">' : '<div style="width:52px;height:52px;border-radius:6px;background:var(--bg2);border:1px dashed var(--brd);display:flex;align-items:center;justify-content:center;color:var(--txt3);font-size:18px;flex-shrink:0" title="Nessuna foto bolla">📄</div>';
+    var _nPez = (r.pezzoPhotos && typeof r.pezzoPhotos==='object') ? Object.keys(r.pezzoPhotos).length : 0;
+    var _pezBadge = _nPez ? '<span style="background:rgba(63,191,111,.14);color:#3fbf6f;border:1px solid #3fbf6f;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:800;margin-left:4px">🔧 '+_nPez+'</span>' : '';
+    html += '<div style="background:#0a1e3a;border:1px solid rgba(59,159,212,.4);border-radius:9px;padding:10px 12px;margin-bottom:6px;display:flex;gap:10px">'+
+      _bollaThumb +
+      '<div style="flex:1;min-width:0">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+          '<div style="font-size:12px;font-weight:800;color:#3B9FD4">📱 '+xe(r.sender||'SCA')+' · '+when+'</div>'+
+          '<div style="font-size:11px;color:#888">'+nArt+' articoli'+_pezBadge+'</div>'+
+        '</div>'+
+        (r.sogg?'<div style="font-size:11px;color:#ccc;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Sogg: '+xe(r.sogg)+'</div>':'')+
+        (r.forn?'<div style="font-size:11px;color:#ccc;margin-bottom:3px">Forn: '+xe(r.forn)+'</div>':'')+
+        '<div style="display:flex;gap:6px;margin-top:6px">'+
+          '<button onclick="ocrLiveElabora(\''+xe(k)+'\')" style="flex:1;background:#3B9FD4;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">▶ ELABORA</button>'+
+          '<button onclick="ocrLiveScarta(\''+xe(k)+'\')" title="Scarta" style="width:38px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">🗑</button>'+
+        '</div>'+
       '</div>'+
     '</div>';
   });
@@ -15453,18 +15468,28 @@ function ocrLiveElabora(id){
   var r = OCR_LIVE_LOCAL[id]; if(!r) return;
   // Rimuovi da FB per non elaborarla due volte (locking soft)
   try{ if(OCR_LIVE_REF) OCR_LIVE_REF.child(id).remove(); }catch(e){}
+  // v35u — Ripristina la foto bolla + le foto pezzo per riga inviate dal telefono
+  //   cosi' l'UFF al PC le vede senza dover rifare nulla.
+  try{
+    window._ocrPezzoPhotos = (r.pezzoPhotos && typeof r.pezzoPhotos === 'object') ? r.pezzoPhotos : {};
+    window._ocrBollaThumb = r.bollaPhoto || '';
+    window._ocrConfPhotoUrl = r.bollaPhoto || '';
+  }catch(e){}
   // Costruisci un oggetto compatibile con showOcrConfirm
   var res = {
     articoli: r.articoli||[],
     sogg: r.sogg||'', fornitore: r.forn||'', causale: r.causale||'',
     vetRic: r.vetRic||'', flussoSug: r.flusso||'',
     tipoDoc: r.tipoDoc||'', fase: r.fase||'', stato: r.stato||'',
-    data: r.data||'', datAcqForn: r.datAcqForn||'',
+    data: r.data||'',                     // DATA DDT DI RESO
+    data_listato: r.dataListato||'',      // DATA LISTATO (timbro blu)
+    datAcqForn: r.datAcqForn||'',
     rma: r.rma||'', note: r.note||'',
     anomaliaRilevata: !!r.anomaliaRilevata, motivoAnomalia: r.motivoAnomalia||''
   };
   if(typeof showOcrConfirm==='function'){
-    showOcrConfirm(res, null, 'live');
+    // v35u — passa la foto bolla come photoUrl al modal (2° arg): compare in cima.
+    showOcrConfirm(res, r.bollaPhoto || null, 'live');
     // Post-render: forza i valori nei campi dedicati che showOcrConfirm non riempie
     setTimeout(function(){
       var m = { ocrDatAcq: res.datAcqForn, ocrFlu: res.flussoSug, ocrDoc: res.tipoDoc, ocrFas: res.fase, ocrSta: res.stato };
