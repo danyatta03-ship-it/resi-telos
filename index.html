@@ -1156,7 +1156,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35v · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35w · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1821,7 +1821,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35v</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35w</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -11754,6 +11754,7 @@ function _openCameraOverlay(cb, opts){
     '</div>'+
     '<div style="display:flex;gap:12px;justify-content:center;align-items:center;padding:16px 12px 24px;background:rgba(0,0,0,.85)">'+
       '<button id="_camClose" style="width:52px;height:52px;background:rgba(255,255,255,.14);color:#fff;border:1.5px solid #666;border-radius:26px;font-size:22px;cursor:pointer">✕</button>'+
+      '<button id="_camGallery" title="Scegli dalla galleria" style="width:52px;height:52px;background:rgba(255,255,255,.14);color:#fff;border:1.5px solid #666;border-radius:26px;font-size:20px;cursor:pointer">🖼️</button>'+
       '<button id="_camShot" style="width:78px;height:78px;background:#fff;border:5px solid #3B9FD4;border-radius:39px;cursor:pointer;font-size:28px">📸</button>'+
       '<button id="_camFlip" title="Cambia camera" style="width:52px;height:52px;background:rgba(255,255,255,.14);color:#fff;border:1.5px solid #666;border-radius:26px;font-size:22px;cursor:pointer">🔄</button>'+
     '</div>';
@@ -11774,6 +11775,9 @@ function _openCameraOverlay(cb, opts){
   }
   start(currentFacing);
   document.getElementById('_camClose').onclick = function(){ close(null, 'user-cancel'); };
+  // v35w — Bottone galleria dentro l'overlay: chiude camera e chiede al chiamante
+  //   di aprire il file picker (err='user-gallery' → _captureImage lo intercetta).
+  document.getElementById('_camGallery').onclick = function(){ close(null, 'user-gallery'); };
   document.getElementById('_camFlip').onclick = function(){
     currentFacing = (currentFacing==='environment') ? 'user' : 'environment';
     start(currentFacing);
@@ -11794,26 +11798,37 @@ function _openCameraOverlay(cb, opts){
 
 // v35v — _captureImage(cb): tenta camera custom, fallback a file picker.
 //   Universale, usare al posto di document.getElementById('X').click() sui file input.
+// v35w — Se l'utente chiude con ✕ (err='user-cancel') NON aprire il file
+//   picker: e' un annulla esplicito. Con 🖼️ (err='user-gallery') apre il
+//   picker su richiesta. Con err diverso (no-camera / gum-fail / no-api)
+//   apre comunque il picker come fallback trasparente.
 function _captureImage(cb, opts){
   _openCameraOverlay(function(dataUrl, err){
     if(dataUrl){ cb(dataUrl); return; }
-    // Fallback file picker
-    var inp = document.createElement('input');
-    inp.type='file'; inp.accept='image/*'; inp.style.display='none';
-    document.body.appendChild(inp);
-    inp.onchange = function(){
-      var f = inp.files && inp.files[0];
-      inp.remove();
-      if(!f){ cb(null); return; }
-      var rd = new FileReader();
-      rd.onload = function(){
-        _imgCompress(rd.result, 700, 0.60).then(function(small){ cb(small || rd.result); }).catch(function(){ cb(rd.result); });
-      };
-      rd.onerror = function(){ cb(null); };
-      rd.readAsDataURL(f);
-    };
-    inp.click();
+    if(err === 'user-cancel'){ cb(null); return; }
+    // Apri file picker (fallback camera-fail OPPURE scelta esplicita utente)
+    _pickFromGallery(cb);
   }, opts);
+}
+
+// v35w — Apre il file picker (con accept=image/*), decodifica in dataURL
+//   e comprime a 700/0.60. Chiama cb(dataUrl|null).
+function _pickFromGallery(cb){
+  var inp = document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.style.display='none';
+  document.body.appendChild(inp);
+  inp.onchange = function(){
+    var f = inp.files && inp.files[0];
+    inp.remove();
+    if(!f){ cb(null); return; }
+    var rd = new FileReader();
+    rd.onload = function(){
+      _imgCompress(rd.result, 700, 0.60).then(function(small){ cb(small || rd.result); }).catch(function(){ cb(rd.result); });
+    };
+    rd.onerror = function(){ cb(null); };
+    rd.readAsDataURL(f);
+  };
+  inp.click();
 }
 
 function _imgCompress(dataUrl, maxW, quality){
@@ -15561,6 +15576,14 @@ function _scaScattaBolla(){
     if(typeof ocrDocument==='function') ocrDocument(fakeInp);
   });
 }
+// v35w — Scanner bolle: apri direttamente il picker gallery (bypass camera).
+function _scaBollaDaGalleria(){
+  _pickFromGallery(function(dataUrl){
+    if(!dataUrl) return;
+    var fakeInp = { files:[dataUrlToFile(dataUrl,'bolla.jpg')], value:'' };
+    if(typeof ocrDocument==='function') ocrDocument(fakeInp);
+  });
+}
 // Helper: dataURL → File (per compat con ocrDocument che si aspetta un file)
 function dataUrlToFile(dataUrl, name){
   try{
@@ -15591,6 +15614,9 @@ function renderScaPanel(){
     '<button class="sca-big" onclick="_scaScattaBolla()" title="Foto bolla / DDT">'+
       camSvg + '<span>Foto bolla</span>'+
     '</button>'+
+    // v35w — Bottone galleria affiancato: apre il file picker direttamente
+    //   (bypass camera overlay) per riprendere una foto scattata prima.
+    '<button onclick="_scaBollaDaGalleria()" style="display:block;margin:10px auto 0;background:rgba(59,159,212,.12);color:#3B9FD4;border:1.5px solid #3B9FD4;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;-webkit-appearance:none">🖼️ Scegli dalla galleria</button>'+
     '<div class="sca-hint">📶 Serve connessione — sync via Firebase</div>';
 }
 
