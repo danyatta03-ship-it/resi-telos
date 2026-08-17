@@ -114,13 +114,34 @@ html[data-theme="light"] .flt-sel{background:#ffffff!important;color:#000!import
 /* v35v — ricerca ovunque in light mode: catch-all per input con placeholder Cerca* */
 html[data-theme="light"] input#dbSrch,
 html[data-theme="light"] input#globalSearchInput,
+html[data-theme="light"] input#globalSearchInline,
 html[data-theme="light"] input#resiCycleSrch,
 html[data-theme="light"] input[placeholder^="Cerca"],
 html[data-theme="light"] input[placeholder^="\U0001F50D"]{background:#ffffff!important;color:#000000!important;border:1px solid #8b95a1!important;-webkit-text-fill-color:#000!important}
 html[data-theme="light"] input#dbSrch::placeholder,
 html[data-theme="light"] input#globalSearchInput::placeholder,
+html[data-theme="light"] input#globalSearchInline::placeholder,
 html[data-theme="light"] input#resiCycleSrch::placeholder,
 html[data-theme="light"] input[placeholder^="Cerca"]::placeholder{color:#6b7684!important;opacity:1!important}
+/* v35x — DROPDOWN RISULTATI RICERCA GLOBALE (in cima allo schermo):
+   la barra "Cerca codice, cliente, fornitore..." genera un pannello di risultati
+   #globalSearchRes con background:#0f0f0f e testi #E0E0E0 hardcoded → in light mode
+   restava un rettangolo nero enorme. Forzo bianco + testi neri. */
+html[data-theme="light"] #globalSearchRes{background:#ffffff!important;border:1.5px solid #3B9FD4!important;box-shadow:0 6px 20px rgba(0,0,0,.12)!important}
+html[data-theme="light"] #globalSearchRes *{color:#000!important}
+html[data-theme="light"] #globalSearchRes [style*="background:#0a0a0a"],
+html[data-theme="light"] #globalSearchRes [style*="background:#111"],
+html[data-theme="light"] #globalSearchRes [style*="background:#0f0f0f"]{background:#f2f5f9!important;color:#0F5F8A!important;font-weight:800!important}
+html[data-theme="light"] #globalSearchRes [style*="border-bottom:1px solid #1a1a1a"],
+html[data-theme="light"] #globalSearchRes [style*="border-bottom: 1px solid #1a1a1a"]{border-bottom-color:#e0e4ec!important}
+html[data-theme="light"] #globalSearchRes [style*="color:#E0E0E0"],
+html[data-theme="light"] #globalSearchRes [style*="color: #E0E0E0"],
+html[data-theme="light"] #globalSearchRes [style*="color:#666"],
+html[data-theme="light"] #globalSearchRes [style*="color: #666"]{color:#000!important}
+/* Le "chip" colorate della sezione (LISTA/ARCHIVIO/STORICO) mantengono il loro accento */
+html[data-theme="light"] #globalSearchRes [style*="color:#3B9FD4"]{color:#0F5F8A!important}
+html[data-theme="light"] #globalSearchRes [style*="color:#5BB8E0"]{color:#0F5F8A!important}
+html[data-theme="light"] #globalSearchRes [style*="color:#d0b370"]{color:#8a6a10!important}
 /* Righe articolo in LISTA: bianco con bordo nero, testo nero */
 html[data-theme="light"] .ac{background:#ffffff!important;border:1.5px solid #000!important;color:#000!important}
 html[data-theme="light"] .ac.locked{background:#f5f5f7!important;border-color:#333!important}
@@ -1156,7 +1177,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35w · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35x · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1821,7 +1842,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35w</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35x</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -3033,11 +3054,17 @@ function addRow() {
     _autoStato = nrStatoFromMotivo(_forcedNR.motivo);
     _autoJumped = false;
     toast('⛔ Reso NON RENDIBILE ('+_forcedNR.motivo+'): '+_forcedNR.why,'r');
-  } else if(_fs === 'RICEVIMENTO' && !_isProblematic){
+  }
+  // v35x — Auto-jump RICEVIMENTO → UFFICIO RESI RIMOSSO.
+  //   Prima quando aggiungevi un reso "pulito" in RICEVIMENTO l'app lo
+  //   spostava subito in UFFICIO RESI / DA GESTIRE. Nuovo comportamento:
+  //   il reso resta in RICEVIMENTO / DA GESTIRE, e passa a UFFICIO RESI
+  //   solo con l'azione esplicita "→ UFFICIO" (bottone sulla card).
+  // Se l'operatore ha scelto 'OK PER UFFICIO' come stato in un reso
+  //   RICEVIMENTO, promuovo comunque perche' e' un'azione esplicita.
+  if(_fs === 'RICEVIMENTO' && _ss === 'OK PER UFFICIO'){
     _autoFase = 'UFFICIO RESI';
-    // Se l'operatore ha esplicitamente scelto 'OK PER UFFICIO' rispetto il suo intento;
-    // altrimenti il default in UFFICIO RESI è 'DA GESTIRE' (l'ufficio deve prenderlo in carico).
-    _autoStato = (_ss === 'OK PER UFFICIO') ? 'OK PER UFFICIO' : 'DA GESTIRE ⏳';
+    _autoStato = 'OK PER UFFICIO';
     _autoJumped = true;
   }
   var row={
@@ -9662,15 +9689,27 @@ function generateAnoMail(a, who) {
   }
 
   var _photoKeys = (a.photoKeys&&a.photoKeys.length)?a.photoKeys:(a.photoKey?[a.photoKey]:[]);
+  // v35x — Aggiungo alla mail anche foto BOLLA e foto PEZZO se disponibili
+  //   sul record (arrivano dal ricevimento OCR: a.bollaPhoto / a.pezzoPhoto sono
+  //   dataURL, non IDB keys). Il PDF finale conterrà: pezzo + bolla + eventuali
+  //   foto anomalia caricate manualmente. Cosi' con un click il fornitore/agente
+  //   ha tutto: bolla di ricezione, foto del pezzo e la spiegazione via mail.
+  var _extraPhotos = [];
+  if(a.pezzoPhoto && typeof a.pezzoPhoto==='string' && a.pezzoPhoto.indexOf('data:image/')===0) _extraPhotos.push(a.pezzoPhoto);
+  if(a.bollaPhoto && typeof a.bollaPhoto==='string' && a.bollaPhoto.indexOf('data:image/')===0) _extraPhotos.push(a.bollaPhoto);
   function doOpen(finalBody){
     // Mostra l'anteprima: l'apertura di Outlook parte da un CLICK dell'utente
     // (necessario: dopo la generazione AI asincrona il "gesto utente" è scaduto
     //  e il browser bloccherebbe l'apertura del client di posta).
-    // Carica le foto anomalia: mailto NON può allegare → l'utente le scarica/copia dall'anteprima.
+    // Le foto vengono unite in un PDF e allegate all'invio.
     var ctx = { who:who, agenteNome: agenteNome, agenteFullName: (a.agente||''), agTel: agTel, clienteNome: (clientName||displayName), anoId: a.id||'', anoCod: (a.cod||''), rowKey: a._rowKey||a._key||'' };
-    if(!_photoKeys.length){ showMailPreview(email, subj, finalBody||body, [], ctx); return; }
+    if(!_photoKeys.length){ showMailPreview(email, subj, finalBody||body, _extraPhotos, ctx); return; }
     Promise.all(_photoKeys.map(function(k){ return idbGet('anophoto_'+k).then(function(v){return v||null;}).catch(function(){return null;}); }))
-      .then(function(ph){ showMailPreview(email, subj, finalBody||body, ph.filter(Boolean), ctx); });
+      .then(function(ph){
+        // Ordine: pezzo, bolla, poi anomalie (l'agente vede subito articolo+bolla, poi dettagli)
+        var all = _extraPhotos.concat(ph.filter(Boolean));
+        showMailPreview(email, subj, finalBody||body, all, ctx);
+      });
   }
   // Usiamo il template diretto: niente AI e niente riferimenti fornitore
   doOpen(body);
@@ -12612,10 +12651,11 @@ function ocrRowHtml(i, a){
   var prc=(a.prc==='' || a.prc==null) ? '' : (parseFloat(a.prc)||0);
   var cau=(a.causale||'').toString();
   var forn=(a.fornitore||'').toString().toUpperCase();
-  // v35g — Default fase per righe OCR: UFFICIO RESI (non RICEVIMENTO). Il
-  //   lettore bolla precompila cosi' quello che gia' l'auto-jump in addRow
-  //   avrebbe fatto al save. Cosi' l'utente vede subito lo stato reale.
-  var fas=(a.fase||'UFFICIO RESI').toString();
+  // v35x — Default fase per righe OCR: RICEVIMENTO / DA GESTIRE.
+  //   Il record entra in reception e ci resta finche' il PC non lo "manda
+  //   in ufficio" esplicitamente (bottone "→ UFFICIO" sulla card in
+  //   lista oppure passaggio fase manuale). Auto-jump rimosso in addRow.
+  var fas=(a.fase||'RICEVIMENTO').toString();
   var sta=(a.stato||'DA GESTIRE \u23f3').toString();
   var doc=(a.tipoDoc||'').toString();
   var flu=(a.flusso||'STANDARD').toString();
