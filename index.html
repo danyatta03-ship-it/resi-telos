@@ -1177,7 +1177,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36c · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36d · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1842,7 +1842,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36c</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36d</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -9757,13 +9757,12 @@ function showMailPreview(email, subj, bodyText, photos, ctx){
   h+='<input id="mpSubj" value="'+xe(subj||'')+'" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;margin-bottom:8px;display:block">';
   h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:3px">TESTO</div>';
   h+='<textarea id="mpBody" style="width:100%;height:200px;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 11px;font-size:13px;border-radius:8px;outline:none;resize:vertical;font-family:inherit;margin-bottom:10px;display:block">'+xe(bodyText||'')+'</textarea>';
-  // v36b — Pannello PDF SEMPRE visibile: se non ci sono foto, avviso chiaro
-  //   invece di sparire (l'utente cosi' sa che sta mandando la mail senza allegato).
-  // v36c — Rimosse le thumbnail "SINGOLE FOTO" — bastava il PDF in anteprima.
+  // v36d — Solo label + bottone "Scarica PDF". Niente preview iframe (bianco
+  //   su iOS Safari), niente thumbnail. Un click, scarichi, apri col visualizzatore
+  //   nativo del sistema. Stop.
   if(photos&&photos.length){
-    h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:4px">📎 ALLEGATO PDF — bolla + pezzo + foto anomalia ('+photos.length+' pagine)</div>';
-    h+='<div id="mpPdfPreviewBox" style="margin-bottom:8px;background:#0a0a0a;border:1.5px solid #3B9FD4;border-radius:8px;overflow:hidden;height:360px;display:flex;align-items:center;justify-content:center;color:#666;font-size:12px">📄 preparazione anteprima PDF…</div>';
-    h+='<button onclick="mpDownloadPdf()" style="width:100%;background:rgba(59,159,212,.15);color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:10px">⬇ Scarica PDF</button>';
+    h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:6px">📎 ALLEGATO PDF — '+photos.length+' pagine (bolla + pezzo + eventuali foto anomalia)</div>';
+    h+='<button onclick="mpDownloadPdf()" style="width:100%;background:rgba(59,159,212,.15);color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:8px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:10px">⬇ Scarica PDF</button>';
   } else {
     // Nessuna foto: mostra placeholder e istruzioni per attaccare
     h+='<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:4px">📎 ALLEGATO PDF</div>';
@@ -9784,27 +9783,17 @@ function showMailPreview(email, subj, bodyText, photos, ctx){
   if(agFull) h+='<button onclick="mpAgentEdit(\''+xe(agFull).replace(/\x27/g,"\\\'")+'\')" style="width:100%;background:none;color:#888;border:1px dashed #333;padding:9px;font-size:11px;border-radius:8px;cursor:pointer;-webkit-appearance:none;margin-bottom:6px">👤 Rubrica agente: '+xe(agFull)+' — aggiungi/modifica email e cellulare</button>';
   h+='<div style="font-size:10px;color:#666;text-align:center">WhatsApp usa il numero salvato nella rubrica agente. "Outlook (PC)" apre il client email predefinito, "Web" nel browser.</div>';
   inner.innerHTML=h; box.appendChild(inner); document.body.appendChild(box);
-  // v36a — Genera il PDF SUBITO e mostralo in anteprima (iframe blob).
-  //   Cache in window._mpPdfBlob + _mpPdfUrl per riusarlo in mpOpenOutlook/Web.
-  //   Cleanup a chiusura modal (revokeObjectURL).
+  // v36d — Genera il PDF SUBITO (background) e lo cache-a per: (1) il bottone
+  //   Scarica PDF, (2) i bottoni Outlook/WhatsApp che lo riusano senza rigenerare.
+  //   Niente iframe: su iOS Safari sarebbe un rettangolo bianco.
   try{
     if(photos && photos.length && typeof photosToPdfBlob==='function'){
-      // Cleanup blob URL precedente se presente
       try{ if(window._mpPdfUrl){ URL.revokeObjectURL(window._mpPdfUrl); window._mpPdfUrl=null; window._mpPdfBlob=null; } }catch(e){}
       photosToPdfBlob(photos, {subject: subj||''}).then(function(blob){
-        if(!blob){ var _pb=document.getElementById('mpPdfPreviewBox'); if(_pb) _pb.textContent='⚠ PDF non generato'; return; }
-        window._mpPdfBlob = blob;
-        window._mpPdfUrl  = URL.createObjectURL(blob);
-        var _pb = document.getElementById('mpPdfPreviewBox');
-        if(_pb){
-          _pb.innerHTML = '<iframe src="'+window._mpPdfUrl+'#view=FitH" style="width:100%;height:100%;border:0;background:#fff" title="Anteprima PDF"></iframe>';
-        }
-      }).catch(function(err){
-        var _pb=document.getElementById('mpPdfPreviewBox');
-        if(_pb) _pb.textContent = '⚠ PDF non visualizzabile ('+((err&&err.message)||err)+') — usa Scarica';
-      });
+        if(blob){ window._mpPdfBlob = blob; window._mpPdfUrl = URL.createObjectURL(blob); }
+      }).catch(function(){});
     }
-    // Hook di cleanup: quando l'utente chiude il modal (✕), revoca il blob URL.
+    // Cleanup: quando l'utente chiude il modal, revoca il blob URL.
     var _observer = new MutationObserver(function(mut, obs){
       if(!document.getElementById('mailPrevBox')){
         try{ if(window._mpPdfUrl){ URL.revokeObjectURL(window._mpPdfUrl); window._mpPdfUrl=null; window._mpPdfBlob=null; } }catch(e){}
