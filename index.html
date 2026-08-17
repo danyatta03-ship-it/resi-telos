@@ -49,7 +49,7 @@
 ════════════════════════════════════════════════════════════════════════════
 -->
 <style>
-/* v35r — Font brand Inter (self-hosted, ~120KB WOFF2 latin subset, 5 pesi).
+/* v35s — Font brand Inter (self-hosted, ~120KB WOFF2 latin subset, 5 pesi).
    Coperto da CSP font-src 'self'. font-display:swap → nessun FOIT su prima
    visita: system-ui compare subito, Inter si sostituisce quando pronto. */
 @font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/Inter-400.woff2') format('woff2')}
@@ -158,7 +158,7 @@ html[data-theme="light"] #mfuBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #resiCycleBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #pickBox div[style*="border-bottom:1px solid #1a1a1a"],
 html[data-theme="light"] #notifList div[style*="border-bottom:1px solid #1a1a1a"]{border-bottom-color:#000!important}
-/* v35r — Modali cicli aggiuntivi: assicura fondo bianco per box container e ricerca */
+/* v35s — Modali cicli aggiuntivi: assicura fondo bianco per box container e ricerca */
 html[data-theme="light"] #resiCycleBox>div,
 html[data-theme="light"] #pickBox>div{background:#ffffff!important;border-color:#3B9FD4!important;color:#000!important}
 html[data-theme="light"] #resiCycleSrch{background:#ffffff!important;color:#000!important}
@@ -433,7 +433,7 @@ html[data-theme="light"] div[style*="border:1px solid #2a2a2a"]{border-color:#3B
 .cdot, .sdot{cursor:pointer}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Inter','Inter Fallback',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,Roboto,sans-serif;font-size:16px;overflow:hidden;font-feature-settings:"cv11","ss01","ss03";-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-/* v35r — Tabular nums su ovunque cifre in colonna (prezzi, date, codici, KPI, badge). */
+/* v35s — Tabular nums su ovunque cifre in colonna (prezzi, date, codici, KPI, badge). */
 .ac-price,.ac-date,.ac-cod,.chip,.sc-n,.badge,.count,.metric .v,.reso-price,.tnums{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 
 /* POPUP */
@@ -1090,10 +1090,10 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35r · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v35s · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
-    <input id="scanManual" placeholder="Digita codice..." oninput="this.value=this.value.toUpperCase()" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
+    <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
     <button onclick="scanManualConfirm()" style="background:rgba(59,159,212,.1);color:#3B9FD4;border:1px solid rgba(59,159,212,.3);border-radius:8px;padding:0 16px;font-size:14px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">OK</button>
   </div>
   <div style="display:flex;gap:8px;margin-top:10px;width:100%;max-width:360px">
@@ -1271,9 +1271,9 @@ html[data-theme="light"] .btn-anomalia{
       <button class="badd" id="btnAdd">＋ AGGIUNGI ALLA LISTA</button>
       <button class="bcam" id="btnCam" onclick="openCamera()" title="Scatta foto">📷</button>
       <button class="bscan" id="btnScan" onclick="openScan(null,'form')" title="Scansiona codice a barre">📸</button>
-      <input type="file" id="scanPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="handleScanPhoto(this)">
+      <input type="file" id="scanPhotoInput" accept="image/*" style="display:none" onchange="handleScanPhoto(this)">
     </div>
-    <input type="file" id="camInput" accept="image/*" capture="environment" multiple style="display:none" onchange="handlePhoto(this)">
+    <input type="file" id="camInput" accept="image/*" multiple style="display:none" onchange="handlePhoto(this)">
     <input type="file" id="ocrInput" accept="image/*" style="display:none" onchange="ocrDocument(this)">
     <div id="pbadge" style="display:none" class="pbadge">
       <span>📷</span><span id="pname" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
@@ -1396,7 +1396,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="uSubUbi">
     <!-- Header con scanner e crea -->
     <div style="display:flex;gap:8px;margin-bottom:12px;align-items:stretch">
-      <input id="ubiNameInput" placeholder="Es. SCAFFALE-A1, CASSETTO-B3..." oninput="this.value=this.value.toUpperCase()"
+      <input id="ubiNameInput" placeholder="Es. SCAFFALE-A1, CASSETTO-B3..." oninput="_upcase(this)"
         style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:11px 12px;font-size:14px;border-radius:9px;outline:none;font-family:inherit;-webkit-appearance:none">
       <button onclick="createUbi()" style="background:#3d1800;color:#3B9FD4;border:2px solid rgba(59,159,212,.5);border-radius:9px;padding:0 16px;font-size:18px;font-weight:700;cursor:pointer;-webkit-appearance:none;flex-shrink:0">+</button>
     </div>
@@ -1426,14 +1426,14 @@ html[data-theme="light"] .btn-anomalia{
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:12px">
       <div style="font-size:12px;font-weight:800;color:#3B9FD4;margin-bottom:4px">📸 Foto pacco in evasione</div>
       <div style="font-size:10px;color:var(--txt2);line-height:1.5;margin-bottom:10px">Fotografa il pacco prima di spedirlo: la foto resta salvata come prova di spedizione, taggata con codice/cliente/data. Utile in caso di contestazioni dal fornitore.</div>
-      <input id="pkgTag" placeholder="Codice / cliente / rif. (opzionale)" oninput="this.value=this.value.toUpperCase()"
+      <input id="pkgTag" placeholder="Codice / cliente / rif. (opzionale)" oninput="_upcase(this)"
         style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">
       <!-- v35h — Select CAUSALE per raggruppare le foto pacco in galleria per sezione -->
       <select id="pkgCau" title="Causale del reso: usata per raggruppare in galleria"
         style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">
         <option value="">— CAUSALE (per raggruppamento in galleria) —</option>
       </select>
-      <input type="file" id="pkgPhotoInput" accept="image/*" capture="environment" onchange="savePkgPhoto(this)" style="display:none">
+      <input type="file" id="pkgPhotoInput" accept="image/*" onchange="savePkgPhoto(this)" style="display:none">
       <button onclick="document.getElementById('pkgPhotoInput').click()" style="width:100%;background:#003820;color:#3B9FD4;border:2px solid #3B9FD4;padding:13px;font-size:15px;font-weight:800;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit">📷 Scatta / carica foto pacco</button>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -1450,7 +1450,7 @@ html[data-theme="light"] .btn-anomalia{
     <div style="font-size:11px;color:#777;margin-bottom:4px;font-weight:700;letter-spacing:1px">CODICE SCANSIONATO</div>
     <div id="psCodShow2" style="font-size:20px;font-weight:800;color:#3B9FD4;font-family:monospace;margin-bottom:14px;padding:10px;background:#0a0a0a;border-radius:8px;text-align:center;word-break:break-all"></div>
     <div style="font-size:9px;color:#777;letter-spacing:1px;margin-bottom:4px;font-weight:700">PRE / BRAND (opzionale)</div>
-    <input id="psPreInput2" placeholder="es. BOS, FAG, SKF..." oninput="this.value=this.value.toUpperCase()"
+    <input id="psPreInput2" placeholder="es. BOS, FAG, SKF..." oninput="_upcase(this)"
       style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:11px 12px;font-size:15px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:10px;display:block">
     <div style="font-size:9px;color:#777;letter-spacing:1px;margin-bottom:4px;font-weight:700">QUANTITÀ</div>
     <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">
@@ -1494,7 +1494,7 @@ html[data-theme="light"] .btn-anomalia{
       <option value="FUORI TEMPISTICHE">Fuori tempistiche</option>
       <option value="ALTRO">Altro…</option>
     </select>
-    <input id="nrMotivoOther" placeholder="Specifica la motivazione…" oninput="this.value=this.value.toUpperCase()"
+    <input id="nrMotivoOther" placeholder="Specifica la motivazione…" oninput="_upcase(this)"
       style="display:none;width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:11px 12px;font-size:14px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-top:10px">
     <button onclick="nrConfirm()"
       style="width:100%;background:#3a0d0d;color:#E05555;border:2px solid #E05555;padding:14px;font-size:16px;font-weight:700;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:16px">
@@ -1755,7 +1755,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35r</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v35s</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -2494,6 +2494,18 @@ function xe(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').r
 function gv(id){var el=document.getElementById(id);return el?el.value.trim():'';}
 function fd(iso){if(!iso)return '';var s=String(iso);if(s.indexOf('T')>0)s=s.slice(0,10);return s.split('-').reverse().join('/');}
 function uv(el){el.value=el.value.toUpperCase();}
+// v35s — Uppercase che PRESERVA la posizione del cursore.
+//   Prima: this.value = this.value.toUpperCase() → cursore saltava in fondo,
+//   se scrivevi in mezzo a un codice precompilato la lettera finiva alla fine.
+function _upcase(el){
+  try{
+    var s=el.selectionStart, e=el.selectionEnd;
+    var v=el.value, u=v.toUpperCase();
+    if(v===u) return;
+    el.value=u;
+    if(el.type==='text' || el.type==='search' || !el.type) el.setSelectionRange(s,e);
+  }catch(err){}
+}
 function ce(el){el.classList.remove('err');}
 function fCh(f){return f==='STANDARD'?'cg':f==='ANOMALIA'?'cr':f==='ECCEZIONE'?'co':f==='FILIALE IN'||f==='FILIALE OUT'?'cy':'cn';}
 function fSt(f){return f==='STANDARD'?3:f==='ANOMALIA'?4:f==='ECCEZIONE'?7:5;}
@@ -2856,20 +2868,24 @@ function addRow() {
     return;
   }
   // ANOMALIA RICEVIMENTO: foto obbligatoria
-  if(fase==='RICEVIMENTO'&&stato==='ANOMALIA RICEVIMENTO'&&!pendName){
+  //   v35s — Il gate accetta anche pendingPezzoPhoto (da OCR ricevimento con
+  //   foto pezzo scattata per la riga): niente doppio-scatto lato PC.
+  if(fase==='RICEVIMENTO'&&stato==='ANOMALIA RICEVIMENTO'&&!pendName&&!(window._pendingPezzoPhoto||'')){
     toast('&#9888; Anomalia Ricevimento: foto obbligatoria prima di procedere','r');
     var pb=document.getElementById('photoBtn');
     if(pb){pb.style.border='2px solid #E05555';pb.style.background='rgba(224,85,85,.15)';}
     if(pb)pb.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
-  // v35h — GARANZIA: se il fornitore richiede documenti (MODULO/LIBRETTO/
-  //   RICEVUTA/RELAZIONE/DIAGNOSI/FOTO ecc.), BLOCCA l'inserimento finche'
-  //   tutti i doc "reali" non sono stati caricati via popup 📷 CARICA.
+  // v35s — GARANZIA: verifica documenti. Ora l'UFF al PC ha in mano i documenti
+  //   fisici (arrivati col pezzo dal RIC). Popup checklist con SPUNTE per confermare:
+  //   se un doc è presente/corretto → spunta; foto opzionale per archivio digitale.
+  //   Solo dopo aver spuntato TUTTI i doc reali (BOLLA, MODULO, LIBRETTO, ecc.)
+  //   si può procedere con l'inserimento.
   if(String(causale||'').toUpperCase().indexOf('GARANZIA')===0){
     var _garMissing = garanziaDocsMissing(forno);
     if(_garMissing.length){
-      toast('⛔ GARANZIA '+forno+': mancano foto documenti richiesti: '+_garMissing.slice(0,3).join(', ')+(_garMissing.length>3?' (+'+(_garMissing.length-3)+')':'')+'. Apro il popup — carica le foto poi ripremi Aggiungi.','r');
+      toast('⛔ GARANZIA '+forno+': spunta i documenti presenti — '+_garMissing.slice(0,3).join(', ')+(_garMissing.length>3?' (+'+(_garMissing.length-3)+')':''),'r');
       try{ if(typeof showGaranziaDocsPopup==='function') showGaranziaDocsPopup(forno); }catch(e){}
       return;
     }
@@ -3635,19 +3651,19 @@ function renderList(){
     if(r._who)html+='<div class="ac-who">\ud83d\udc64 '+xe(r._who)+(r._lastEdit&&r._lastEdit!==r._who?' \u00b7 \u270e '+xe(r._lastEdit):'')+' <span style="color:var(--txt3);font-size:8px">'+xe(r.fase||'')+'</span>'+(r._log&&r._log.length?' <span style="color:var(--txt3)">·'+r._log.length+' mod.</span>':'')+'</div>';
     html+='<div style="display:flex;justify-content:space-between"><div>';
     html+='<div class="ac-sogg">'+xe(r.sogg||'\u2014')+'</div>';
-    // v35r \u2014 Foto bolla OCR: miniatura cliccabile+zoomabile.
+    // v35s \u2014 Foto bolla OCR: miniatura cliccabile+zoomabile.
     //   Priorita': bollaPhoto (salvata in OCR ricevimento) > photoThumb (foto pezzo).
     var _phBoll = r.bollaPhoto || r.photoThumb || '';
+    var _phPez  = r.pezzoPhoto || '';
     var _phBadge = '';
+    var _capt = xe((r.cod||'') + (r.forn?(' \u00b7 '+r.forn):''));
     if(_phBoll){
-      var _phSrc = xe(_phBoll).replace(/'/g,'&#39;');
-      var _capt = xe((r.cod||'') + (r.forn?(' \u00b7 '+r.forn):''));
-      _phBadge = ' <img src="'+_phSrc+'" onclick="event.stopPropagation();openPhotoZoom(this.src,\''+_capt+'\')" '+
-                 'title="Foto bolla \u2014 tocca per ingrandire" '+
-                 'style="width:26px;height:26px;object-fit:cover;border-radius:4px;border:1.5px solid #3B9FD4;cursor:zoom-in;vertical-align:middle;margin-left:4px">';
-    } else if(r.photo){
-      _phBadge = ' \ud83d\udcf7';
+      _phBadge += ' <img src="'+xe(_phBoll).replace(/\'/g,'&#39;')+'" onclick="event.stopPropagation();openPhotoZoom(this.src,\'Bolla \u2014 '+_capt+'\')" title="Foto bolla \u2014 tocca per ingrandire" style="width:26px;height:26px;object-fit:cover;border-radius:4px;border:1.5px solid #3B9FD4;cursor:zoom-in;vertical-align:middle;margin-left:4px">';
     }
+    if(_phPez){
+      _phBadge += ' <img src="'+xe(_phPez).replace(/\'/g,'&#39;')+'" onclick="event.stopPropagation();openPhotoZoom(this.src,\'Pezzo \u2014 '+_capt+'\')" title="Foto pezzo \u2014 tocca per ingrandire" style="width:26px;height:26px;object-fit:cover;border-radius:4px;border:1.5px solid #3fbf6f;cursor:zoom-in;vertical-align:middle;margin-left:3px">';
+    }
+    if(!_phBoll && !_phPez && r.photo){ _phBadge = ' \ud83d\udcf7'; }
     html+='<div class="ac-cod">'+(r.pre?'<span style="color:var(--ora);margin-right:4px">'+xe(r.pre)+'</span>':'')+xe(r.cod)+_phBadge+'</div>';
     if(r.forn) html+='<div style="font-size:11px;color:#3B9FD4;font-weight:700;margin-top:2px;letter-spacing:.3px">'+xe(r.forn)+'</div>';
     html+='</div><div style="text-align:right">';
@@ -5214,7 +5230,7 @@ function showResiByCycle(cicloName, fase){
       var _hasPh = !!(r.photoThumb||r.photo);
       var _thumb = r.photoThumb ? '<img src="'+xe(r.photoThumb)+'" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0">' :
                                    '<div style="width:44px;height:44px;border-radius:6px;background:var(--bg3);color:var(--txt3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0" title="Nessuna foto">📷</div>';
-      // v35r — attributo data-srch usato dalla search dedicata dentro il modale ciclo
+      // v35s — attributo data-srch usato dalla search dedicata dentro il modale ciclo
       var _srch = xe([r.cod, r.pre, r.forn, r.sogg, r.causale, r.stato, r.rma, r.note, r.ubic]
                       .filter(function(x){return x!=null && x!=='';})
                       .join(' ').toLowerCase());
@@ -5230,7 +5246,7 @@ function showResiByCycle(cicloName, fase){
     });
   }
   var totPh = flt.filter(function(r){return r.photoThumb||r.photo;}).length;
-  // v35r — barra di ricerca dedicata al modale del ciclo: filtra le righe visibili
+  // v35s — barra di ricerca dedicata al modale del ciclo: filtra le righe visibili
   //         mantenendo attivo il filtro ciclo+fase.
   var searchBar =
     '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;background:var(--bg2);border:1px solid '+color+'55;border-radius:10px;padding:6px 10px">'+
@@ -5256,7 +5272,7 @@ function showResiByCycle(cicloName, fase){
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
-// v35r — Filtro in-place delle righe dentro il modale ciclo: nasconde/mostra
+// v35s — Filtro in-place delle righe dentro il modale ciclo: nasconde/mostra
 //         via style.display senza rebuild della lista (mantiene lo scroll).
 function _resiCycleFilter(q){
   var box = document.getElementById('resiCycleList'); if(!box) return;
@@ -5748,6 +5764,18 @@ function fornByCode(v){
 function onForn(el){
   var s=fornByCode(el.value);
   if(s){el.value=s.name;ce(el);toast('Fornitore: '+s.name,'b');}
+  // v35s — Se l'operatore ha impostato causale GARANZIA e sta inserendo il
+  //   fornitore, apri il popup checklist docs. Non se il fornitore e' vuoto.
+  try{
+    var cauEl = document.getElementById('cCau');
+    var cau = cauEl ? String(cauEl.value||'').toUpperCase() : '';
+    var forn = String((el&&el.value)||'').trim();
+    if(cau.indexOf('GARANZIA')===0 && forn && typeof showGaranziaDocsPopup==='function'){
+      // debounce: non riaprire se gia' aperto per stesso fornitore
+      var box = document.getElementById('garDocsBox');
+      if(!box) showGaranziaDocsPopup(forn);
+    }
+  }catch(e){}
 }
 
 function delSup(i){if(!confirm('Eliminare?'))return;supDb.splice(i,1);try{localStorage.setItem('supdb',JSON.stringify(supDb));}catch(e){}renderSuppliers();}
@@ -5836,7 +5864,7 @@ function editRow(key){
   }
   html+='<div class="r2">'+fld('VETTORE USCITA',sl('vetUsc',['CIPI/PIEMME','CITYLINE','MITTENTE/DESTINATARIO','INTERCOMPANY','NAZ/INT','CATI','UPS','GLS','BRT','DHL'],r.vetUsc))+fld('DATA STATO',inp('datSta',r.datSta,'','date'))+'</div>';
   // ── MAGAZZINO: N. colli + tipologia imballo + foto pacco chiuso + bolla firmata
-  // v35r — Aggiunta foto BOLLA FIRMATA anche in MAGAZZINO (riusa _photoFin,
+  // v35s — Aggiunta foto BOLLA FIRMATA anche in MAGAZZINO (riusa _photoFin,
   //   lo stesso campo usato in FINALE, cosi' persiste tra le fasi).
   html += '<div id="ei_magFields" style="'+(r.fase==='MAGAZZINO'?'':'display:none')+';margin-top:6px">'+
     '<div class="r2">'+
@@ -5847,7 +5875,7 @@ function editRow(key){
       (r._photoPez ? '✓ Foto pacco chiuso (tocca per sostituire) — imposta PRESA LOGISTICA' : '📦 Foto pacco chiuso → PRESA LOGISTICA')+
     '</button>'+
     (r._photoPez ? '<img src="'+xe(r._photoPez)+'" onclick="openPhotoZoom(this.src,\'Pacco chiuso — '+xe((r.cod||'').replace(/\'/g,""))+'\')" style="max-width:100%;border-radius:8px;border:1px solid #3fbf6f;margin-top:6px;display:block;cursor:zoom-in">' : '')+
-    // v35r — Foto bolla firmata anche in MAGAZZINO (utile prima di passare a FINALE).
+    // v35s — Foto bolla firmata anche in MAGAZZINO (utile prima di passare a FINALE).
     '<button type="button" onclick="_pickFotoWorkflow(\''+key+'\',\'fin\')" style="width:100%;background:var(--bg2);color:'+(r._photoFin?'#3fbf6f':'#3B9FD4')+';border:1.5px solid '+(r._photoFin?'#3fbf6f':'#3B9FD4')+';padding:10px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:6px">'+
       (r._photoFin ? '✓ Foto bolla firmata (tocca per sostituire)' : '📝 Foto bolla firmata corriere')+
     '</button>'+
@@ -5874,10 +5902,13 @@ function editRow(key){
   html+=fld('VETTORE RIC.',sl('vetRic',['PIEMME','CIPI','AGENTE','COLLEGA','AD','DIEMME','GLS','VINCA','BANCO','PIENNE','BRT','UPS','DHL','TNT','LGT','CITYLINE','NUOVA DEMOS'],r.vetRic));
   html+='<div class="sh-section">NOTE</div>';
   html+=fld('NOTE','<textarea id="ei_note" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:var(--rad2);outline:none;resize:none;min-height:52px;font-family:inherit;margin-bottom:7px">'+xe(r.note||'')+'</textarea>');
-  // v35r — Foto bolla (OCR ricevimento): visibile + zoomable nella sheet di edit.
+  // v35s — Foto bolla (OCR ricevimento): visibile + zoomable nella sheet di edit.
   var _bImg = r.bollaPhoto || r.photoThumb || '';
+  var _pImg = r.pezzoPhoto || '';
   if(_bImg) html+='<div style="font-size:9px;color:var(--txt3);letter-spacing:.5px;margin:6px 0 3px;font-weight:700">📄 FOTO BOLLA</div>'+
                    '<img src="'+xe(_bImg)+'" onclick="openPhotoZoom(this.src,\'Bolla — '+xe((r.cod||'').replace(/\'/g,""))+'\')" style="max-width:100%;border-radius:8px;border:1px solid #3B9FD4;margin-bottom:7px;display:block;cursor:zoom-in">';
+  if(_pImg) html+='<div style="font-size:9px;color:var(--txt3);letter-spacing:.5px;margin:6px 0 3px;font-weight:700">🔧 FOTO PEZZO</div>'+
+                   '<img src="'+xe(_pImg)+'" onclick="openPhotoZoom(this.src,\'Pezzo — '+xe((r.cod||'').replace(/\'/g,""))+'\')" style="max-width:100%;border-radius:8px;border:1px solid #3fbf6f;margin-bottom:7px;display:block;cursor:zoom-in">';
   if(r.photo)html+='<div style="font-size:10px;color:var(--grn);margin-bottom:9px;font-family:monospace">\ud83d\udcf7 '+xe(r.photo)+'</div>';
 
   html+='<button onclick="duplicaRow(\''+key+'\')" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1.5px solid #3B9FD4;padding:11px;font-size:13px;font-weight:700;border-radius:10px;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-top:8px">\ud83d\udccb Duplica in nuova riga</button>';
@@ -5939,7 +5970,7 @@ function _pickFotoWorkflow(key, kind){
       // Ridimensiono a max 1024px lato lungo per non gonfiare il record
       var img = new Image();
       img.onload = function(){
-        // v35r — compressione aggressiva (Firebase-friendly): 800px lato lungo, JPEG 0.55.
+        // v35s — compressione aggressiva (Firebase-friendly): 800px lato lungo, JPEG 0.55.
         var mx=800, w=img.width, h=img.height;
         if(w>mx||h>mx){ if(w>h){ h=Math.round(h*mx/w); w=mx; } else { w=Math.round(w*mx/h); h=mx; } }
         var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
@@ -6003,8 +6034,10 @@ function svEdit(key){
   var _cur = rows[key] || {};
   if(_cur._photoPez){ ch._photoPez=_cur._photoPez; ch._photoPezTs=_cur._photoPezTs||Date.now(); }
   if(_cur._photoFin){ ch._photoFin=_cur._photoFin; ch._photoFinTs=_cur._photoFinTs||Date.now(); }
-  // v35r — preserva anche la foto della bolla OCR (ricevimento) tra le modifiche
+  // v35s — preserva anche la foto della bolla OCR (ricevimento) tra le modifiche
   if(_cur.bollaPhoto){ ch.bollaPhoto=_cur.bollaPhoto; ch.bollaPhotoTs=_cur.bollaPhotoTs||Date.now(); }
+  // v35s — preserva foto pezzo scattata dal RIC durante OCR (visibile su PC senza rifarla)
+  if(_cur.pezzoPhoto){ ch.pezzoPhoto=_cur.pezzoPhoto; ch.pezzoPhotoTs=_cur.pezzoPhotoTs||Date.now(); }
   // ── BLOCCO: passaggio a FINALE richiede foto bolla firmata corriere.
   //   Eccezione: vettore uscita = GLS (foto senza firma tollerata, ma comunque foto).
   // v35 — Il gate scatta SOLO sulla TRANSIZIONE (fase precedente != FINALE).
@@ -8725,37 +8758,67 @@ function populateCauSelect(){
 // Popup documenti garanzia (in base al fornitore corrente).
 // v34y: se viene passato un fornitore esplicito (dalla riga OCR) lo usiamo,
 // altrimenti fallback al vecchio comportamento (#cFor globale).
+// v35s — Popup checklist garanzia: sul PC l'UFF ha i documenti FISICI arrivati
+//   dal telefono (foto pezzo gia' fatta). Per ogni doc: checkbox PRESENTE + FOTO
+//   opzionale (se serve archivio digitale). Ticcando tutti si conferma e si va
+//   avanti. Stato memorizzato in _garDocsChecked[forn] e persistito.
+window._garDocsChecked = window._garDocsChecked || {};
+try{ var _saved = JSON.parse(localStorage.getItem('garDocsChecked')||'{}'); window._garDocsChecked = _saved || {}; }catch(e){}
+function _garSaveChecked(){ try{ localStorage.setItem('garDocsChecked', JSON.stringify(window._garDocsChecked||{})); }catch(e){} }
+function _garTickDoc(fornU, docName, on){
+  if(!window._garDocsChecked[fornU]) window._garDocsChecked[fornU] = {};
+  if(on) window._garDocsChecked[fornU][docName] = { ts: Date.now(), by: (typeof deviceName!=='undefined'?deviceName:'?') };
+  else delete window._garDocsChecked[fornU][docName];
+  _garSaveChecked();
+}
 function showGaranziaDocsPopup(fornOverride){
   var forn = (fornOverride && String(fornOverride).trim())
     ? String(fornOverride).trim()
     : (((document.getElementById('cFor')||{}).value||'').trim());
+  var fornU = String(forn||'').toUpperCase();
   var g=getGaranziaInfo(forn);
   var docs=(g&&g.documenti&&g.documenti.length)?g.documenti.slice():['BOLLA','MODULO','LIBRETTO'];
   var old=document.getElementById('garDocsBox'); if(old)old.remove();
   var box=document.createElement('div'); box.id='garDocsBox';
   box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:1500;display:flex;align-items:center;justify-content:center;padding:16px';
-  var h='<div style="background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:20px;width:100%;max-width:380px;max-height:82vh;overflow-y:auto">';
+  var h='<div style="background:var(--bg1);border:2px solid #3B9FD4;border-radius:14px;padding:20px;width:100%;max-width:420px;max-height:86vh;overflow-y:auto;color:var(--txt)">';
   h+='<div style="font-size:15px;font-weight:800;color:#3B9FD4;margin-bottom:4px">📋 Documenti necessari · GARANZIA</div>';
-  h+='<div style="font-size:11px;color:#999;margin-bottom:12px">'+(forn?('Fornitore: <b style="color:#fff">'+xe(forn.toUpperCase())+'</b>'):'Inserisci il fornitore per i documenti specifici')+((g&&g.giorni&&g.giorni!=='X'&&g.giorni!=='0')?(' · entro <b style="color:#fff">'+xe(g.giorni)+' giorni</b>'):'')+'</div>';
+  h+='<div style="font-size:11px;color:var(--txt3);margin-bottom:12px">'+(forn?('Fornitore: <b style="color:var(--txt)">'+xe(fornU)+'</b>'):'Inserisci il fornitore per i documenti specifici')+((g&&g.giorni&&g.giorni!=='X'&&g.giorni!=='0')?(' · entro <b style="color:var(--txt)">'+xe(g.giorni)+' giorni</b>'):'')+'</div>';
   if(g&&g.giorni==='X'){ h+='<div style="background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.4);border-radius:8px;padding:10px;font-size:12px;font-weight:700;margin-bottom:10px">⛔ Reso in garanzia NON accettato da questo fornitore</div>'; }
-  // v34r: ogni documento ha un pulsante 📷 per caricare la foto/scan del documento stesso.
-  // Le foto vengono aggiunte a pendPhotos come le altre foto del pezzo, con nome descrittivo.
-  h+='<div style="font-size:10px;color:#7d8590;margin-bottom:6px;letter-spacing:.3px">Carica la foto/scan di ciascun documento richiesto:</div>';
+  h+='<div style="font-size:10px;color:var(--txt3);margin-bottom:8px;letter-spacing:.3px;line-height:1.5">✓ <b>Spunta</b> ogni documento fisico che hai ricevuto insieme al pezzo. La foto e\' opzionale (utile per archivio digitale).</div>';
+  var checked = window._garDocsChecked[fornU] || {};
   for(var i=0;i<docs.length;i++){
-    var dSafe = String(docs[i]).replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    h+='<div style="display:flex;gap:8px;align-items:center;padding:8px 10px;background:#1a1a1a;border-radius:8px;margin-bottom:6px">'+
-        '<span style="color:#34D399;flex-shrink:0;font-weight:800;font-size:14px">✓</span>'+
-        '<span style="font-size:12px;color:#e0e0e0;line-height:1.45;flex:1">'+xe(docs[i])+'</span>'+
-        '<span class="garDocStatus" data-doc="'+xe(docs[i])+'" style="font-size:10px;color:#666;min-width:16px;text-align:center"></span>'+
-        '<button onclick="garDocPick(\''+dSafe+'\', this)" title="Carica foto documento" style="flex-shrink:0;background:rgba(59,159,212,.15);color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">📷 Carica</button>'+
-      '</div>';
+    var d = String(docs[i]);
+    var dSafe = d.replace(/\'/g,"\\'").replace(/"/g,'&quot;');
+    var isReal = _garIsRealDoc(d);
+    var isChecked = !!checked[d];
+    var uploadedPhoto = (window._garDocsUploaded||[]).some(function(u){ return String(u.doc||'').toUpperCase()===d.toUpperCase(); });
+    h+='<label class="garDocRow" data-doc="'+xe(d)+'" style="display:flex;gap:8px;align-items:center;padding:9px 10px;background:'+(isChecked?'rgba(46,204,113,.08)':'var(--bg2)')+';border:1.5px solid '+(isChecked?'#3fbf6f':'var(--brd)')+';border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .15s,border-color .15s">'+
+        (isReal ? ('<input type="checkbox" '+(isChecked?'checked':'')+' onclick="event.stopPropagation()" onchange="_garTickDoc(\''+xe(fornU)+'\',\''+dSafe+'\',this.checked);this.closest(\'.garDocRow\').style.background=this.checked?\'rgba(46,204,113,.08)\':\'var(--bg2)\';this.closest(\'.garDocRow\').style.borderColor=this.checked?\'#3fbf6f\':\'var(--brd)\'" style="width:18px;height:18px;flex-shrink:0;accent-color:#3fbf6f;cursor:pointer">')
+                : '<span style="color:var(--txt3);font-size:12px;flex-shrink:0">ℹ️</span>')+
+        '<span style="font-size:12px;color:var(--txt);line-height:1.4;flex:1;font-weight:'+(isReal?'600':'400')+'">'+xe(d)+'</span>'+
+        (isReal ? ('<span class="garDocStatus" data-doc="'+xe(d)+'" style="font-size:11px;color:'+(uploadedPhoto?'#3fbf6f':'var(--txt3)')+';min-width:16px;text-align:center">'+(uploadedPhoto?'📷':'')+'</span>'+
+        '<button onclick="event.preventDefault();event.stopPropagation();garDocPick(\''+dSafe+'\', this)" title="Carica foto (opzionale)" style="flex-shrink:0;background:transparent;color:#3B9FD4;border:1px solid #3B9FD4;border-radius:6px;padding:4px 9px;font-size:10px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">📷</button>')
+                : '')+
+      '</label>';
   }
-  h+='<input type="file" id="garDocInput" accept="image/*" capture="environment" style="display:none" onchange="garDocHandleFile(this)">';
-  h+='<button onclick="document.getElementById(\'garDocsBox\').remove()" style="width:100%;background:#3B9FD4;color:#fff;border:none;padding:12px;font-size:14px;font-weight:800;border-radius:10px;cursor:pointer;margin-top:8px">Ho capito</button>';
+  h+='<input type="file" id="garDocInput" accept="image/*" style="display:none" onchange="garDocHandleFile(this)">';
+  // Bottone "Ho verificato tutti" — abilitato solo quando tutti i doc reali sono spuntati
+  h+='<button id="garDocsOk" onclick="_garDocsConfirm(\''+xe(fornU)+'\')" style="width:100%;background:#3B9FD4;color:#fff;border:none;padding:12px;font-size:14px;font-weight:800;border-radius:10px;cursor:pointer;margin-top:10px">✓ Ho verificato tutti — vai avanti</button>';
+  h+='<button onclick="document.getElementById(\'garDocsBox\').remove()" style="width:100%;background:none;color:var(--txt3);border:none;padding:9px;font-size:12px;cursor:pointer;margin-top:4px">Annulla</button>';
   h+='</div>';
   box.innerHTML=h; document.body.appendChild(box);
-  // Marca i documenti già caricati (visibile se riapri il popup dopo aver caricato)
-  try{ (window._garDocsUploaded||[]).forEach(function(d){ var s=box.querySelector('.garDocStatus[data-doc="'+d.doc.replace(/"/g,'&quot;')+'"]'); if(s){ s.textContent='✓'; s.style.color='#34D399'; } }); }catch(e){}
+}
+
+// Conferma checklist: chiude popup e ritenta l'inserimento (addRow o applyOcrConfirm)
+function _garDocsConfirm(fornU){
+  var missing = garanziaDocsMissing(fornU);
+  if(missing.length){
+    if(typeof toast==='function') toast('⚠ Spunta ancora: '+missing.slice(0,3).join(', ')+(missing.length>3?' (+'+(missing.length-3)+')':''),'y');
+    return;
+  }
+  try{ document.getElementById('garDocsBox').remove(); }catch(e){}
+  if(typeof toast==='function') toast('✅ Documenti garanzia verificati — puoi procedere','g');
 }
 
 // v34r — Upload foto documenti garanzia
@@ -8773,21 +8836,33 @@ var _GAR_REAL_TOKENS = [
   'FOTO IMBALLO','FOTO SE CARROZZERIA','TARGA','CODICE DI SERIE'
 ];
 function _garIsRealDoc(name){
-  var U = String(name||'').toUpperCase();
-  return _GAR_REAL_TOKENS.some(function(t){ return U.indexOf(t)>=0; });
+  var U = String(name||'').toUpperCase().trim();
+  if(!U) return false;
+  if(U.length > 40) return false; // note lunghe non sono documenti
+  // v35s — Escludo esplicitamente note/condizioni/vettori che l'anagrafica GARANZIE_DB
+  //   spesso mischia con i doc reali (es. "SE BOSCH RICEVUTA...", "SOLO PER HOFFER",
+  //   "CIPI/PIEMME", "GLS", "MITTENTE/DESTINATARIO", "NO GARANZIA", "DA VERIFICARE").
+  if(/^(SE\s|SOLO\s|OLTRE\s|ACCUMULARE|COMPILARE\s|CHIAMARE|BISOGNA\s|DA\sVERIFICARE|NO\sGARANZIA|X$|CIPI|GLS|NAZ|CITY|MITTENTE|INTERCOMPANY|SMART\s)/.test(U)) return false;
+  // Deve iniziare con un token doc noto o essere esattamente uguale
+  return _GAR_REAL_TOKENS.some(function(t){ return U === t || U.indexOf(t)===0; });
 }
 function garanziaDocsMissing(forn){
   try{
     if(typeof getGaranziaInfo!=='function') return [];
     var g = getGaranziaInfo(forn||'');
     if(!g || !g.documenti || !g.documenti.length) return [];
+    var fornU = String(forn||'').toUpperCase();
     var uploaded = (window._garDocsUploaded||[]).map(function(d){ return String(d.doc||'').toUpperCase(); });
+    // v35s — Ora accetta ANCHE i doc spuntati come "PRESENTE" via checklist
+    //   (il PC ha in mano i documenti fisici arrivati dal telefono col pezzo).
+    var ticked = window._garDocsChecked && window._garDocsChecked[fornU] ? window._garDocsChecked[fornU] : {};
     var missing = [];
     g.documenti.forEach(function(d){
       if(!_garIsRealDoc(d)) return; // salta le note ("SE BOSCH...", "SOLO PER...")
       var U = String(d).toUpperCase();
-      var found = uploaded.some(function(u){ return u === U || u.indexOf(U)>=0 || U.indexOf(u)>=0; });
-      if(!found) missing.push(d);
+      var foundPhoto = uploaded.some(function(u){ return u === U || u.indexOf(U)>=0 || U.indexOf(u)>=0; });
+      var isTicked = !!ticked[d];
+      if(!foundPhoto && !isTicked) missing.push(d);
     });
     return missing;
   }catch(e){ return []; }
@@ -10572,7 +10647,7 @@ function renderChatMsgs(msgs){
     var br=isMe?'18px 4px 18px 18px':'4px 18px 18px 18px';
     var brd=isMe?'rgba(59,159,212,.3)':'#2a2a2a';
     html+='<div style="max-width:78%;background:'+bg+';border:1px solid '+brd+';border-radius:'+br+';padding:8px 12px;position:relative">';
-    // v35r — HARDENING XSS chat: allow-list schemi. Un peer con accesso al DB
+    // v35s — HARDENING XSS chat: allow-list schemi. Un peer con accesso al DB
     //   potrebbe iniettare "javascript:..." nel campo m.photo/m.file.
     //   Accetto solo data:image/... e https:// (blob:/http: rifiutati).
     function _safeMediaUrl(u, forImg){
@@ -11533,7 +11608,7 @@ function ocrCropShow(dataUrl, cb){
   img.src=dataUrl;
 }
 
-// v35r — Helper universale di compressione immagine.
+// v35s — Helper universale di compressione immagine.
 //   Ridimensiona a maxW lato lungo (default 800px, come Firebase-friendly),
 //   ricomprime a JPEG con qualita' data (default 0.55 ~ ottima resa e piccolo)
 //   e risolve una dataUrl. Fallback: ritorna la dataUrl originale se qualcosa
@@ -11562,7 +11637,7 @@ function _imgCompress(dataUrl, maxW, quality){
   });
 }
 
-// v35r — Viewer fullscreen zoomabile universale per una singola foto.
+// v35s — Viewer fullscreen zoomabile universale per una singola foto.
 //   Usa pinch/tap-to-zoom nativo. Un tap sul fondo chiude; tap sull'immagine
 //   zoomma (scala 2x). Riutilizzato dalla LISTA per la bolla salvata.
 function openPhotoZoom(url, caption){
@@ -11571,16 +11646,36 @@ function openPhotoZoom(url, caption){
   var box = document.createElement('div');
   box.id = 'photoZoomBox';
   box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:2100;display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto;cursor:zoom-out;-webkit-overflow-scrolling:touch';
-  var lbl = caption ? '<div style="position:absolute;top:12px;left:14px;color:#fff;font-size:12px;font-weight:700;background:rgba(0,0,0,.5);padding:4px 10px;border-radius:6px;max-width:70vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+xe(caption)+'</div>' : '';
-  box.innerHTML =
-    lbl +
-    '<button onclick="event.stopPropagation();document.getElementById(\'photoZoomBox\').remove()" '+
-      'style="position:absolute;top:12px;right:14px;background:rgba(255,255,255,.18);color:#fff;border:1px solid #666;border-radius:22px;width:40px;height:40px;font-size:22px;cursor:pointer">×</button>'+
-    '<img id="photoZoomImg" src="'+String(url).replace(/"/g,'&quot;')+'" '+
+  var safeUrl = String(url).replace(/"/g,'&quot;');
+  var fname = 'foto-'+String(caption||'resi').replace(/[^A-Za-z0-9]+/g,'_').slice(0,40)+'.jpg';
+  var lbl = caption ? '<div style="position:absolute;top:12px;left:14px;color:#fff;font-size:12px;font-weight:700;background:rgba(0,0,0,.5);padding:4px 10px;border-radius:6px;max-width:55vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+xe(caption)+'</div>' : '';
+  // v35s — barra azioni: scarica + copia + chiudi
+  var actions = '<div style="position:absolute;top:12px;right:14px;display:flex;gap:6px;align-items:center">'+
+    '<a href="'+safeUrl+'" download="'+xe(fname)+'" onclick="event.stopPropagation()" title="Scarica" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid #666;border-radius:20px;width:40px;height:40px;font-size:18px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none">⬇</a>'+
+    '<button onclick="event.stopPropagation();_photoCopy(this.previousElementSibling.href)" title="Copia negli appunti" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid #666;border-radius:20px;width:40px;height:40px;font-size:16px;cursor:pointer">⎘</button>'+
+    '<button onclick="event.stopPropagation();document.getElementById(\'photoZoomBox\').remove()" title="Chiudi" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid #666;border-radius:22px;width:40px;height:40px;font-size:22px;cursor:pointer">×</button>'+
+  '</div>';
+  box.innerHTML = lbl + actions +
+    '<img id="photoZoomImg" src="'+safeUrl+'" '+
       'onclick="event.stopPropagation();var s=this.dataset.z==\'1\'?\'1\':\'2\';this.style.transform=\'scale(\'+s+\')\';this.style.transformOrigin=\'center\';this.dataset.z=(s==\'2\'?\'1\':\'0\');" '+
       'style="max-width:100%;max-height:100%;border-radius:8px;transition:transform .2s ease;transform-origin:center;cursor:zoom-in">';
   box.onclick = function(){ box.remove(); };
   document.body.appendChild(box);
+}
+// v35s — copia dataURL immagine come blob nell'appunti (Clipboard API async).
+function _photoCopy(url){
+  try{
+    if(!navigator.clipboard || !window.ClipboardItem){
+      if(typeof toast==='function') toast('Copia non supportata su questo browser — usa ⬇ per scaricare','y');
+      return;
+    }
+    fetch(url).then(function(r){ return r.blob(); }).then(function(b){
+      var item = {}; item[b.type] = b;
+      navigator.clipboard.write([ new ClipboardItem(item) ])
+        .then(function(){ if(typeof toast==='function') toast('📋 Foto copiata negli appunti','g'); })
+        .catch(function(){ if(typeof toast==='function') toast('⛔ Impossibile copiare','r'); });
+    }).catch(function(){ if(typeof toast==='function') toast('⛔ Impossibile leggere foto','r'); });
+  }catch(e){ if(typeof toast==='function') toast('⛔ '+(e&&e.message||'errore copia'),'r'); }
 }
 
 // v35g — apre in fullscreen la foto della bolla nella modal OCR confirm.
@@ -11698,7 +11793,7 @@ function ocrViaAI(dataUrlIn, cb){
   ocrSetLoading('AI: preparo immagine…');
   _ocrDownscale(dataUrlIn, 1400, 0.75).then(function(dataUrl){
   ocrSetLoading('AI: analisi bolla…');
-  var basePrompt='Sei un esperto nella lettura di bolle/DDT italiani di reso merce, spesso COMPILATI A MANO IN CORSIVO (a volte con righe evidenziate). PRIMA DI TUTTO verifica che l\'immagine contenga DAVVERO un documento di trasporto/bolla/fattura con del testo: se non c\'è alcun documento (un tavolo, un oggetto qualunque, una foto senza testo leggibile) rispondi SOLO {"nessun_documento": true} e nient\'altro. NON INVENTARE MAI nulla: trascrivi esclusivamente ciò che è scritto e leggibile nell\'immagine; un campo non presente resta stringa vuota; in caso di dubbio sull\'esistenza stessa del documento rispondi {"nessun_documento": true}. L\'azienda stampata in ALTO (mittente) è il CLIENTE che restituisce i pezzi: mettila in "soggetto". Il destinatario è sempre TELOS: ignoralo.\n\nREGOLE FONDAMENTALI (le più importanti):\n1) LA BOLLA CONTIENE QUASI SEMPRE PIÙ ARTICOLI (2, 3, 5, anche 10+): uno per BLOCCO di righe. Devi estrarli TUTTI, uno per uno, nell\'ordine in cui compaiono dall\'alto in basso. NON fermarti mai al primo. Scorri attentamente TUTTA la tabella articoli fino alla fine, comprese le righe scritte a mano piccole o parzialmente coperte. Prima di rispondere ricontrolla di aver letto ogni riga articolo del documento.\n2) Ogni articolo di solito ha: quantità (es. "1" oppure "Ø1"), descrizione, sigla marca (es. NGK, BIR, FAU, VAL, KET, BKS, DPH, MAL) e un CODICE tra parentesi o accanto alla descrizione: quello è il codice articolo.\n   IMPORTANTISSIMO — DUE COLONNE SEPARATE: molte bolle mostrano su ogni riga\n   PRIMA la sigla MARCA/pre (2-4 lettere, es. KET, BKS, CAR, DPH, MAL, NGK)\n   e POI il CODICE ARTICOLO completo (che a sua volta e\' spesso una miscela di\n   lettere+numeri+trattini: es. KDF034, KPF052, SGM0009R, CAR-BKS-SGM0009,\n   TA1030, 48244KLR). Il CODICE va copiato INTERO cosi\' come appare, SENZA\n   spezzarlo al confine lettera/numero.\n   Esempio corretto: la riga "KET KDF034 DISCO FRENO..." va estratta come\n   pre="KET", codice="KDF034" (NON pre="KDF", codice="034").\n   Esempio corretto: "BKS SGM0009R RIG.SCAT..." → pre="BKS", codice="SGM0009R".\n   Esempio corretto: "MAL 48244KLR KIT CUFF..." → pre="MAL", codice="48244KLR".\n   Se leggi una riga con DUE token alfanumerici prima della descrizione,\n   il PRIMO (piu\' corto, tipicamente 2-4 lettere pure) e\' sempre la MARCA/pre;\n   il SECONDO e\' il CODICE completo — non spezzarlo mai in "prefisso alfa" +\n   "suffisso numerico".\n3) Le righe che iniziano con "RIF." / "RIF.BL" / "RIF.BOLLA" seguite da numero e data sono il RIFERIMENTO alla bolla di consegna originaria dell\'articolo che le precede: mettile nel campo "riferimento" di QUELL\'articolo, NON sono codici articolo.\n4) Sul corsivo ambiguo scegli l\'interpretazione più plausibile per un codice ricambi (cifre e lettere maiuscole).\n\n5) TIMBRI ANOMALIA — LEGGI CON PRUDENZA (default: NON e\' anomalia):\n   Le bolle di reso NORMALI non hanno anomalie. Un\'anomalia esiste SOLO quando c\'e\' un ELEMENTO GRAFICO DISTINTO E VISIBILE sulla bolla che segnala esplicitamente un problema di ricevimento. Esempi VALIDI:\n     - Un TIMBRO A INCHIOSTRO con la parola "ANOMALIA" (caratteri grossi, spesso rossi/blu, con riquadro o cerchio)\n     - Un\'ETICHETTA ADESIVA rossa/gialla appiccicata sopra la bolla ("RIFIUTATO", "NON CONFORME", "PACCO APERTO", "DANNEGGIATO IN TRASPORTO")\n     - Una SCRITTA A MANO CERCHIATA / SOTTOLINEATA / IN EVIDENZIATORE che dice esplicitamente "ANOMALIA" (non semplici note del compilatore)\n     - Una GRANDE X ROSSA o FRECCIA disegnata sopra la bolla che punta a un problema\n\n   Cosa NON e\' un\'anomalia (non attivare mai il flag per queste):\n     - "CARCASSA", "OLD CORE", "CARCASSA DA RIGENERARE" → sono causali di reso normali (restituzione core)\n     - "USATO", "MONTATO", "SMONTATO" nel testo (spesso descrivono lo stato normale del pezzo reso in garanzia)\n     - "GARANZIA", "DIFETTOSO" scritti come CAUSALE di reso (colonna causale del DDT) — NON sono anomalie di ricevimento\n     - "SPORCO", "ROTTO" citati in una descrizione articolo o in un modulo garanzia standard\n     - Descrizioni tecniche di pezzi (candela usata, filtro sporco, ecc.)\n     - Testo stampato tipografico del template della bolla\n\n   Regola d\'oro: se non c\'e\' un timbro/etichetta/scritta GRAFICAMENTE EVIDENTE aggiunta DOPO la stampa della bolla e riferita al ricevimento (non al pezzo), allora anomalia_rilevata=false.\n\n   Se trovi un timbro/etichetta valida:\n     "flusso_suggerito": "ANOMALIA"\n     "anomalia_rilevata": true\n     "motivo_anomalia": "<trascrivi solo il testo del timbro/etichetta>"\n   In tutti gli altri casi (99% delle bolle):\n     "flusso_suggerito": "STANDARD"\n     "anomalia_rilevata": false\n     "motivo_anomalia": ""\n\nRispondi SOLO con JSON valido, senza testo extra prima o dopo, con la stessa struttura di questo ESEMPIO (che ha 3 articoli, per ricordarti che devi elencarli TUTTI):\n{\n  "numero_documento": "BL/TRA/44321",\n  "data": "17/05/2026",\n  "soggetto": "AUTOFFICINA ROSSI SNC",\n  "vettore": "CIPI",\n  "causale": "GARANZIA",\n  "flusso_suggerito": "STANDARD",\n  "anomalia_rilevata": false,\n  "motivo_anomalia": "",\n  "articoli": [\n    {"pre":"KET","codice":"KDF034","descrizione":"DISCO FRENO ANT/POST","quantita":"2","prezzo":"11.40","riferimento":""},\n    {"pre":"BOS","codice":"0986444981","descrizione":"BOBINA ACCENSIONE","quantita":"1","prezzo":"58.00","riferimento":"RIF.BL/STD/2211 12/03/26"},\n    {"pre":"MAL","codice":"48244KLR","descrizione":"KIT CUFF.RUOTA","quantita":"1","prezzo":"13.24","riferimento":""}\n  ]\n}\n\nI campi mancanti devono essere stringa vuota. Se la bolla ha 1 solo articolo, l\'array avrà 1 elemento; se ne ha 8, l\'array avrà 8 elementi. Non riassumere, non raggruppare, non fondere righe diverse in una sola.';
+  var basePrompt='Sei un esperto nella lettura di bolle/DDT italiani di reso merce, spesso COMPILATI A MANO IN CORSIVO (a volte con righe evidenziate). PRIMA DI TUTTO verifica che l\'immagine contenga DAVVERO un documento di trasporto/bolla/fattura con del testo: se non c\'è alcun documento (un tavolo, un oggetto qualunque, una foto senza testo leggibile) rispondi SOLO {"nessun_documento": true} e nient\'altro. NON INVENTARE MAI nulla: trascrivi esclusivamente ciò che è scritto e leggibile nell\'immagine; un campo non presente resta stringa vuota; in caso di dubbio sull\'esistenza stessa del documento rispondi {"nessun_documento": true}. L\'azienda stampata in ALTO (mittente) è il CLIENTE che restituisce i pezzi: mettila in "soggetto". Il destinatario è sempre TELOS: ignoralo.\n\nREGOLE FONDAMENTALI (le più importanti):\n1) LA BOLLA CONTIENE QUASI SEMPRE PIÙ ARTICOLI (2, 3, 5, anche 10+): uno per BLOCCO di righe. Devi estrarli TUTTI, uno per uno, nell\'ordine in cui compaiono dall\'alto in basso. NON fermarti mai al primo. Scorri attentamente TUTTA la tabella articoli fino alla fine, comprese le righe scritte a mano piccole o parzialmente coperte. Prima di rispondere ricontrolla di aver letto ogni riga articolo del documento.\n2) Ogni articolo di solito ha: quantità (es. "1" oppure "Ø1"), descrizione, sigla marca (es. NGK, BIR, FAU, VAL, KET, BKS, DPH, MAL) e un CODICE tra parentesi o accanto alla descrizione: quello è il codice articolo.\n   IMPORTANTISSIMO — DUE COLONNE SEPARATE: molte bolle mostrano su ogni riga\n   PRIMA la sigla MARCA/pre (2-4 lettere, es. KET, BKS, CAR, DPH, MAL, NGK)\n   e POI il CODICE ARTICOLO completo (che a sua volta e\' spesso una miscela di\n   lettere+numeri+trattini: es. KDF034, KPF052, SGM0009R, CAR-BKS-SGM0009,\n   TA1030, 48244KLR). Il CODICE va copiato INTERO cosi\' come appare, SENZA\n   spezzarlo al confine lettera/numero.\n   Esempio corretto: la riga "KET KDF034 DISCO FRENO..." va estratta come\n   pre="KET", codice="KDF034" (NON pre="KDF", codice="034").\n   Esempio corretto: "BKS SGM0009R RIG.SCAT..." → pre="BKS", codice="SGM0009R".\n   Esempio corretto: "MAL 48244KLR KIT CUFF..." → pre="MAL", codice="48244KLR".\n   Se leggi una riga con DUE token alfanumerici prima della descrizione,\n   il PRIMO (piu\' corto, tipicamente 2-4 lettere pure) e\' sempre la MARCA/pre;\n   il SECONDO e\' il CODICE completo — non spezzarlo mai in "prefisso alfa" +\n   "suffisso numerico".\n3) Le righe che iniziano con "RIF." / "RIF.BL" / "RIF.BOLLA" seguite da numero e data sono il RIFERIMENTO alla bolla di consegna originaria dell\'articolo che le precede: mettile nel campo "riferimento" di QUELL\'articolo, NON sono codici articolo.\n4) Sul corsivo ambiguo scegli l\'interpretazione più plausibile per un codice ricambi (cifre e lettere maiuscole).\n\n5) TIMBRI ANOMALIA — LEGGI CON PRUDENZA (default: NON e\' anomalia):\n   Le bolle di reso NORMALI non hanno anomalie. Un\'anomalia esiste SOLO quando c\'e\' un ELEMENTO GRAFICO DISTINTO E VISIBILE sulla bolla che segnala esplicitamente un problema di ricevimento. Esempi VALIDI:\n     - Un TIMBRO A INCHIOSTRO con la parola "ANOMALIA" (caratteri grossi, spesso rossi/blu, con riquadro o cerchio)\n     - Un\'ETICHETTA ADESIVA rossa/gialla appiccicata sopra la bolla ("RIFIUTATO", "NON CONFORME", "PACCO APERTO", "DANNEGGIATO IN TRASPORTO")\n     - Una SCRITTA A MANO CERCHIATA / SOTTOLINEATA / IN EVIDENZIATORE che dice esplicitamente "ANOMALIA" (non semplici note del compilatore)\n     - Una GRANDE X ROSSA o FRECCIA disegnata sopra la bolla che punta a un problema\n\n   Cosa NON e\' un\'anomalia (non attivare mai il flag per queste):\n     - "CARCASSA", "OLD CORE", "CARCASSA DA RIGENERARE" → sono causali di reso normali (restituzione core)\n     - "USATO", "MONTATO", "SMONTATO" nel testo (spesso descrivono lo stato normale del pezzo reso in garanzia)\n     - "GARANZIA", "DIFETTOSO" scritti come CAUSALE di reso (colonna causale del DDT) — NON sono anomalie di ricevimento\n     - "SPORCO", "ROTTO" citati in una descrizione articolo o in un modulo garanzia standard\n     - Descrizioni tecniche di pezzi (candela usata, filtro sporco, ecc.)\n     - Testo stampato tipografico del template della bolla\n\n   Regola d\'oro: se non c\'e\' un timbro/etichetta/scritta GRAFICAMENTE EVIDENTE aggiunta DOPO la stampa della bolla e riferita al ricevimento (non al pezzo), allora anomalia_rilevata=false.\n\n   Se trovi un timbro/etichetta valida:\n     "flusso_suggerito": "ANOMALIA"\n     "anomalia_rilevata": true\n     "motivo_anomalia": "<trascrivi solo il testo del timbro/etichetta>"\n   In tutti gli altri casi (99% delle bolle):\n     "flusso_suggerito": "STANDARD"\n     "anomalia_rilevata": false\n     "motivo_anomalia": ""\n\n6) DATA LISTATO (timbro blu Telos) — CAMPO SEPARATO "data_listato":\n   Cerca un TIMBRO BLU a inchiostro (rettangolare o senza cornice) con SOLO una DATA scritta dentro (formato "07 AGO. 2026" oppure "07/08/2026" oppure "7-8-2026"). Questo timbro viene apposto dall\'ufficio ricevimento Telos quando registra la bolla. La data letta dal timbro va nel campo "data_listato" in formato ISO YYYY-MM-DD (es. "2026-08-07"). Se NON c\'e\' un timbro blu con data, lascia "data_listato" come stringa vuota — NON metterci la data dell\'intestazione del DDT, e NON metterci la data di oggi.\n\n   Il campo "data" invece resta la data STAMPATA nell\'intestazione del DDT (top-right, formato del template del cliente): questa e\' la data di emissione della bolla lato cliente.\n\nRispondi SOLO con JSON valido, senza testo extra prima o dopo, con la stessa struttura di questo ESEMPIO (che ha 3 articoli, per ricordarti che devi elencarli TUTTI):\n{\n  "numero_documento": "BL/TRA/44321",\n  "data": "17/05/2026",\n  "data_listato": "2026-08-07",\n  "soggetto": "AUTOFFICINA ROSSI SNC",\n  "vettore": "CIPI",\n  "causale": "GARANZIA",\n  "flusso_suggerito": "STANDARD",\n  "anomalia_rilevata": false,\n  "motivo_anomalia": "",\n  "articoli": [\n    {"pre":"KET","codice":"KDF034","descrizione":"DISCO FRENO ANT/POST","quantita":"2","prezzo":"11.40","riferimento":""},\n    {"pre":"BOS","codice":"0986444981","descrizione":"BOBINA ACCENSIONE","quantita":"1","prezzo":"58.00","riferimento":"RIF.BL/STD/2211 12/03/26"},\n    {"pre":"MAL","codice":"48244KLR","descrizione":"KIT CUFF.RUOTA","quantita":"1","prezzo":"13.24","riferimento":""}\n  ]\n}\n\nI campi mancanti devono essere stringa vuota. Se la bolla ha 1 solo articolo, l\'array avrà 1 elemento; se ne ha 8, l\'array avrà 8 elementi. Non riassumere, non raggruppare, non fondere righe diverse in una sola.';
   // ── Estensione prompt: tipo documento + causale dedotta dal COLORE della scritta
   //   Aggiunge due campi al JSON di risposta ("tipo_documento" e
   //   "causale_colore") + un campo "codice_cliente" per scontrini/fatture.
@@ -11795,10 +11890,12 @@ function normalizeAIResult(o){
   var _tdoc = (o.tipo_documento||'').toString().toUpperCase().trim();
   var _validTdoc = ['FLOTTA','SCONTRINO','FATTURA','VENDITA','ACQUISTO','VISIONE','RESO FILIALE','NOLEGGIO','BL/FIM','BL/TRA','NESSUNO'];
   if(_tdoc && _validTdoc.indexOf(_tdoc)<0){
-    // Normalizza varianti comuni
+    // v35s — Normalizza SOLO varianti sicure (scontrino/fattura). Non forziamo piu'
+    //   BOLLA/DDT → BL/TRA: lascio all'operatore o all'AI la scelta specifica
+    //   (BL/TRA vs BL/FIM vs BL/RNC vs RESO FILIALE). Se l'AI restituisce un
+    //   valore ambiguo, il campo resta vuoto e l'operatore lo compila a mano.
     if(_tdoc.indexOf('SCONTRIN')>=0) _tdoc='SCONTRINO';
     else if(_tdoc.indexOf('FATTUR')>=0) _tdoc='FATTURA';
-    else if(_tdoc.indexOf('BOLLA')>=0 || _tdoc.indexOf('DDT')>=0 || _tdoc.indexOf('BL')===0) _tdoc='BL/TRA';
     else _tdoc='';
   }
   var _ccli = (o.codice_cliente||'').toString().trim();
@@ -11814,6 +11911,9 @@ function normalizeAIResult(o){
 
   return {
     data:dnorm(o.data),
+    // v35s — data_listato = data del timbro blu Telos (aggiunta al prompt AI).
+    //   Normalizzata a YYYY-MM-DD; l'AI puo' rispondere gia' in ISO o in gg/mm/aaaa.
+    data_listato: dnorm(o.data_listato||o.dataListato||''),
     sogg:(o.soggetto||o.deposito_partenza||'').toString().toUpperCase(),
     vetRic:(o.vettore||'').toString().toUpperCase(),
     rma:(o.numero_documento||'').toString().toUpperCase().replace(/\s+/g,''),
@@ -11970,7 +12070,7 @@ function showOcrConfirm(res, photoUrl, source){
   inner.style.cssText='background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:16px;width:100%;max-width:min(96vw,1100px);margin:auto';
 
   var nArt=res.articoli.length;
-  function fInp(id,val,ph){ return '<input id="'+id+'" value="'+xe(val||'')+'" placeholder="'+(ph||'')+'" oninput="this.value=this.value.toUpperCase()" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">'; }
+  function fInp(id,val,ph){ return '<input id="'+id+'" value="'+xe(val||'')+'" placeholder="'+(ph||'')+'" oninput="_upcase(this)" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">'; }
   function lab(t){ return '<div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:3px">'+t+'</div>'; }
 
   var a0=res.articoli[0]||{pre:'',cod:'',qty:'1',prc:''};
@@ -12003,24 +12103,33 @@ function showOcrConfirm(res, photoUrl, source){
     html+=ocrRowHtml(i, res.articoli[i]);
   }
   html+='</div>'+
-    '<button type="button" onclick="ocrAddRow()" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1px dashed rgba(59,159,212,.5);border-radius:9px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:12px">+ Aggiungi riga vuota</button>';
+    '<div style="display:flex;gap:6px;margin-bottom:12px">'+
+      '<button type="button" onclick="ocrAddRow()" style="flex:1;background:#0a1e3a;color:#3B9FD4;border:1px dashed rgba(59,159,212,.5);border-radius:9px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">+ Aggiungi riga vuota</button>'+
+      // v35s — Multi-bolla stesso cliente
+      '<button type="button" onclick="ocrAddAltraBolla()" style="flex:1;background:rgba(46,204,113,.10);color:#3fbf6f;border:1px dashed #3fbf6f;border-radius:9px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">📸 Altra bolla stesso cliente</button>'+
+    '</div>';
 
   html+='<div style="height:1px;background:#222;margin:6px 0 10px"></div>';
-  html+=lab('SOGGETTO / COD. CLIENTE')+'<input id="ocrSogg" value="'+xe(res.sogg||'')+'" placeholder="codice o nome cliente" oninput="this.value=this.value.toUpperCase();ocrSoggLookup(this)" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:4px;display:block"><div id="ocrSoggTip" style="margin-bottom:8px;display:flex;align-items:center;flex-wrap:wrap;gap:4px"></div>';
+  html+=lab('SOGGETTO / COD. CLIENTE')+'<input id="ocrSogg" value="'+xe(res.sogg||'')+'" placeholder="codice o nome cliente" oninput="_upcase(this);ocrSoggLookup(this)" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:4px;display:block"><div id="ocrSoggTip" style="margin-bottom:8px;display:flex;align-items:center;flex-wrap:wrap;gap:4px"></div>';
   // v34q: RIMOSSI Fornitore + Causale + Fase + Stato + TipoDoc + TipoFlusso + DataAcqForn
   // dai "comuni" — ora SONO TUTTI PER RIGA (codici diversi = valori diversi).
   // Rimangono comuni SOLO: VETTORE, DATA LISTATO, SOGGETTO, RMA, NOTE.
+  // v35s — DATA LISTATO = timbro blu Telos (data ricevimento); resta ocrData.
+  //   DATA DDT DI RESO = data emissione bolla lato cliente; sposto qui il campo
+  //   che prima era NOTE. Le NOTE testuali finiscono in basso col loro campo.
   html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
         '<div>'+lab('VETTORE RIC.')+fInp('ocrVet',res.vetRic,'es. CIPI')+'</div>'+
-        '<div>'+lab('DATA LISTATO')+'<input id="ocrData" type="date" value="'+xe(res.data||'')+'" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block"></div>'+
+        '<div>'+lab('DATA LISTATO (timbro blu)')+'<input id="ocrData" type="date" value="'+xe(res.data_listato||'')+'" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block"></div>'+
         '</div>';
   html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
         '<div>'+lab('RMA / N° BOLLA')+fInp('ocrRma',res.rma,'BL/TRA/...')+'</div>'+
-        '<div>'+lab('NOTE')+'<input id="ocrNote" value="'+xe(res.note||(a0.desc||''))+'" placeholder="annotazioni" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block"></div>'+
+        '<div>'+lab('DATA DDT DI RESO')+'<input id="ocrDataDdt" type="date" value="'+xe(res.data||'')+'" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block"></div>'+
         '</div>';
+  // NOTE testuali (in fondo)
+  html+=lab('NOTE')+'<input id="ocrNote" value="'+xe(res.note||'')+'" placeholder="annotazioni libere" style="width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:9px 11px;font-size:13px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;margin-bottom:8px;display:block">';
 
   // v35g — tap sulla thumbnail apre la foto in overlay fullscreen (zoom-out per chiudere)
-  // v35r — Prepara SUBITO la thumbnail compressa che verra' salvata su ogni riga
+  // v35s — Prepara SUBITO la thumbnail compressa che verra' salvata su ogni riga
   //        (~800px JPEG 0.55) cosi' e' pronta quando l'utente conferma.
   if(photoUrl){
     window._ocrConfPhotoUrl = photoUrl;
@@ -12144,16 +12253,26 @@ function ocrRowHtml(i, a){
   return '<div class="ocrRow" data-i="'+i+'" style="border:1px solid #1e2530;background:rgba(59,159,212,.03);border-radius:9px;padding:8px;margin-bottom:6px">'+
     '<div style="display:flex;gap:5px;align-items:center;margin-bottom:6px">'+
       '<div style="width:22px;color:#3B9FD4;font-size:12px;font-weight:800;text-align:right">'+(i+1)+'.</div>'+
-      '<input class="ocrRowPre" value="'+xe2(pre)+'" placeholder="PRE" oninput="this.value=this.value.toUpperCase()" onchange="ocrRowAutoForn(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:56px;background:#111;color:#3B9FD4;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;font-weight:700;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:center">'+
-      '<input class="ocrRowCod" value="'+xe2(cod)+'" placeholder="codice" oninput="this.value=this.value.toUpperCase()" onchange="ocrRowAutoForn(this)" onblur="ocrRowAutoForn(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="flex:1;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 8px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;min-width:0">'+
+      '<input class="ocrRowPre" value="'+xe2(pre)+'" placeholder="PRE" oninput="_upcase(this)" onchange="ocrRowAutoForn(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:56px;background:#111;color:#3B9FD4;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;font-weight:700;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:center">'+
+      '<input class="ocrRowCod" value="'+xe2(cod)+'" placeholder="codice" oninput="_upcase(this)" onchange="ocrRowAutoForn(this)" onblur="ocrRowAutoForn(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="flex:1;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 8px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;min-width:0">'+
       '<input class="ocrRowQty" type="number" min="1" value="'+qty+'" title="Quantità" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:44px;background:#111;color:#fff;border:1px solid #2a2a2a;padding:8px 4px;font-size:12px;border-radius:7px;outline:none;font-family:inherit;-webkit-appearance:none;text-align:center">'+
       '<input class="ocrRowPrc" type="number" step="0.01" value="'+(prc===''?'':prc)+'" placeholder="€" title="Prezzo" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="width:64px;background:#111;color:#5BB8E0;border:1px solid #2a2a2a;padding:8px 6px;font-size:12px;border-radius:7px;outline:none;font-family:monospace;-webkit-appearance:none;text-align:right">'+
       '<button type="button" onclick="ocrDelRow(this)" title="Elimina" style="width:26px;height:32px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;padding:0">×</button>'+
     '</div>'+
+    // v35s — Foto pezzo per singola riga: obbligatoria da telefono, poi il PC la
+    //   vede in lista senza doverla rifare (bolla + pezzo sono giá state fatte).
+    '<div class="ocrRowPezzoBox" data-i="'+i+'" style="display:flex;gap:6px;align-items:center;margin-bottom:5px">'+
+      '<button type="button" onclick="ocrPickPezzo(this,'+i+')" style="flex:1;background:var(--bg2);color:'+(a && (a._pezzoPhoto || (window._ocrPezzoPhotos && window._ocrPezzoPhotos[i]))?'#3fbf6f':'#3B9FD4')+';border:1.5px solid '+(a && (a._pezzoPhoto || (window._ocrPezzoPhotos && window._ocrPezzoPhotos[i]))?'#3fbf6f':'#3B9FD4')+';padding:7px 10px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;-webkit-appearance:none;font-family:inherit">'+
+        ((window._ocrPezzoPhotos && window._ocrPezzoPhotos[i])?'✓ Foto pezzo (tocca per sostituire)':'📷 Foto pezzo (obbligatoria)')+
+      '</button>'+
+      '<span class="ocrRowPezzoThumb" data-i="'+i+'">'+
+        ((window._ocrPezzoPhotos && window._ocrPezzoPhotos[i]) ? '<img src="'+xe2(window._ocrPezzoPhotos[i])+'" onclick="openPhotoZoom(this.src,\'Pezzo #'+(i+1)+'\')" style="width:36px;height:36px;object-fit:cover;border-radius:5px;border:1.5px solid #3fbf6f;cursor:zoom-in">' : '')+
+      '</span>'+
+    '</div>'+
     // Riga 2: causale + fornitore (span più largo)
     '<div style="display:grid;grid-template-columns:2fr 1fr;gap:5px;margin-bottom:5px">'+
       '<select class="ocrRowCau" onchange="ocrRowOnCauChange(this);ocrRowFocusNext(this)" style="'+_selCss+'" title="Causale">'+_mkOpts(_cauL, cau, '— causale —')+'</select>'+
-      '<input class="ocrRowForn" value="'+xe2(forn)+'" placeholder="Fornitore" oninput="this.value=this.value.toUpperCase()" onchange="ocrRowRememberForn(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="'+_inpCss+'" title="Fornitore">'+
+      '<input class="ocrRowForn" value="'+xe2(forn)+'" placeholder="Fornitore" oninput="_upcase(this)" onchange="ocrRowRememberForn(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ocrRowFocusNext(this);}" style="'+_inpCss+'" title="Fornitore">'+
     '</div>'+
     // Riga 3: flusso, tipo doc, fase, stato, data acq — griglia flessibile
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:5px">'+
@@ -12234,6 +12353,87 @@ function ocrAddRow(){
   var rows=list.querySelectorAll('.ocrRow'); var last=rows[rows.length-1];
   if(last){ last.scrollIntoView({block:'nearest'}); var c=last.querySelector('.ocrRowCod'); if(c) c.focus(); }
 }
+
+// v35s — Foto pezzo per singola riga OCR. Aggiorna la thumb + pulsante.
+//   La foto viene compressa (800px, JPEG 0.55) e salvata in window._ocrPezzoPhotos[i].
+//   Al confirm applyOcrConfirm la propaga in ogni row inserita come pezzoPhoto.
+window._ocrPezzoPhotos = window._ocrPezzoPhotos || {};
+function ocrPickPezzo(btn, i){
+  var inp = document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.style.display='none';
+  document.body.appendChild(inp);
+  inp.onchange = function(){
+    var f = inp.files && inp.files[0]; if(!f){ inp.remove(); return; }
+    var rd = new FileReader();
+    rd.onload = function(){
+      _imgCompress(rd.result, 800, 0.55).then(function(small){
+        window._ocrPezzoPhotos[i] = small || rd.result;
+        var host = btn.closest('.ocrRowPezzoBox');
+        if(host){
+          host.querySelector('button').style.color='#3fbf6f';
+          host.querySelector('button').style.borderColor='#3fbf6f';
+          host.querySelector('button').textContent='✓ Foto pezzo (tocca per sostituire)';
+          var thumbHost = host.querySelector('.ocrRowPezzoThumb');
+          if(thumbHost){
+            thumbHost.innerHTML='<img src="'+window._ocrPezzoPhotos[i].replace(/"/g,'&quot;')+'" onclick="openPhotoZoom(this.src,\'Pezzo #'+(i+1)+'\')" style="width:36px;height:36px;object-fit:cover;border-radius:5px;border:1.5px solid #3fbf6f;cursor:zoom-in">';
+          }
+        }
+        try{ toast('📷 Foto pezzo #'+(i+1)+' pronta','g'); }catch(e){}
+      });
+      inp.remove();
+    };
+    rd.onerror = function(){ inp.remove(); };
+    rd.readAsDataURL(f);
+  };
+  inp.click();
+}
+
+// v35s — Multi-bolla stesso cliente: apre camera per una nuova bolla,
+//   lancia OCR sulla nuova foto, e MERGIA i nuovi articoli in coda alla
+//   lista corrente (mantiene soggetto/vettore/data-listato invariati).
+function ocrAddAltraBolla(){
+  var inp = document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.style.display='none';
+  document.body.appendChild(inp);
+  inp.onchange = function(){
+    var f = inp.files && inp.files[0]; if(!f){ inp.remove(); return; }
+    if(typeof toast==='function') toast('📄 OCR seconda bolla in corso…','b');
+    // Salvo la lista articoli attuale (con eventuali modifiche utente)
+    var current = (typeof ocrCollectRows==='function') ? ocrCollectRows() : [];
+    var savedSogg = (document.getElementById('ocrSogg')||{}).value||'';
+    var savedVet  = (document.getElementById('ocrVet')||{}).value||'';
+    var savedData = (document.getElementById('ocrData')||{}).value||'';
+    var savedRma  = (document.getElementById('ocrRma')||{}).value||'';
+    var savedNote = (document.getElementById('ocrNote')||{}).value||'';
+    // Chiudo il popup corrente
+    try{ document.getElementById('ocrConfBox').remove(); }catch(e){}
+    // Simulo l'input OCR
+    var fakeInput = { files:[f], value:'' };
+    if(typeof ocrDocument==='function'){
+      // Wrap del showOcrConfirm per intercettare il nuovo risultato e mergiare
+      var origShow = window.showOcrConfirm;
+      window.showOcrConfirm = function(newRes, photoUrl, source){
+        try{
+          var merged = current.slice();
+          (newRes.articoli||[]).forEach(function(a){ merged.push(a); });
+          newRes.articoli = merged;
+          if(savedSogg && !newRes.sogg) newRes.sogg = savedSogg;
+          if(savedVet  && !newRes.vetRic) newRes.vetRic = savedVet;
+          if(savedData && !newRes.data_listato) newRes.data_listato = savedData;
+          if(savedRma  && !newRes.rma) newRes.rma = savedRma;
+          if(savedNote && !newRes.note) newRes.note = savedNote;
+        }catch(e){}
+        window.showOcrConfirm = origShow;
+        return origShow(newRes, photoUrl, source);
+      };
+      inp.remove();
+      ocrDocument(fakeInput);
+    } else {
+      inp.remove();
+    }
+  };
+  inp.click();
+}
 function ocrDelRow(btn){
   var row=btn.closest('.ocrRow'); if(!row) return;
   var list=document.getElementById('ocrArtList'); if(!list) return;
@@ -12288,17 +12488,35 @@ function applyOcrConfirm(allArticles){
   var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
   var sv=function(id,val){ var e=document.getElementById(id); if(e&&val!==''&&val!=null){ e.value=val; if(typeof ce==='function')ce(e); } };
 
-  // Campi comuni: trasferisco al form principale TUTTI i campi obbligatori
-  // v35h — La data letta dalla bolla va nel nuovo campo hBolla (DATA BOLLA),
-  //   NON piu' in hArr (DATA LISTATO). Se hArr e' ancora vuoto la valorizzo
-  //   con la stessa data come default, cosi' chi non ha ancora scelto un
-  //   listato differente ha comunque un valore. Se hArr e' gia' compilato
-  //   non lo sovrascrivo.
-  var data=g('ocrData');
-  if(data && /^\d{4}-\d{2}-\d{2}$/.test(data)){
-    sv('hBolla', data);
-    var _hArr = document.getElementById('hArr');
-    if(_hArr && !(_hArr.value||'').trim()) sv('hArr', data);
+  // v35s — DATA LISTATO (ocrData) = timbro blu Telos → hArr.
+  //         DATA DDT DI RESO (ocrDataDdt) = data emissione bolla → hBolla.
+  //   Se DATA LISTATO e' vuota all'inserimento (l'AI non ha letto il timbro
+  //   blu o e' assente), blocco con popup e chiedo di inserirla manualmente.
+  var dataListato = g('ocrData');
+  var dataDdt = g('ocrDataDdt');
+  if(dataDdt && /^\d{4}-\d{2}-\d{2}$/.test(dataDdt)){
+    sv('hBolla', dataDdt);
+  }
+  if(dataListato && /^\d{4}-\d{2}-\d{2}$/.test(dataListato)){
+    sv('hArr', dataListato);
+  } else if(allArticles){
+    // Fallback: prompt inline nel popup OCR
+    var manual = window.prompt('📅 Inserisci DATA LISTATO (timbro blu Telos)\nFormato: gg/mm/aaaa\n\nEs. per 07/08/2026 → 07/08/2026');
+    if(!manual){
+      toast('⛔ DATA LISTATO obbligatoria: annullato inserimento','r');
+      return;
+    }
+    // Converti gg/mm/aaaa → YYYY-MM-DD
+    var m = String(manual).match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+    if(m){
+      var yy = m[3].length===2 ? ('20'+m[3]) : m[3];
+      dataListato = yy+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);
+      sv('hArr', dataListato);
+      var _od = document.getElementById('ocrData'); if(_od) _od.value = dataListato;
+    } else {
+      toast('⛔ Formato data non valido (usa gg/mm/aaaa)','r');
+      return;
+    }
   }
   // v34q: ocrForn/Cau/Flu/Doc/Fas/Sta rimossi dai comuni — vengono impostati PER RIGA nel loop sotto
   // Soggetto: aggancia codice cliente <-> nome via CLI_DATA (così l'anomalia trova il contatto)
@@ -12425,6 +12643,9 @@ function applyOcrConfirm(allArticles){
       _capturedAddToasts.push({msg:String(msg||''), kind:kind||'b'});
       try{ _origToast(msg, kind); }catch(e){}
     };
+    // v35s — Traccia mapping articolo → chiave riga inserita, per allegare
+    //   la foto pezzo corretta ad ogni riga (window._ocrPezzoPhotos[i] → row[k].pezzoPhoto).
+    var _perRowKey = {};
     for(var i=0;i<articoli.length;i++){
       var a=articoli[i];
       try{ if(a.cod){ CODE_MEM[a.cod]={pre:a.pre, qty:a.qty}; } }catch(e){}
@@ -12444,10 +12665,21 @@ function applyOcrConfirm(allArticles){
       var cEl=document.getElementById('cCod'); if(cEl){cEl.value=a.cod; if(typeof ce==='function')ce(cEl);}
       _set('cQty', a.qty);
       var pEl=document.getElementById('cPrc'); if(pEl) pEl.value=parseFloat(a.prc)||0;
+      // v35s — comunica al successivo addRow la pending foto pezzo per QUESTA riga,
+      //   cosi' addRow puo' saltare il gate "foto obbligatoria" (bolla+pezzo sono presenti).
+      window._pendingPezzoPhoto = (window._ocrPezzoPhotos && window._ocrPezzoPhotos[i]) || '';
       var before=Object.keys(rows).length;
+      var _keysBefore1 = Object.keys(rows||{}).slice();
       if(typeof addRow==='function'){ try{ addRow(); }catch(e){} }
-      if(Object.keys(rows).length>before) added++;
-      else failed.push(i+1);
+      window._pendingPezzoPhoto = '';
+      var _afterKeys = Object.keys(rows||{});
+      if(_afterKeys.length>before){
+        added++;
+        // trova la chiave nuova (differenza)
+        for(var _nk=0;_nk<_afterKeys.length;_nk++){
+          if(_keysBefore1.indexOf(_afterKeys[_nk])<0){ _perRowKey[i] = _afterKeys[_nk]; break; }
+        }
+      } else failed.push(i+1);
     }
     try{ if(typeof saveCodeMem==='function')saveCodeMem(); }catch(e){}
     // Ripristina toast originale
@@ -12456,22 +12688,29 @@ function applyOcrConfirm(allArticles){
     if(added>0){
       var _newKeys = Object.keys(rows||{}).filter(function(k){ return !_keysBefore[k]; });
       try{ if(typeof pushUndoBatch==='function') pushUndoBatch(_newKeys); }catch(e){}
-      // v35r — Allega la foto bolla (compressa ~800px JPEG 0.55) a ogni riga
-      //   appena inserita. Salvata come campo bollaPhoto per la thumbnail in
-      //   LISTA e per il viewer zoomabile. Fallback silenzioso se non pronta.
+      // v35s — Allega la foto bolla (comune a tutte le righe) + la foto pezzo
+      //   (specifica per riga) a ogni record inserito. Foto compressa a
+      //   ~800px JPEG 0.55 per stare tranquilli col quota Firebase.
       try{
         var _bolla = window._ocrBollaThumb || '';
-        if(_bolla && _newKeys.length){
-          _newKeys.forEach(function(k){
-            var r = rows[k]; if(!r) return;
-            r.bollaPhoto = _bolla; r.bollaPhotoTs = Date.now();
-            if(typeof sendMsg==='function'){
-              sendMsg({type:'update', key:k, changes:{bollaPhoto:_bolla, bollaPhotoTs:r.bollaPhotoTs, _lastEdit:deviceName}});
+        _newKeys.forEach(function(k){
+          var r = rows[k]; if(!r) return;
+          var patch = { _lastEdit: deviceName };
+          if(_bolla){ r.bollaPhoto = _bolla; r.bollaPhotoTs = Date.now(); patch.bollaPhoto = _bolla; patch.bollaPhotoTs = r.bollaPhotoTs; }
+          // Trova indice articolo per QUESTA chiave e allega pezzoPhoto se presente
+          for(var _ai in _perRowKey){
+            if(_perRowKey[_ai] === k){
+              var _px = window._ocrPezzoPhotos && window._ocrPezzoPhotos[_ai];
+              if(_px){ r.pezzoPhoto = _px; r.pezzoPhotoTs = Date.now(); patch.pezzoPhoto = _px; patch.pezzoPhotoTs = r.pezzoPhotoTs; }
+              break;
             }
-          });
-        }
+          }
+          if(Object.keys(patch).length > 1 && typeof sendMsg==='function'){
+            sendMsg({type:'update', key:k, changes: patch});
+          }
+        });
       }catch(e){}
-      try{ window._ocrBollaThumb = ''; window._ocrConfPhotoUrl = ''; }catch(e){}
+      try{ window._ocrBollaThumb = ''; window._ocrConfPhotoUrl = ''; window._ocrPezzoPhotos = {}; }catch(e){}
     }
     if(added===articoli.length){
       // v35g — successo pieno: chiudi popup e vai in lista
@@ -13078,7 +13317,7 @@ function admSha256(txt){
   });
 }
 
-// v35r — PBKDF2-SHA256 su PIN admin per bloccare brute-force offline.
+// v35s — PBKDF2-SHA256 su PIN admin per bloccare brute-force offline.
 //   Prima il PIN era SHA-256 nudo (hardcoded nel JS pubblico): con una
 //   wordlist qualsiasi era brute-forceabile in secondi. Ora derivo con
 //   PBKDF2 + salt casuale + 200k iterazioni → cost per tentativo ~50ms.
@@ -13124,7 +13363,7 @@ function admVerify(pin, stored){
   return Promise.resolve(false);
 }
 
-// v35r — Throttle brute-force lato client sul PIN admin.
+// v35s — Throttle brute-force lato client sul PIN admin.
 //   Progressive delay: 500ms dopo il 1° fallito, 1s, 2s, 4s, 8s.
 //   Lockout: dopo 5 fallimenti consecutivi blocco per 5 minuti.
 //   NB: solo mitigazione lato client (l'attaccante determinato userebbe
@@ -14019,7 +14258,7 @@ function admRender_security(){
       '<div style="max-height:340px;overflow-y:auto" id="secModList">Caricamento…</div>' +
     '</div>' +
 
-    // v35r — Bottone per copiare le regole Firebase suggerite da incollare nella Console.
+    // v35s — Bottone per copiare le regole Firebase suggerite da incollare nella Console.
     '<div class="admCard"><h3>🔥 Regole Firebase RTDB suggerite</h3>' +
       '<div class="sub" style="line-height:1.6">Regole hardened da incollare in Firebase Console → Realtime Database → Regole. Bloccano l\'accesso root, aprono ogni sottoalbero solo agli utenti autenticati (anon-auth compreso), validano schema+dimensioni (es. chat foto solo data:image/ o https:// max 400KB), rendono security_log append-only. Vedi anche docs/SECURITY.md.</div>' +
       '<button class="admBtn ok" onclick="admCopyFirebaseRules()" style="margin-top:8px">📋 Copia regole Firebase</button>' +
@@ -14034,7 +14273,7 @@ function admRender_security(){
   return h;
 }
 
-// v35r — Fetch + copy delle regole Firebase suggerite (firebase-rules.json).
+// v35s — Fetch + copy delle regole Firebase suggerite (firebase-rules.json).
 function admCopyFirebaseRules(){
   fetch('firebase-rules.json?ts='+Date.now()).then(function(r){ return r.text(); }).then(function(txt){
     if(!txt) throw new Error('vuoto');
