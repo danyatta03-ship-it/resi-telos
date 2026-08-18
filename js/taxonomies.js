@@ -23,11 +23,14 @@
 // canSeeTabs    = tab principali visibili ('*' = tutti)
 //
 // v34o: SCA (Scanner mobile) + RPC (Ricevimento PC che riceve gli scans)
+// v36f: RIC vede TUTTI i record in reception (canViewOwnOnly:false) — cosi'
+//   RIC/RPC/UFF collaborano sulla stessa coda invece di vedere ognuno "il suo".
+//   UFF vede anche RICEVIMENTO (per prendere in carico record che RIC gli manda).
 var ROLE_PERMS = {
   SCA: { canAdd:false, canDelete:false, canArchive:false, canEditFasi:[],               canViewAll:false, canViewPhases:['*'], canViewOwnOnly:true,  canBulk:false, canAdvanceTo:[],                    canSendBack:false, canSeeTabs:['pgIns'] },
   RPC: { canAdd:true,  canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'],  canViewAll:false, canViewPhases:['*'], canViewOwnOnly:false, canBulk:false, canAdvanceTo:['UFFICIO RESI'],       canSendBack:false, canSeeTabs:['pgIns','pgList'] },
-  RIC: { canAdd:true,  canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'],  canViewAll:false, canViewPhases:['*'], canViewOwnOnly:true,  canBulk:false, canAdvanceTo:['UFFICIO RESI'],       canSendBack:false, canSeeTabs:['pgIns','pgList'] },
-  UFF: { canAdd:true,  canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:false, canViewPhases:['UFFICIO RESI'], canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true,  canSeeTabs:['*'] },
+  RIC: { canAdd:true,  canDelete:false, canArchive:false, canEditFasi:['RICEVIMENTO'],  canViewAll:false, canViewPhases:['*'], canViewOwnOnly:false, canBulk:false, canAdvanceTo:['UFFICIO RESI'],       canSendBack:false, canSeeTabs:['pgIns','pgList'] },
+  UFF: { canAdd:true,  canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:false, canViewPhases:['RICEVIMENTO','UFFICIO RESI'], canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true,  canSeeTabs:['*'] },
   MAG: { canAdd:true,  canDelete:false, canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO'],          canViewAll:false, canViewPhases:['MAGAZZINO'],    canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['UFFICIO RESI','MAGAZZINO','FINALE'],               canSendBack:true,  canSeeTabs:['*'] },
   ADM: { canAdd:true,  canDelete:true,  canArchive:true,  canEditFasi:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canViewAll:true,  canViewPhases:['*'],            canViewOwnOnly:false, canBulk:true,  canAdvanceTo:['RICEVIMENTO','UFFICIO RESI','MAGAZZINO','FINALE'], canSendBack:true,  canSeeTabs:['*'] }
 };

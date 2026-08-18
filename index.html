@@ -1177,7 +1177,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36e · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36f · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1842,7 +1842,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36e</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36f</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -12316,7 +12316,7 @@ function ocrViaAI(dataUrlIn, cb){
     '    ROSSO     → "ANOMALIA" (usa anche flusso_suggerito=ANOMALIA)\n'+
     '    VERDE     → "CARCASSA" (solo carcasse — es. cerchiato/evidenziato in verde)\n'+
     '    GIALLO    → "RENDERE AL FORNITORE" (pezzo da restituire al fornitore)\n'+
-    '    STOCK / merce a magazzino / evidenziazione non riconoscibile → lascia "" (nessun colore, nessuna causale automatica).\n'+
+    '    BLU/AZZURRO → "STOCK MAGAZZINO" (merce da rimettere a stock, non un reso in causale specifica)\n'+
     '    Se nessuna evidenziazione è visibile, lascia "".\n'+
     '  Se identifichi una causale_colore E il campo "causale" testuale è vuoto, valorizza anche "causale" con la stessa.';
   function attempt(extra, timeout, onDone){
@@ -12686,8 +12686,14 @@ function showOcrConfirm(res, photoUrl, source){
 }
 
 // v35v \u2014 Chiudi il modal OCR SENZA salvare, resettando lo stato di bozza.
+// v36f \u2014 Rilascia il soft-lock (_editingBy) sulla bozza se presente.
 function _ocrCancelClose(){
   try{ var b=document.getElementById('ocrConfBox'); if(b) b.remove(); }catch(e){}
+  try{
+    if(window._ocrDraftId && typeof OCR_LIVE_REF!=='undefined' && OCR_LIVE_REF){
+      OCR_LIVE_REF.child(window._ocrDraftId).update({_editingBy:null,_editingTs:null,_editingRole:null}).catch(function(){});
+    }
+  }catch(e){}
   try{
     window._ocrDraftId = null;
     window._ocrDraftIsDraft = false;
@@ -12733,7 +12739,11 @@ function _ocrCancelSaveDraft(){
     sender: (typeof deviceName!=='undefined' && deviceName) || 'RPC',
     _draft: true,
     _draftBy: (typeof deviceName!=='undefined' && deviceName) || 'RPC',
-    _draftTs: Date.now()
+    _draftTs: Date.now(),
+    // v36f — rilascia il soft-lock: il salvataggio bozza chiude la sessione di modifica
+    _editingBy: null,
+    _editingTs: null,
+    _editingRole: null
   };
   try{ if(typeof _ocrLiveInit==='function') _ocrLiveInit(); }catch(e){}
   var id = window._ocrDraftId;
@@ -13351,6 +13361,8 @@ function applyOcrConfirm(allArticles){
     if(added===articoli.length){
       // v35g — successo pieno: chiudi popup e vai in lista
       try{ document.getElementById('ocrConfBox').remove(); }catch(e){}
+      // v36f — rimuovi definitivamente la bozza da ocrLive: record confermato in rows[]
+      try{ if(window._ocrDraftId && typeof OCR_LIVE_REF!=='undefined' && OCR_LIVE_REF){ OCR_LIVE_REF.child(window._ocrDraftId).remove().catch(function(){}); } }catch(e){}
       // v35v — reset stato bozza (non deve piu' comparire nel pannello)
       try{ window._ocrDraftId = null; window._ocrDraftIsDraft = false; }catch(e){}
       gTab('pgIns');
@@ -13358,6 +13370,7 @@ function applyOcrConfirm(allArticles){
     } else if(added>0){
       // Successo parziale: chiudi comunque perche' altre andranno riprocessate
       try{ document.getElementById('ocrConfBox').remove(); }catch(e){}
+      try{ if(window._ocrDraftId && typeof OCR_LIVE_REF!=='undefined' && OCR_LIVE_REF){ OCR_LIVE_REF.child(window._ocrDraftId).remove().catch(function(){}); } }catch(e){}
       try{ window._ocrDraftId = null; window._ocrDraftIsDraft = false; }catch(e){}
       gTab('pgIns');
       toast('⚠ Aggiunti '+added+'/'+articoli.length+' (fallite righe: '+failed.join(', ')+'). Controlla data acq. fornitore, coerenza flusso/documento e permessi.','y');
@@ -14003,15 +14016,15 @@ function admVerify(pin, stored){
 }
 
 // v35u — Throttle brute-force lato client sul PIN admin.
-//   Progressive delay: 500ms dopo il 1° fallito, 1s, 2s, 4s, 8s.
-//   Lockout: dopo 5 fallimenti consecutivi blocco per 5 minuti.
-//   NB: solo mitigazione lato client (l'attaccante determinato userebbe
-//   comunque un brute-force offline; il fix vero e' PBKDF2/argon2 con salt,
-//   tracciato come finding #3 nel report).
-var _ADM_FAILS = 0, _ADM_LOCKED_UNTIL = 0;
+// v36f — Ammorbidito: 10 tentativi (era 5), lockout 2 min (era 5), auto-reset
+//   contatore dopo 2 min di silenzio (era: fails persistenti finche' non
+//   entravi correttamente). L'utente lo trovava troppo aggressivo su mobile
+//   dove sbagliare la digitazione e' facile.
+var _ADM_FAILS = 0, _ADM_LOCKED_UNTIL = 0, _ADM_LAST_FAIL = 0;
 try{
   var _f = parseInt(localStorage.getItem('adm_fails')||'0'); if(!isNaN(_f)) _ADM_FAILS = _f;
   var _l = parseInt(localStorage.getItem('adm_locked_until')||'0'); if(!isNaN(_l)) _ADM_LOCKED_UNTIL = _l;
+  var _lf = parseInt(localStorage.getItem('adm_last_fail')||'0'); if(!isNaN(_lf)) _ADM_LAST_FAIL = _lf;
 }catch(e){}
 
 // Verifica PIN: legge stored (v1 o v2) da FB/localStorage, verifica, e migra
@@ -14020,8 +14033,13 @@ function admCheckPin(input){
   var txt = String(input||'');
   if(txt.length < 8) return Promise.resolve(false); // early skip
   var now = Date.now();
+  // v36f — Auto-reset contatore fail dopo 2 min di inattivita' (era persistente per sempre)
+  if(_ADM_LAST_FAIL && (now - _ADM_LAST_FAIL) > 2*60*1000){
+    _ADM_FAILS = 0;
+    try{ localStorage.removeItem('adm_fails'); localStorage.removeItem('adm_last_fail'); }catch(e){}
+  }
   if(_ADM_LOCKED_UNTIL && now < _ADM_LOCKED_UNTIL){
-    var mins = Math.ceil((_ADM_LOCKED_UNTIL - now)/60000);
+    var mins = Math.max(1, Math.ceil((_ADM_LOCKED_UNTIL - now)/60000));
     if(typeof toast==='function') toast('🔒 Accesso admin bloccato per '+mins+' min (troppi tentativi)','r');
     return Promise.resolve(false);
   }
@@ -14048,13 +14066,19 @@ function admCheckPin(input){
         return true;
       }
       _ADM_FAILS++;
-      var delay = Math.min(8000, 500 * Math.pow(2, _ADM_FAILS-1));
-      if(_ADM_FAILS >= 5){
-        _ADM_LOCKED_UNTIL = Date.now() + 5*60*1000;
+      _ADM_LAST_FAIL = Date.now();
+      // v36f — Progressive delay: 200/400/800/1600/... cap 4s. Piu' rapido su primi errori.
+      var delay = Math.min(4000, 200 * Math.pow(2, _ADM_FAILS-1));
+      // v36f — Lockout ammorbidito: 10 tentativi (era 5), blocco 2 min (era 5).
+      if(_ADM_FAILS >= 10){
+        _ADM_LOCKED_UNTIL = Date.now() + 2*60*1000;
         try{ localStorage.setItem('adm_locked_until', String(_ADM_LOCKED_UNTIL)); }catch(e){}
-        if(typeof toast==='function') toast('🔒 5 tentativi errati — accesso admin bloccato 5 minuti','r');
+        if(typeof toast==='function') toast('🔒 10 tentativi errati — accesso admin bloccato 2 minuti','r');
       }
-      try{ localStorage.setItem('adm_fails', String(_ADM_FAILS)); }catch(e){}
+      try{
+        localStorage.setItem('adm_fails', String(_ADM_FAILS));
+        localStorage.setItem('adm_last_fail', String(_ADM_LAST_FAIL));
+      }catch(e){}
       return new Promise(function(res){ setTimeout(function(){ res(false); }, delay); });
     });
   });
@@ -16056,7 +16080,12 @@ function renderOcrLivePanel(){
     //   sotto in piccolo. Cosi' l'utente riconosce al volo qual e' quale.
     var _draftBadge = _isDraft ? '<span style="background:rgba(240,180,60,.25);color:#8a5a10;border:1.5px solid #f0b43c;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:900;letter-spacing:.5px;white-space:nowrap;flex-shrink:0">📝 BOZZA</span>' : '';
     var _senderIcon = _isDraft ? '💾' : '📱';
-    var _btnMainLbl = _isDraft ? '▶ Riprendi' : '▶ ELABORA';
+    // v36f — Soft-lock: se qualcuno sta modificando questa bozza negli ultimi
+    //   5 min (e non sono io), disabilita il bottone Riprendi e mostra chi ci sta.
+    var _lockActive = !!(r._editingBy && r._editingBy !== deviceName && (Date.now() - (r._editingTs||0)) < 5*60*1000);
+    var _lockBadge = _lockActive ? '<span style="background:rgba(224,85,85,.15);color:#E05555;border:1.5px solid #E05555;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:900;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;margin-right:4px">🔒 '+xe(r._editingBy)+'</span>' : '';
+    var _btnMainLbl = _lockActive ? '🔒 in modifica' : (_isDraft ? '▶ Riprendi' : '▶ ELABORA');
+    var _btnDisabled = _lockActive ? 'disabled style="flex:1;background:#333;color:#888;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:800;cursor:not-allowed;-webkit-appearance:none;font-family:inherit"' : 'style="flex:1;background:'+_bordCol+';color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit"';
     var _soggLine = r.sogg ? '<div style="font-size:14px;font-weight:800;color:'+_bordCol+';margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+xe(r.sogg)+'">👤 '+xe(r.sogg)+'</div>' : '';
     var _rmaLine  = r.rma  ? '<div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:2px;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+xe(r.rma)+'">📄 '+xe(r.rma)+'</div>' : '';
     var _metaLine = '<div style="font-size:10px;color:var(--txt3);margin-bottom:2px">'+_senderIcon+' '+xe(r.sender||'SCA')+' · '+when+(r.forn?' · Forn: '+xe(r.forn):'')+'</div>';
@@ -16069,11 +16098,14 @@ function renderOcrLivePanel(){
             _rmaLine +
             _metaLine +
           '</div>'+
-          _draftBadge +
+          '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">'+
+            _draftBadge +
+            _lockBadge +
+          '</div>'+
         '</div>'+
         '<div style="font-size:10px;color:var(--txt3);margin-bottom:6px">'+nArt+' articoli'+_pezBadge+'</div>'+
         '<div style="display:flex;gap:6px">'+
-          '<button onclick="ocrLiveElabora(\''+xe(k)+'\')" style="flex:1;background:'+_bordCol+';color:#fff;border:none;border-radius:7px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">'+_btnMainLbl+'</button>'+
+          '<button onclick="ocrLiveElabora(\''+xe(k)+'\')" '+_btnDisabled+'>'+_btnMainLbl+'</button>'+
           '<button onclick="ocrLiveScarta(\''+xe(k)+'\')" title="Scarta" style="width:38px;background:rgba(224,85,85,.12);color:#E05555;border:1px solid rgba(224,85,85,.35);border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit">🗑</button>'+
         '</div>'+
       '</div>'+
@@ -16086,11 +16118,28 @@ function renderOcrLivePanel(){
 // RPC: clicca "Elabora" su una scansione in arrivo → riapre showOcrConfirm
 function ocrLiveElabora(id){
   var r = OCR_LIVE_LOCAL[id]; if(!r) return;
+  // v36f — SOFT LOCK: se un altro utente sta gia' modificando questa bozza
+  //   (marker _editingBy + _editingTs valido negli ultimi 5 min), blocca.
+  //   L'utente puo' solo visualizzare finche' l'altro non chiude.
+  var LOCK_MS = 5*60*1000;
+  var now = Date.now();
+  if(r._editingBy && r._editingBy !== deviceName && (now - (r._editingTs||0)) < LOCK_MS){
+    if(typeof toast==='function') toast('🔒 Bozza in modifica da '+r._editingBy+' — attendi che chiuda','y');
+    return;
+  }
   // v35v — Stash l'id per poter risalvare come BOZZA se l'utente clicca Annulla
   window._ocrDraftId = id;
   window._ocrDraftIsDraft = !!r._draft;
-  // Rimuovi da FB per non elaborarla due volte (locking soft)
-  try{ if(OCR_LIVE_REF) OCR_LIVE_REF.child(id).remove(); }catch(e){}
+  // v36f — Segna il lock su FB (non rimuovo piu' la bozza: gli altri la vedono con badge "🔒 in modifica da ME")
+  try{
+    if(OCR_LIVE_REF){
+      OCR_LIVE_REF.child(id).update({
+        _editingBy: deviceName || 'sconosciuto',
+        _editingTs: now,
+        _editingRole: ROLE || ''
+      }).catch(function(){});
+    }
+  }catch(e){}
   // v35u — Ripristina la foto bolla + le foto pezzo per riga inviate dal telefono
   //   cosi' l'UFF al PC le vede senza dover rifare nulla.
   try{
@@ -16134,6 +16183,32 @@ function initOcrLiveAuto(){
 // Aggancio al boot: aspetta FB pronto poi avvia listener se RPC
 setTimeout(initOcrLiveAuto, 2000);
 setInterval(initOcrLiveAuto, 5000);   // safety net per role change runtime
+
+// v36f — Heartbeat lock: mentre il modal OCR e' aperto su una bozza, rinnovo
+//   _editingTs ogni 60s cosi' il soft-lock (5 min) non scade se l'utente sta
+//   lavorando. Se il modal si chiude, il lock viene rilasciato dagli handler
+//   di uscita (_ocrCancelClose / _ocrCancelSaveDraft / applyOcrConfirm success).
+setInterval(function(){
+  try{
+    if(window._ocrDraftId && document.getElementById('ocrConfBox') && typeof OCR_LIVE_REF!=='undefined' && OCR_LIVE_REF){
+      OCR_LIVE_REF.child(window._ocrDraftId).update({
+        _editingBy: deviceName || 'sconosciuto',
+        _editingTs: Date.now(),
+        _editingRole: ROLE || ''
+      }).catch(function(){});
+    }
+  }catch(e){}
+}, 60000);
+
+// v36f — Auto-refresh pannello ogni 30s: cosi' i lock scaduti spariscono dalla
+//   UI anche se nessuno tocca la bozza (nessun evento FB in arrivo).
+setInterval(function(){
+  try{
+    if(typeof _isMode==='function' && _isMode('RPC') && typeof renderOcrLivePanel==='function'){
+      renderOcrLivePanel();
+    }
+  }catch(e){}
+}, 30000);
 
 </script>
 
