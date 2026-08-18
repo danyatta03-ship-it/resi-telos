@@ -1177,7 +1177,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36f · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36g · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1842,7 +1842,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36f</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36g</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -15743,9 +15743,19 @@ function ocrLiveListen(){
       // Filtra scans vecchie (>24h) come pulizia opportunistica
       var now = Date.now();
       var out = {};
+      // v36g — Rilascio i MIEI lock stale (crashato/ricaricato prima di chiudere).
+      //   Se una bozza ha _editingBy === deviceName e IO non ho piu' un modal
+      //   aperto per quella bozza, rilascio subito (non aspetto 5 min).
+      var myOpenDraftId = window._ocrDraftId && document.getElementById('ocrConfBox') ? window._ocrDraftId : null;
       for(var k in v){
         var r = v[k];
         if(r && (now - (r.ts||0)) < 24*3600*1000) out[k] = r;
+        // Cleanup lock proprio se non ho il modal aperto per questo id
+        try{
+          if(r && r._editingBy === deviceName && k !== myOpenDraftId){
+            OCR_LIVE_REF.child(k).update({_editingBy:null,_editingTs:null,_editingRole:null}).catch(function(){});
+          }
+        }catch(e){}
       }
       OCR_LIVE_LOCAL = out;
       renderOcrLivePanel();
