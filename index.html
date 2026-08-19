@@ -142,6 +142,41 @@ html[data-theme="light"] #globalSearchRes [style*="color: #666"]{color:#000!impo
 html[data-theme="light"] #globalSearchRes [style*="color:#3B9FD4"]{color:#0F5F8A!important}
 html[data-theme="light"] #globalSearchRes [style*="color:#5BB8E0"]{color:#0F5F8A!important}
 html[data-theme="light"] #globalSearchRes [style*="color:#d0b370"]{color:#8a6a10!important}
+/* v36h — MAIL PREVIEW modal: fondo bianco + testi neri in light mode.
+   Prima l'inner div aveva background:#111 hardcoded → modal restava nero
+   mentre tutto il resto era bianco. Ora tutti gli elementi del modal
+   ereditano i colori chiari. Textarea/input mantengono bordi visibili. */
+html[data-theme="light"] #mailPrevBox > div{background:#ffffff!important;border:2px solid #3B9FD4!important;color:#000!important}
+html[data-theme="light"] #mailPrevBox *{color:#000!important}
+html[data-theme="light"] #mailPrevBox [style*="color:#3B9FD4"]{color:#0F5F8A!important}
+html[data-theme="light"] #mailPrevBox [style*="color:#2ecc71"]{color:#1e7e3e!important}
+html[data-theme="light"] #mailPrevBox [style*="color:#25D366"]{color:#1a7f43!important}
+html[data-theme="light"] #mailPrevBox [style*="color:#f0b43c"]{color:#8a5a10!important}
+html[data-theme="light"] #mailPrevBox input,
+html[data-theme="light"] #mailPrevBox textarea{background:#ffffff!important;color:#000!important;border:1.5px solid #8b95a1!important;-webkit-text-fill-color:#000!important}
+html[data-theme="light"] #mailPrevBox [style*="background:#1a1a1a"]{background:#ffffff!important}
+html[data-theme="light"] #mailPrevBox [style*="background:#0a1e3a"]{background:rgba(59,159,212,.10)!important}
+html[data-theme="light"] #mailPrevBox [style*="background:#083a1c"]{background:rgba(46,204,113,.10)!important}
+html[data-theme="light"] #mailPrevBox [style*="background:#0a3a2a"]{background:rgba(46,204,113,.10)!important}
+html[data-theme="light"] #mailPrevBox [style*="background:none"]{background:transparent!important}
+/* Pulsante primario Outlook rimane pieno azzurro anche in light */
+html[data-theme="light"] #mailPrevBox button[onclick*="mpOpenOutlook"]{background:#3B9FD4!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
+/* v36h — OCR CONFIRM modal: stesso trattamento — inner nero → bianco. */
+html[data-theme="light"] #ocrConfBox > div{background:#ffffff!important;border:2px solid #3B9FD4!important;color:#000!important}
+html[data-theme="light"] #ocrConfBox *:not(button):not(select){color:#000!important}
+html[data-theme="light"] #ocrConfBox [style*="color:#3B9FD4"]{color:#0F5F8A!important}
+html[data-theme="light"] #ocrConfBox [style*="color:#5BB8E0"]{color:#0F5F8A!important}
+html[data-theme="light"] #ocrConfBox [style*="color:#f0b43c"]{color:#8a5a10!important}
+html[data-theme="light"] #ocrConfBox input,
+html[data-theme="light"] #ocrConfBox select,
+html[data-theme="light"] #ocrConfBox textarea{background:#ffffff!important;color:#000!important;border:1.5px solid #8b95a1!important;-webkit-text-fill-color:#000!important}
+html[data-theme="light"] #ocrConfBox [style*="background:#111"]{background:#ffffff!important}
+html[data-theme="light"] #ocrConfBox [style*="background:#1a1a1a"]{background:#ffffff!important}
+html[data-theme="light"] #ocrConfBox [style*="background:#0a0a0a"]{background:#f2f5f9!important}
+html[data-theme="light"] #ocrConfBox [style*="background:#0a1e3a"]{background:rgba(59,159,212,.10)!important}
+html[data-theme="light"] #ocrConfBox [style*="background:rgba(59,159,212,.03)"]{background:rgba(59,159,212,.06)!important}
+/* Bottone primario submit resta azzurro pieno */
+html[data-theme="light"] #ocrConfBox button[onclick*="applyOcrConfirm(true)"]{background:#3B9FD4!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
 /* Righe articolo in LISTA: bianco con bordo nero, testo nero */
 html[data-theme="light"] .ac{background:#ffffff!important;border:1.5px solid #000!important;color:#000!important}
 html[data-theme="light"] .ac.locked{background:#f5f5f7!important;border-color:#333!important}
@@ -1177,7 +1212,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36g · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36h · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1842,7 +1877,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36g</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36h</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -1877,7 +1912,7 @@ html[data-theme="light"] .btn-anomalia{
       <div style="font-size:9px;color:#777;letter-spacing:1px;font-weight:700;margin-bottom:6px">CREA NUOVA UBICAZIONE</div>
       <div style="display:flex;gap:8px">
         <input id="locNameInput" placeholder="es. SCAFFALE-A1, CASSETTO-B3..." style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;outline:none;font-family:inherit;-webkit-appearance:none;text-transform:uppercase">
-        <button onclick="createLocation()" style="background:#3d1800;color:#3B9FD4;border:2px solid #3B9FD4;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit;flex-shrink:0">&#43;</button>
+        <button onclick="createUbi()" style="background:#3d1800;color:#3B9FD4;border:2px solid #3B9FD4;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit;flex-shrink:0">&#43;</button>
       </div>
     </div>
     <div id="locList"></div>
@@ -7880,10 +7915,8 @@ function deleteAno(id){
 // SCANNER — MEMORIA + UBICAZIONI
 // ════════════════════════════════════════════════════════
 
-function loadCodeMem(){ try{CODE_MEM=JSON.parse(localStorage.getItem('codemem')||'{}');}catch(e){CODE_MEM={};} }
-function saveCodeMem(){ try{localStorage.setItem('codemem',JSON.stringify(CODE_MEM));}catch(e){} }
-
-
+// v36h — Rimossi duplicati loadCodeMem/saveCodeMem: la seconda coppia poco
+//   piu' avanti include il sync Firebase (v36e). Qui restava una copia morta.
 
 
 
