@@ -58,6 +58,21 @@
 @font-face{font-family:'Inter';font-style:normal;font-weight:700;font-display:swap;src:url('fonts/Inter-700.woff2') format('woff2')}
 @font-face{font-family:'Inter';font-style:normal;font-weight:800;font-display:swap;src:url('fonts/Inter-800.woff2') format('woff2')}
 :root{--bg:#080808;--bg1:#111111;--bg2:#1a1a1a;--bg3:#222222;--brd:#2a2a2a;--brd2:#333333;--txt:#FFFFFF;--txt2:#E0E0E0;--txt3:#999999;--grn:#3B9FD4;--grn2:#2980B9;--blu:#3B9FD4;--red:#E05555;--yel:#5BB8E0;--ora:#3B9FD4;--pur:#E0E0E0;--rad:10px;--rad2:7px}
+/* v36i — QUALITY FLOOR a11y (frontend-design skill).
+   1) Focus visibile solo per navigazione tastiera (Tab), non su click mouse.
+      Contorno azzurro Telos ben visibile sia dark che light.
+   2) prefers-reduced-motion: disabilita transizioni non essenziali per chi ha
+      vertigini/motion sickness. Le funzioni essenziali (pinch zoom foto,
+      drag del crop) restano — sono interazione utente, non decorazione. */
+:where(button,input,select,textarea,a,[role="button"]):focus-visible{
+  outline:2.5px solid #3B9FD4;outline-offset:2px;border-radius:6px;
+}
+html[data-theme="light"] :where(button,input,select,textarea,a,[role="button"]):focus-visible{
+  outline-color:#0F5F8A;
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:0.001ms!important;animation-iteration-count:1!important;transition-duration:0.001ms!important;scroll-behavior:auto!important}
+}
 /* PC/tablet largo: alzo la luminosita' e il contrasto — su monitor grandi il tema mobile molto scuro risulta smorto. Sotto 900px resta come prima (mobile). */
 @media (min-width:900px){:root{--bg:#101015;--bg1:#1a1a20;--bg2:#26262e;--bg3:#2f2f36;--brd:#3e3e46;--brd2:#4a4a54;--txt:#FFFFFF;--txt2:#F0F0F0;--txt3:#B8B8C0;--blu:#4FB0E5;--yel:#7ACAE8}}
 /* v34d LIGHT THEME — attivato con html[data-theme="light"] (default resta dark).
@@ -1212,7 +1227,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36h · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36i · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1877,7 +1892,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36h</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36i</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -3036,11 +3051,36 @@ function addRow() {
   } else {
     // v35v — cDatAcqForn NON piu' mandatorio all'insert (il RIC/UFF non ce l'ha
     //   sempre). Il gate rimane su transizione UFF→MAGAZZINO in svEdit.
-    var checks=[{id:'hArr',v:datArr},{id:'hVet',v:vetRic},{id:'cCod',v:cod},{id:'cFor',v:forno},{id:'cCau',v:causale},{id:'cFas',v:fase},{id:'cSta',v:stato}];
-    checks.push({id:'cDoc',v:gv('cDoc')});
-    var ok=true,fe=null;
-    for(var i=0;i<checks.length;i++){if(!checks[i].v){var el=document.getElementById(checks[i].id);if(el){el.classList.add('err');if(!fe)fe=el;}ok=false;}}
-    if(!ok){toast('Campi obbligatori mancanti','r');if(fe)fe.scrollIntoView({behavior:'smooth',block:'center'});return;}
+    // v36i — Label leggibili per l'utente, non nomi tecnici id-based
+    var checks=[
+      {id:'hArr',v:datArr,       label:'DATA LISTATO'},
+      {id:'hVet',v:vetRic,       label:'VETTORE RICEVIMENTO'},
+      {id:'cCod',v:cod,          label:'CODICE ARTICOLO'},
+      {id:'cFor',v:forno,        label:'FORNITORE'},
+      {id:'cCau',v:causale,      label:'CAUSALE'},
+      {id:'cFas',v:fase,         label:'FASE'},
+      {id:'cSta',v:stato,        label:'STATO'}
+    ];
+    checks.push({id:'cDoc',v:gv('cDoc'),label:'TIPO DOC'});
+    var ok=true,fe=null,missing=[];
+    for(var i=0;i<checks.length;i++){
+      if(!checks[i].v){
+        var el=document.getElementById(checks[i].id);
+        if(el){el.classList.add('err');if(!fe)fe=el;}
+        missing.push(checks[i].label);
+        ok=false;
+      }
+    }
+    if(!ok){
+      // v36i — Copy failure = direzione: dico ESATTAMENTE quali campi mancano,
+      //   non il generico "Campi obbligatori mancanti". L'utente sa dove guardare.
+      var msg = missing.length===1
+        ? '⛔ Manca il campo: '+missing[0]
+        : '⛔ Mancano '+missing.length+' campi: '+missing.join(' · ');
+      toast(msg,'r');
+      if(fe)fe.scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
   }
   // ── Regole di coerenza ──
   var _anoV=gv('cAno'), _fluV=gv('cFlu'), _docV=gv('cDoc');
