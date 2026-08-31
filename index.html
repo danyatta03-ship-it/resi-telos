@@ -1227,7 +1227,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36m · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36n · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1892,7 +1892,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36m</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36n</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -11706,6 +11706,19 @@ function aiComplete(parts, cb, opts){
   opts=opts||{};
   var variants=aiVariants();
   if(!variants.length){ cb(null,'AI non configurata (vedi ocr-config.js)'); return; }
+  // v36n — opts.model: modello PREFERITO per questa chiamata (es. gemini-2.5-flash
+  //   per l'OCR di precisione, molto piu' accurato del flash-lite di default).
+  //   Prepende le varianti col modello richiesto MANTENENDO come fallback quelle
+  //   originali: se il modello forte e' esaurito/non disponibile si ripiega sul resto.
+  if(opts.model){
+    var _pref=[];
+    for(var _pi=0;_pi<variants.length;_pi++){
+      if(variants[_pi].model===opts.model) continue;
+      var _cv={}; for(var _ck in variants[_pi]) _cv[_ck]=variants[_pi][_ck];
+      _cv.model=opts.model; _pref.push(_cv);
+    }
+    if(_pref.length) variants=_pref.concat(variants);
+  }
   var idx=0, lastErr='', quotaHit=false;
   var maxTry=Math.min(variants.length, opts.maxAttempts||variants.length);
   function tryNext(){
@@ -12368,13 +12381,79 @@ function _ocrDownscale(dataUrl, maxSide, quality){
     }catch(e){ resolve(dataUrl); }
   });
 }
+// v36n — MODELLO OCR: gemini-2.5-flash (non "lite"). Il flash-lite di default e'
+//   il modello piu' economico e sbaglia sistematicamente la grafia corsiva e i
+//   codici piccoli. Per l'OCR delle bolle usiamo il modello pieno; se non e'
+//   disponibile o e' a quota, aiComplete ripiega automaticamente sul resto.
+var OCR_AI_MODEL = 'gemini-2.5-flash';
+
+// v36n — Chiave di identita' di un articolo, per fondere due letture della stessa
+//   bolla senza duplicare le righe gia' viste.
+//   L'identita' e' il CODICE (+ qta e prezzo, che distinguono due righe realmente
+//   diverse con lo stesso codice). La MARCA e' volutamente ESCLUSA dalla chiave:
+//   capita spesso che una passata legga "C1" senza marca e l'altra "BOS C1" — e'
+//   la stessa riga, e includendo il pre finirebbe contata due volte.
+//   Il pre viene comunque recuperato da _ocrArtScore, che a parita' di chiave
+//   tiene la lettura piu' completa.
+function _ocrArtKey(a){
+  if(!a) return '';
+  var c=(a.cod||'').toString().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  var p=(a.pre||'').toString().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  var q=(a.qty||'').toString().replace(/[^0-9]/g,'');
+  var pr=(a.prc||'').toString().replace(/[^0-9.]/g,'');
+  if(c) return 'C|'+c+'|'+q+'|'+pr;
+  if(p) return 'P|'+p+'|'+q+'|'+pr;   // riga senza codice: ripiego sulla marca
+  return '';
+}
+// Quanto e' "completa" una lettura di articolo: a parita' di chiave tengo la migliore.
+function _ocrArtScore(a){
+  var s=0; if(a&&a.cod)s+=3; if(a&&a.pre)s+=2; if(a&&a.desc)s+=1; if(a&&a.prc)s+=1; return s;
+}
+// Unione di due liste articoli, deduplicata. Preserva l'ordine della prima lettura
+// e accoda in fondo le righe che solo la seconda ha visto.
+function _ocrMergeArticoli(listA, listB){
+  var out=[], seen={};
+  function push(a){
+    var k=_ocrArtKey(a); if(!k) return;
+    if(seen[k]!=null){
+      if(_ocrArtScore(a)>_ocrArtScore(out[seen[k]])) out[seen[k]]=a;
+      return;
+    }
+    seen[k]=out.length; out.push(a);
+  }
+  (listA||[]).forEach(push); (listB||[]).forEach(push);
+  return out;
+}
+// v36n — Sceglie il risultato migliore fra due passate.
+//   L'unione viene usata SOLO se avvicina al totale che l'AI stessa ha dichiarato
+//   e senza mai superarlo: cosi' recuperiamo le righe saltate senza il rischio di
+//   inventare doppioni (es. stesso codice letto "KDF034" e "KDFO34" nelle due passate).
+function _ocrPickBest(resA, resB, target){
+  var la=(resA&&resA.articoli&&resA.articoli.length)||0;
+  var lb=(resB&&resB.articoli&&resB.articoli.length)||0;
+  if(!lb) return resA;
+  if(!la) return resB;
+  if(target>0 && (la<target || lb<target)){
+    var merged=_ocrMergeArticoli(resA.articoli, resB.articoli);
+    if(merged.length>Math.max(la,lb) && merged.length<=target){
+      var base=(lb>=la)?resB:resA, out={};
+      for(var k in base) out[k]=base[k];
+      out.articoli=merged;
+      return out;
+    }
+  }
+  return (lb>la)?resB:resA;
+}
 function ocrViaAI(dataUrlIn, cb){
   var cfg=ocrAIConfig();
   if(!cfg||!cfg.endpoint){ cb(null); return; }
   ocrSetLoading('AI: preparo immagine…');
-  _ocrDownscale(dataUrlIn, 1400, 0.75).then(function(dataUrl){
+  // v36n — ALTA RISOLUZIONE: 2200px @ q0.90 (prima 1400px @ q0.75). Sulle bolle di
+  //   reso i codici sono scritti a mano e piccoli: a 1400/0.75 il JPEG li impastava
+  //   e l'AI ne perdeva 2-3 su 25. Upload piu' pesante, compensato da timeout piu' lunghi.
+  _ocrDownscale(dataUrlIn, 2200, 0.90).then(function(dataUrl){
   ocrSetLoading('AI: analisi bolla…');
-  var basePrompt='Sei un esperto nella lettura di bolle/DDT italiani di reso merce, spesso COMPILATI A MANO IN CORSIVO (a volte con righe evidenziate). PRIMA DI TUTTO verifica che l\'immagine contenga DAVVERO un documento di trasporto/bolla/fattura con del testo: se non c\'è alcun documento (un tavolo, un oggetto qualunque, una foto senza testo leggibile) rispondi SOLO {"nessun_documento": true} e nient\'altro. NON INVENTARE MAI nulla: trascrivi esclusivamente ciò che è scritto e leggibile nell\'immagine; un campo non presente resta stringa vuota; in caso di dubbio sull\'esistenza stessa del documento rispondi {"nessun_documento": true}. L\'azienda stampata in ALTO (mittente) è il CLIENTE che restituisce i pezzi: mettila in "soggetto". Il destinatario è sempre TELOS: ignoralo.\n\nREGOLE FONDAMENTALI (le più importanti):\n1) LA BOLLA CONTIENE QUASI SEMPRE PIÙ ARTICOLI (2, 3, 5, anche 10+, spesso 15-25 su bolle grandi): uno per BLOCCO di righe. Devi estrarli TUTTI, uno per uno, nell\'ordine in cui compaiono dall\'alto in basso. NON fermarti mai al primo. Scorri attentamente TUTTA la tabella articoli fino alla fine, comprese le righe scritte a mano piccole o parzialmente coperte.\n\n   PROCEDURA OBBLIGATORIA DI COMPLETEZZA (v36l potenziata — la precisione è tutto):\n   a) PRIMA DI TUTTO conta VISIVAMENTE ogni riga nella tabella articoli della bolla. Scorri dall\'ALTO IN BASSO, comprese righe in fondo pagina, scritte a mano piccole, cerchiate, evidenziate, quantità frazione (0.5, 1.5). CONTA OGNI SINGOLA. Chiamalo N.\n   b) Se la bolla stampata mostra "TOTALE RIGHE" / "N. ARTICOLI" / "QTA TOTALE" / "TOTALE PZ.", confermalo: dovrebbe essere N.\n   c) Se N > 15, FERMATI e RICONTAGLI di nuovo. Le bolle grandi saltano articoli frequentemente.\n   d) Compila l\'array "articoli" con ESATTAMENTE N elementi, uno per riga, ordine top-bottom. NON fondere righe. NON saltare righe scritte a matita / piccole / abbreviate.\n   e) VERIFICA FINALE prima di rispondere: RICONTAGLI l\'array. Se lunghezza ≠ N, STOP. Torna a leggere le righe mancanti. INCLUDI TUTTE, anche parziali.\n   f) Se una riga è parzialmente illeggibile (quantità sì, codice no; descrizione sì, prezzo no), includila comunque: pre="", cod="", quantita=quello che leggi. Una riga incompleta > perdere una riga.\n   g) ATTENZIONE SPECIALE: righe a matita (sfumate), fondo pagina, quantità frazione (0.5, 1.5), descrizione abbreviata (sigla+numero), righe "N.B." / "NOTE" / "VEDI RETRO" — sono ARTICOLI da includere.\n2) Ogni articolo di solito ha: quantità (es. "1" oppure "Ø1"), descrizione, sigla marca (es. NGK, BIR, FAU, VAL, KET, BKS, DPH, MAL) e un CODICE tra parentesi o accanto alla descrizione: quello è il codice articolo.\n   IMPORTANTISSIMO — DUE COLONNE SEPARATE: molte bolle mostrano su ogni riga\n   PRIMA la sigla MARCA/pre (SEMPRE ESATTAMENTE 3 LETTERE, es. KET, BKS, CAR, DPH, MAL, NGK, BOS, VAL, CAT, FAU)\n   e POI il CODICE ARTICOLO completo.\n   REGOLA TASSATIVA SULLA SIGLA MARCA: e\' SEMPRE lunga esattamente 3 caratteri.\n   Mai 2, mai 4, mai 5. Se non riesci a leggere UNA sigla di ESATTAMENTE 3 caratteri\n   con certezza, lascia "pre" come stringa vuota "" — la memoria del sistema o\n   l\'operatore la aggiungeranno dopo. NON tentare mai di indovinare o allungare a 4/5 (che a sua volta e\' spesso una miscela di\n   lettere+numeri+trattini: es. KDF034, KPF052, SGM0009R, CAR-BKS-SGM0009,\n   TA1030, 48244KLR). Il CODICE va copiato INTERO cosi\' come appare, SENZA\n   spezzarlo al confine lettera/numero.\n   Esempio corretto: la riga "KET KDF034 DISCO FRENO..." va estratta come\n   pre="KET", codice="KDF034" (NON pre="KDF", codice="034").\n   Esempio corretto: "BKS SGM0009R RIG.SCAT..." → pre="BKS", codice="SGM0009R".\n   Esempio corretto: "MAL 48244KLR KIT CUFF..." → pre="MAL", codice="48244KLR".\n   Se leggi una riga con DUE token alfanumerici prima della descrizione,\n   il PRIMO (piu\' corto, tipicamente 2-4 lettere pure) e\' sempre la MARCA/pre;\n   il SECONDO e\' il CODICE completo — non spezzarlo mai in "prefisso alfa" +\n   "suffisso numerico".\n3) Le righe che iniziano con "RIF." / "RIF.BL" / "RIF.BOLLA" seguite da numero e data sono il RIFERIMENTO alla bolla di consegna originaria dell\'articolo che le precede: mettile nel campo "riferimento" di QUELL\'articolo, NON sono codici articolo.\n4) Sul corsivo ambiguo scegli l\'interpretazione più plausibile per un codice ricambi (cifre e lettere maiuscole).\n\n5) TIMBRI ANOMALIA — LEGGI CON PRUDENZA (default: NON e\' anomalia):\n   Le bolle di reso NORMALI non hanno anomalie. Un\'anomalia esiste SOLO quando c\'e\' un ELEMENTO GRAFICO DISTINTO E VISIBILE sulla bolla che segnala esplicitamente un problema di ricevimento. Esempi VALIDI:\n     - Un TIMBRO A INCHIOSTRO con la parola "ANOMALIA" (caratteri grossi, spesso rossi/blu, con riquadro o cerchio)\n     - Un\'ETICHETTA ADESIVA rossa/gialla appiccicata sopra la bolla ("RIFIUTATO", "NON CONFORME", "PACCO APERTO", "DANNEGGIATO IN TRASPORTO")\n     - Una SCRITTA A MANO CERCHIATA / SOTTOLINEATA / IN EVIDENZIATORE che dice esplicitamente "ANOMALIA" (non semplici note del compilatore)\n     - Una GRANDE X ROSSA o FRECCIA disegnata sopra la bolla che punta a un problema\n\n   Cosa NON e\' un\'anomalia (non attivare mai il flag per queste):\n     - "CARCASSA", "OLD CORE", "CARCASSA DA RIGENERARE" → sono causali di reso normali (restituzione core)\n     - "USATO", "MONTATO", "SMONTATO" nel testo (spesso descrivono lo stato normale del pezzo reso in garanzia)\n     - "GARANZIA", "DIFETTOSO" scritti come CAUSALE di reso (colonna causale del DDT) — NON sono anomalie di ricevimento\n     - "SPORCO", "ROTTO" citati in una descrizione articolo o in un modulo garanzia standard\n     - Descrizioni tecniche di pezzi (candela usata, filtro sporco, ecc.)\n     - Testo stampato tipografico del template della bolla\n\n   Regola d\'oro: se non c\'e\' un timbro/etichetta/scritta GRAFICAMENTE EVIDENTE aggiunta DOPO la stampa della bolla e riferita al ricevimento (non al pezzo), allora anomalia_rilevata=false.\n\n   Se trovi un timbro/etichetta valida:\n     "flusso_suggerito": "ANOMALIA"\n     "anomalia_rilevata": true\n     "motivo_anomalia": "<trascrivi solo il testo del timbro/etichetta>"\n   In tutti gli altri casi (99% delle bolle):\n     "flusso_suggerito": "STANDARD"\n     "anomalia_rilevata": false\n     "motivo_anomalia": ""\n\n6) DATA LISTATO (timbro blu Telos) — CAMPO SEPARATO "data_listato":\n   Cerca un TIMBRO BLU a inchiostro (rettangolare o senza cornice) con SOLO una DATA scritta dentro (formato "07 AGO. 2026" oppure "07/08/2026" oppure "7-8-2026"). Questo timbro viene apposto dall\'ufficio ricevimento Telos quando registra la bolla. La data letta dal timbro va nel campo "data_listato" in formato ISO YYYY-MM-DD (es. "2026-08-07"). Se NON c\'e\' un timbro blu con data, lascia "data_listato" come stringa vuota — NON metterci la data dell\'intestazione del DDT, e NON metterci la data di oggi.\n\n   Il campo "data" invece resta la data STAMPATA nell\'intestazione del DDT (top-right, formato del template del cliente): questa e\' la data di emissione della bolla lato cliente.\n\nRispondi SOLO con JSON valido, senza testo extra prima o dopo, con la stessa struttura di questo ESEMPIO (che ha 3 articoli, per ricordarti che devi elencarli TUTTI):\n{\n  "numero_documento": "BL/TRA/44321",\n  "data": "17/05/2026",\n  "data_listato": "2026-08-07",\n  "soggetto": "AUTOFFICINA ROSSI SNC",\n  "vettore": "CIPI",\n  "causale": "GARANZIA",\n  "flusso_suggerito": "STANDARD",\n  "anomalia_rilevata": false,\n  "motivo_anomalia": "",\n  "articoli": [\n    {"pre":"KET","codice":"KDF034","descrizione":"DISCO FRENO ANT/POST","quantita":"2","prezzo":"11.40","riferimento":""},\n    {"pre":"BOS","codice":"0986444981","descrizione":"BOBINA ACCENSIONE","quantita":"1","prezzo":"58.00","riferimento":"RIF.BL/STD/2211 12/03/26"},\n    {"pre":"MAL","codice":"48244KLR","descrizione":"KIT CUFF.RUOTA","quantita":"1","prezzo":"13.24","riferimento":""}\n  ]\n}\n\nI campi mancanti devono essere stringa vuota. Se la bolla ha 1 solo articolo, l\'array avrà 1 elemento; se ne ha 8, l\'array avrà 8 elementi. Non riassumere, non raggruppare, non fondere righe diverse in una sola.';
+  var basePrompt='Sei un esperto nella lettura di bolle/DDT italiani di reso merce, spesso COMPILATI A MANO IN CORSIVO (a volte con righe evidenziate). PRIMA DI TUTTO verifica che l\'immagine contenga DAVVERO un documento di trasporto/bolla/fattura con del testo: se non c\'è alcun documento (un tavolo, un oggetto qualunque, una foto senza testo leggibile) rispondi SOLO {"nessun_documento": true} e nient\'altro. NON INVENTARE MAI nulla: trascrivi esclusivamente ciò che è scritto e leggibile nell\'immagine; un campo non presente resta stringa vuota; in caso di dubbio sull\'esistenza stessa del documento rispondi {"nessun_documento": true}. L\'azienda stampata in ALTO (mittente) è il CLIENTE che restituisce i pezzi: mettila in "soggetto". Il destinatario è sempre TELOS: ignoralo.\n\nREGOLE FONDAMENTALI (le più importanti):\n1) LA BOLLA CONTIENE QUASI SEMPRE PIÙ ARTICOLI (2, 3, 5, anche 10+, spesso 15-25 su bolle grandi): uno per BLOCCO di righe. Devi estrarli TUTTI, uno per uno, nell\'ordine in cui compaiono dall\'alto in basso. NON fermarti mai al primo. Scorri attentamente TUTTA la tabella articoli fino alla fine, comprese le righe scritte a mano piccole o parzialmente coperte.\n\n   PROCEDURA OBBLIGATORIA DI COMPLETEZZA (v36l potenziata — la precisione è tutto):\n   a) PRIMA DI TUTTO conta VISIVAMENTE ogni riga nella tabella articoli della bolla. Scorri dall\'ALTO IN BASSO, comprese righe in fondo pagina, scritte a mano piccole, cerchiate, evidenziate, quantità frazione (0.5, 1.5). CONTA OGNI SINGOLA. Chiamalo N.\n   b) Se la bolla stampata mostra "TOTALE RIGHE" / "N. ARTICOLI" / "QTA TOTALE" / "TOTALE PZ.", confermalo: dovrebbe essere N.\n   c) Se N > 15, FERMATI e RICONTAGLI di nuovo. Le bolle grandi saltano articoli frequentemente.\n   d) Compila l\'array "articoli" con ESATTAMENTE N elementi, uno per riga, ordine top-bottom. NON fondere righe. NON saltare righe scritte a matita / piccole / abbreviate.\n   e) VERIFICA FINALE prima di rispondere: RICONTAGLI l\'array. Se lunghezza ≠ N, STOP. Torna a leggere le righe mancanti. INCLUDI TUTTE, anche parziali.\n   e-bis) OBBLIGATORIO — scrivi N nel campo "totale_righe_contate" del JSON. Questo campo e\' il tuo conteggio VISIVO delle righe presenti sulla bolla, NON la lunghezza dell\'array. Se vedi 25 righe ma riesci a trascriverne solo 23, scrivi comunque 25: e\' fondamentale per sapere quante ne mancano. Non lasciarlo mai a 0 se la bolla ha articoli.\n   f) Se una riga è parzialmente illeggibile (quantità sì, codice no; descrizione sì, prezzo no), includila comunque: pre="", cod="", quantita=quello che leggi. Una riga incompleta > perdere una riga.\n   g) ATTENZIONE SPECIALE: righe a matita (sfumate), fondo pagina, quantità frazione (0.5, 1.5), descrizione abbreviata (sigla+numero), righe "N.B." / "NOTE" / "VEDI RETRO" — sono ARTICOLI da includere.\n2) Ogni articolo di solito ha: quantità (es. "1" oppure "Ø1"), descrizione, sigla marca (es. NGK, BIR, FAU, VAL, KET, BKS, DPH, MAL) e un CODICE tra parentesi o accanto alla descrizione: quello è il codice articolo.\n   IMPORTANTISSIMO — DUE COLONNE SEPARATE: molte bolle mostrano su ogni riga\n   PRIMA la sigla MARCA/pre (SEMPRE ESATTAMENTE 3 LETTERE, es. KET, BKS, CAR, DPH, MAL, NGK, BOS, VAL, CAT, FAU)\n   e POI il CODICE ARTICOLO completo.\n   REGOLA TASSATIVA SULLA SIGLA MARCA: e\' SEMPRE lunga esattamente 3 caratteri.\n   Mai 2, mai 4, mai 5. Se non riesci a leggere UNA sigla di ESATTAMENTE 3 caratteri\n   con certezza, lascia "pre" come stringa vuota "" — la memoria del sistema o\n   l\'operatore la aggiungeranno dopo. NON tentare mai di indovinare o allungare a 4/5 (che a sua volta e\' spesso una miscela di\n   lettere+numeri+trattini: es. KDF034, KPF052, SGM0009R, CAR-BKS-SGM0009,\n   TA1030, 48244KLR). Il CODICE va copiato INTERO cosi\' come appare, SENZA\n   spezzarlo al confine lettera/numero.\n   Esempio corretto: la riga "KET KDF034 DISCO FRENO..." va estratta come\n   pre="KET", codice="KDF034" (NON pre="KDF", codice="034").\n   Esempio corretto: "BKS SGM0009R RIG.SCAT..." → pre="BKS", codice="SGM0009R".\n   Esempio corretto: "MAL 48244KLR KIT CUFF..." → pre="MAL", codice="48244KLR".\n   Se leggi una riga con DUE token alfanumerici prima della descrizione,\n   il PRIMO (piu\' corto, tipicamente 2-4 lettere pure) e\' sempre la MARCA/pre;\n   il SECONDO e\' il CODICE completo — non spezzarlo mai in "prefisso alfa" +\n   "suffisso numerico".\n3) Le righe che iniziano con "RIF." / "RIF.BL" / "RIF.BOLLA" seguite da numero e data sono il RIFERIMENTO alla bolla di consegna originaria dell\'articolo che le precede: mettile nel campo "riferimento" di QUELL\'articolo, NON sono codici articolo.\n4) Sul corsivo ambiguo scegli l\'interpretazione più plausibile per un codice ricambi (cifre e lettere maiuscole).\n\n5) TIMBRI ANOMALIA — LEGGI CON PRUDENZA (default: NON e\' anomalia):\n   Le bolle di reso NORMALI non hanno anomalie. Un\'anomalia esiste SOLO quando c\'e\' un ELEMENTO GRAFICO DISTINTO E VISIBILE sulla bolla che segnala esplicitamente un problema di ricevimento. Esempi VALIDI:\n     - Un TIMBRO A INCHIOSTRO con la parola "ANOMALIA" (caratteri grossi, spesso rossi/blu, con riquadro o cerchio)\n     - Un\'ETICHETTA ADESIVA rossa/gialla appiccicata sopra la bolla ("RIFIUTATO", "NON CONFORME", "PACCO APERTO", "DANNEGGIATO IN TRASPORTO")\n     - Una SCRITTA A MANO CERCHIATA / SOTTOLINEATA / IN EVIDENZIATORE che dice esplicitamente "ANOMALIA" (non semplici note del compilatore)\n     - Una GRANDE X ROSSA o FRECCIA disegnata sopra la bolla che punta a un problema\n\n   Cosa NON e\' un\'anomalia (non attivare mai il flag per queste):\n     - "CARCASSA", "OLD CORE", "CARCASSA DA RIGENERARE" → sono causali di reso normali (restituzione core)\n     - "USATO", "MONTATO", "SMONTATO" nel testo (spesso descrivono lo stato normale del pezzo reso in garanzia)\n     - "GARANZIA", "DIFETTOSO" scritti come CAUSALE di reso (colonna causale del DDT) — NON sono anomalie di ricevimento\n     - "SPORCO", "ROTTO" citati in una descrizione articolo o in un modulo garanzia standard\n     - Descrizioni tecniche di pezzi (candela usata, filtro sporco, ecc.)\n     - Testo stampato tipografico del template della bolla\n\n   Regola d\'oro: se non c\'e\' un timbro/etichetta/scritta GRAFICAMENTE EVIDENTE aggiunta DOPO la stampa della bolla e riferita al ricevimento (non al pezzo), allora anomalia_rilevata=false.\n\n   Se trovi un timbro/etichetta valida:\n     "flusso_suggerito": "ANOMALIA"\n     "anomalia_rilevata": true\n     "motivo_anomalia": "<trascrivi solo il testo del timbro/etichetta>"\n   In tutti gli altri casi (99% delle bolle):\n     "flusso_suggerito": "STANDARD"\n     "anomalia_rilevata": false\n     "motivo_anomalia": ""\n\n6) DATA LISTATO (timbro blu Telos) — CAMPO SEPARATO "data_listato":\n   Cerca un TIMBRO BLU a inchiostro (rettangolare o senza cornice) con SOLO una DATA scritta dentro (formato "07 AGO. 2026" oppure "07/08/2026" oppure "7-8-2026"). Questo timbro viene apposto dall\'ufficio ricevimento Telos quando registra la bolla. La data letta dal timbro va nel campo "data_listato" in formato ISO YYYY-MM-DD (es. "2026-08-07"). Se NON c\'e\' un timbro blu con data, lascia "data_listato" come stringa vuota — NON metterci la data dell\'intestazione del DDT, e NON metterci la data di oggi.\n\n   Il campo "data" invece resta la data STAMPATA nell\'intestazione del DDT (top-right, formato del template del cliente): questa e\' la data di emissione della bolla lato cliente.\n\nRispondi SOLO con JSON valido, senza testo extra prima o dopo, con la stessa struttura di questo ESEMPIO (che ha 3 articoli, per ricordarti che devi elencarli TUTTI):\n{\n  "numero_documento": "BL/TRA/44321",\n  "data": "17/05/2026",\n  "data_listato": "2026-08-07",\n  "soggetto": "AUTOFFICINA ROSSI SNC",\n  "vettore": "CIPI",\n  "causale": "GARANZIA",\n  "flusso_suggerito": "STANDARD",\n  "anomalia_rilevata": false,\n  "motivo_anomalia": "",\n  "totale_righe_contate": 3,\n  "articoli": [\n    {"pre":"KET","codice":"KDF034","descrizione":"DISCO FRENO ANT/POST","quantita":"2","prezzo":"11.40","riferimento":""},\n    {"pre":"BOS","codice":"0986444981","descrizione":"BOBINA ACCENSIONE","quantita":"1","prezzo":"58.00","riferimento":"RIF.BL/STD/2211 12/03/26"},\n    {"pre":"MAL","codice":"48244KLR","descrizione":"KIT CUFF.RUOTA","quantita":"1","prezzo":"13.24","riferimento":""}\n  ]\n}\n\nI campi mancanti devono essere stringa vuota. Se la bolla ha 1 solo articolo, l\'array avrà 1 elemento; se ne ha 8, l\'array avrà 8 elementi. Non riassumere, non raggruppare, non fondere righe diverse in una sola.';
   // ── Estensione prompt: tipo documento + causale dedotta dal COLORE della scritta
   //   Aggiunge due campi al JSON di risposta ("tipo_documento" e
   //   "causale_colore") + un campo "codice_cliente" per scontrini/fatture.
@@ -12403,22 +12482,31 @@ function ocrViaAI(dataUrlIn, cb){
       var obj=ocrSafeJSON(content);
       if(obj&&(obj.nessun_documento===true||obj.nessun_documento==='true')){ onDone({noDoc:true}); return; }
       onDone(obj?normalizeAIResult(obj):null);
-    }, {temp:0, timeout:timeout});
+    }, {temp:0, timeout:timeout, model:OCR_AI_MODEL});
   }
-  attempt('', 20000, function(res){   // v34r: 20s dopo downscale piu' aggressivo
+  attempt('', 45000, function(res){   // v36n: 45s — immagine ad alta risoluzione
     if(!res || res.noDoc){ cb(res); return; }
-    // v36l: retry potenziato se il primo tentativo ne ha trovati POCHI (1-7). Spesso significa che l'AI
-    // si è fermata al primo blocco o ha saltato intere sezioni. Richiedi una seconda lettura
-    // più attenta con focus su "riga per riga", "niente saltare", "verifica il conteggio finale".
     var artCount = (res.articoli && res.articoli.length) || 0;
-    if(artCount >= 1 && artCount <= 7){
-      ocrSetLoading('AI: verifica conteggio articoli…');
-      var retryMsg = artCount===1 ?
-        '\n\nATTENZIONE: hai estratto SOLO 1 articolo. Questa bolla ne contiene MOLTI DI PIÙ: scorri TUTTA la tabella dal primo all\'ultimo articolo, riga per riga, e RIELENCA TUTTI.' :
-        '\n\nATTENZIONE: hai estratto solo '+artCount+' articoli. Le bolle hanno spesso 15-25 articoli: GUARDA ATTENTAMENTE ogni riga della tabella, comprese quelle piccole, sbiadite, in fondo pagina, scritte a mano. INCLUDI TUTTE le righe, anche quelle incomplete. Ricontagli e assicurati che il conteggio sia esatto.';
-      attempt(retryMsg, 18000, function(res2){
-        if(res2 && res2.articoli && res2.articoli.length>artCount){ cb(res2); }
-        else{ cb(res); }
+    var declared = res.totaleRighe || 0;
+    // v36n — Seconda passata quando:
+    //   (a) pochissimi articoli (1-7): tipico "mi sono fermata al primo blocco";
+    //   (b) l'AI ha CONTATO piu' righe di quante ne ha trascritte (declared > artCount).
+    //   Il caso (b) e' la vera rete di sicurezza: l'AI dichiara 25 e ne consegna 23,
+    //   quindi sappiamo con certezza che ne mancano 2 e possiamo chiederle proprio quelle.
+    var shortByCount = declared > 0 && artCount < declared;
+    if(artCount >= 1 && (artCount <= 7 || shortByCount)){
+      ocrSetLoading(shortByCount ? ('AI: mancano '+(declared-artCount)+' righe, rileggo…') : 'AI: verifica conteggio articoli…');
+      var retryMsg;
+      if(shortByCount){
+        retryMsg = '\n\nATTENZIONE — RILETTURA MIRATA: nel tentativo precedente hai CONTATO '+declared+' righe articolo sulla bolla ma ne hai restituite solo '+artCount+'. Ne mancano '+(declared-artCount)+'. Riparti dalla prima riga della tabella e scendi fino all\'ultima, una per una, senza saltarne nessuna. Restituisci TUTTE le '+declared+' righe, comprese quelle piccole, sbiadite, scritte a matita o in fondo pagina. Se una riga non e\' del tutto leggibile includila lo stesso con i campi che riesci a leggere.';
+      } else if(artCount===1){
+        retryMsg = '\n\nATTENZIONE: hai estratto SOLO 1 articolo. Questa bolla ne contiene MOLTI DI PIÙ: scorri TUTTA la tabella dal primo all\'ultimo articolo, riga per riga, e RIELENCA TUTTI.';
+      } else {
+        retryMsg = '\n\nATTENZIONE: hai estratto solo '+artCount+' articoli. Le bolle hanno spesso 15-25 articoli: GUARDA ATTENTAMENTE ogni riga della tabella, comprese quelle piccole, sbiadite, in fondo pagina, scritte a mano. INCLUDI TUTTE le righe, anche quelle incomplete. Ricontagli e assicurati che il conteggio sia esatto.';
+      }
+      attempt(retryMsg, 40000, function(res2){
+        var target = declared || (res2 && res2.totaleRighe) || 0;
+        cb(_ocrPickBest(res, res2, target));
       });
       return;
     }
@@ -12529,6 +12617,10 @@ function normalizeAIResult(o){
     anomaliaRilevata: anomaliaFinale || _cauColor==='ANOMALIA',
     motivoAnomalia: anomaliaFinale ? motivoRaw : (_cauColor==='ANOMALIA' ? 'ANOMALIA da colore' : ''),
     note:'',
+    // v36n — Conteggio VISIVO delle righe dichiarato dall'AI (campo "totale_righe_contate").
+    //   Se e' maggiore di articoli.length sappiamo che la lettura e' incompleta e
+    //   ocrViaAI lancia una rilettura mirata chiedendo esattamente le righe mancanti.
+    totaleRighe: (parseInt(o.totale_righe_contate||o.totale_righe||0,10)||0),
     articoli:arts
   };
 }
@@ -12741,6 +12833,16 @@ function showOcrConfirm(res, photoUrl, source){
           '</div>';
   }
   html+='<div style="font-size:11px;color:#888;margin-bottom:12px">Controlla e correggi, poi inserisci nel form.'+(nArt>1?' <b style="color:#3B9FD4">'+nArt+' articoli trovati.</b>':'')+'</div>';
+  // v36n — Se l'AI ha CONTATO piu' righe di quante ne ha trascritte, dillo chiaramente:
+  //   meglio un avviso esplicito che un inserimento silenziosamente incompleto.
+  try{
+    var _dich = (res && res.totaleRighe) || 0;
+    if(_dich > nArt){
+      html+='<div style="background:rgba(224,85,85,.12);border:1.5px solid #E05555;border-radius:8px;padding:8px 10px;margin-bottom:12px;font-size:11px;color:#E05555;font-weight:700;line-height:1.5">'+
+        '⚠ L\'AI ha contato <b>'+_dich+'</b> righe sulla bolla ma ne ha lette solo <b>'+nArt+'</b>: ne mancano <b>'+(_dich-nArt)+'</b>.<br>'+
+        '<span style="font-weight:400">Controlla la foto e aggiungi a mano le righe mancanti con <b style="color:#3B9FD4">+ Aggiungi riga vuota</b>, oppure rifai la foto più da vicino e più a fuoco.</span></div>';
+    }
+  }catch(e){}
 
   // Lista multi-riga: TUTTI gli articoli visibili contemporaneamente, editabili inline.
   // Se OCR non ha trovato nulla mostro comunque una riga vuota per l'inserimento manuale.
