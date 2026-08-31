@@ -1227,7 +1227,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36l · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36m · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1892,7 +1892,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36l</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36m</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -12382,12 +12382,12 @@ function ocrViaAI(dataUrlIn, cb){
     '- "tipo_documento": uno tra ["SCONTRINO","FATTURA","BOLLA","VENDITA","ACQUISTO","VISIONE","RESO FILIALE","NOLEGGIO","FLOTTA","BL/FIM","BL/TRA","NESSUNO"]. Riconoscilo dall\'aspetto/testo del documento:\n'+
     '    • SCONTRINO = piccola carta termica, spesso stretta, senza intestazione aziendale, con parole "SCONTRINO", "SCONTRINO FISCALE", "DOC.COMMERCIALE", numero cassa e ora.\n'+
     '    • FATTURA = documento formale con "FATTURA", numero fattura, P.IVA, totale IVA.\n'+
-    '    • VENDITA = qualsiasi BOLLA DI RESO che arriva da un CLIENTE esterno (autofficina, garage, gommista, privato). Anche se in alto c\'è stampato "DDT" o "BOLLA DI TRASPORTO" o un numero tipo "BL/RES/...", "BL/RNC/...", "DDT/...", il tipo_documento resta VENDITA quando il documento è per RESTITUZIONE MERCE da cliente a Telos. Questo è il caso PIÙ COMUNE.\n'+
-    '    • BL/TRA = SOLO ed ESCLUSIVAMENTE un TRASFERIMENTO INTERNO tra filiali TELOS (cioè quando sia mittente che destinatario sono filiali TELOS/DI ROCCO/gruppo, con numero tipo "BL/TRA/N" stampato dal sistema Telos, NON dal cliente). Se il mittente è un cliente esterno (nome azienda diverso da TELOS), NON è mai BL/TRA. In caso di dubbio, usa VENDITA.\n'+
-    '    • BL/FIM = trasferimento a fornitore Fiamm/rientro merce a fornitore ufficiale (raro).\n'+
-    '    • ACQUISTO = documento di acquisto merce dal fornitore verso Telos.\n'+
-    '    • VISIONE/NOLEGGIO/FLOTTA/RESO FILIALE se stampato esplicitamente. Se non chiaro, lascia "".\n'+
-    '    REGOLA D\'ORO: la stragrande maggioranza delle bolle che scansioniamo sono RESI da clienti → tipo_documento="VENDITA". Non attivare BL/TRA solo perché vedi "BL/" o "TRA" nel numero bolla del cliente.\n'+
+    '    • VENDITA = QUALSIASI documento che arriva da un CLIENTE/AZIENDA ESTERNA (non Telos). NON IMPORTA se il numero dice "BL/TRA/123" o "DDT/456" — se il mittente NON è Telos/DI ROCCO/gruppo, allora è VENDITA. Punto. Esempi: ZENER, AUTOFFICINA ROSSI, GARAGE MARIO, BOSCH, NGK, ecc. = TUTTE VENDITA.\n'+
+    '    • BL/TRA = SOLO se ENTRAMBI mittente E destinatario sono TELOS/DI ROCCO/gruppo TELOS. Se il mittente è un\'azienda esterna (che sia "BL/TRA/..." nel numero o meno), NON è BL/TRA. IGNORA il numero della bolla — guarda CHI è il mittente.\n'+
+    '    • BL/FIM = trasferimento a fornitore Fiamm/rientro merce (molto raro, raramente il mittente).\n'+
+    '    • ACQUISTO = documento di acquisto merce dal fornitore verso Telos (c\'è un "ACQUISTO" visibile).\n'+
+    '    • VISIONE/NOLEGGIO/FLOTTA/RESO FILIALE = solo se stampati esplicitamente su doc.\n'+
+    '    REGOLA ASSOLUTA v36l: SE MITTENTE ≠ TELOS → VENDITA. NON fare eccezioni.\n'+
     '- "codice_cliente": SOLO se tipo_documento è "SCONTRINO" o "FATTURA", trascrivi il codice cliente numerico (di solito 5-7 cifre) che compare vicino a "COD.CLI", "COD.CLIENTE" o accanto al nome cliente. Altrimenti "".\n'+
     '- "causale_colore": se sulla bolla la CAUSALE o il CODICE del pezzo è EVIDENZIATO/SCRITTO con inchiostro colorato (marker / evidenziatore), determina il colore dominante e mappa (v35b):\n'+
     '    ARANCIONE → "GARANZIA"\n'+
@@ -12487,14 +12487,17 @@ function normalizeAIResult(o){
     else if(_tdoc.indexOf('FATTUR')>=0) _tdoc='FATTURA';
     else _tdoc='';
   }
-  // v36k — Se l'AI etichetta BL/TRA ma il mittente non è TELOS, quasi
-  //   certamente è una bolla di RESO da cliente. Forzo VENDITA: BL/TRA
-  //   deve restare solo per trasferimenti interni tra filiali Telos.
-  if(_tdoc==='BL/TRA'){
-    var _sogRaw = (o.soggetto||o.deposito_partenza||'').toString().toUpperCase();
-    if(_sogRaw && _sogRaw.indexOf('TELOS')<0 && _sogRaw.indexOf('DI ROCCO')<0){
-      _tdoc = 'VENDITA';
-    }
+  // v36l — Override AGGRESSIVO: se soggetto (mittente) ≠ TELOS, FORZA VENDITA.
+  //   Questo capita quando l'AI legge "BL/TRA/123" nel numero bolla e pensa sia BL/TRA,
+  //   ma il mittente è ZENER / BOSCH / ecc. = cliente esterno = SEMPRE VENDITA.
+  //   Regola assoluta: SE MITTENTE ≠ TELOS → VENDITA, senza eccezioni.
+  var _sogRaw = (o.soggetto||o.deposito_partenza||'').toString().toUpperCase().trim();
+  if(_sogRaw && _sogRaw.indexOf('TELOS')<0 && _sogRaw.indexOf('DI ROCCO')<0 && _sogRaw.indexOf('GRUPPO')<0){
+    // Mittente è esterno (cliente, fornitore, ecc.) → VENDITA
+    _tdoc = 'VENDITA';
+  } else if(_tdoc==='BL/TRA' && !_sogRaw){
+    // Se BL/TRA ma soggetto è vuoto/illeggibile, fallback conservativo a VENDITA
+    _tdoc = 'VENDITA';
   }
   var _ccli = (o.codice_cliente||'').toString().trim();
   // Solo per scontrino/fattura mantengo il codice cliente
