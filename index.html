@@ -1227,7 +1227,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36n · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36o · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1892,7 +1892,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36n</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36o</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -12381,6 +12381,35 @@ function _ocrDownscale(dataUrl, maxSide, quality){
     }catch(e){ resolve(dataUrl); }
   });
 }
+// v36o — Ruota un dataURL di 90/180/270 gradi IN SENSO ORARIO.
+//   Le bolle vengono quasi sempre fotografate di traverso: chiedere al modello di
+//   girarle mentalmente costa precisione, mentre rileggerle gia' raddrizzate no.
+//   Gradi non validi (o 0) restituiscono l'immagine invariata.
+function _ocrRotate(dataUrl, deg){
+  return new Promise(function(resolve){
+    try{
+      deg = ((parseInt(deg,10)||0) % 360 + 360) % 360;
+      if(deg!==90 && deg!==180 && deg!==270){ resolve(dataUrl); return; }
+      var img = new Image();
+      img.onload = function(){
+        try{
+          var w=img.naturalWidth, h=img.naturalHeight;
+          var c=document.createElement('canvas');
+          c.width  = (deg===180) ? w : h;
+          c.height = (deg===180) ? h : w;
+          var x=c.getContext('2d');
+          if(deg===90){ x.translate(c.width, 0); x.rotate(Math.PI/2); }
+          else if(deg===180){ x.translate(c.width, c.height); x.rotate(Math.PI); }
+          else { x.translate(0, c.height); x.rotate(-Math.PI/2); }
+          x.drawImage(img, 0, 0);
+          resolve(c.toDataURL('image/jpeg', 0.92));
+        }catch(e){ resolve(dataUrl); }
+      };
+      img.onerror = function(){ resolve(dataUrl); };
+      img.src = dataUrl;
+    }catch(e){ resolve(dataUrl); }
+  });
+}
 // v36n — MODELLO OCR: gemini-2.5-flash (non "lite"). Il flash-lite di default e'
 //   il modello piu' economico e sbaglia sistematicamente la grafia corsiva e i
 //   codici piccoli. Per l'OCR delle bolle usiamo il modello pieno; se non e'
@@ -12428,7 +12457,10 @@ function _ocrMergeArticoli(listA, listB){
 //   L'unione viene usata SOLO se avvicina al totale che l'AI stessa ha dichiarato
 //   e senza mai superarlo: cosi' recuperiamo le righe saltate senza il rischio di
 //   inventare doppioni (es. stesso codice letto "KDF034" e "KDFO34" nelle due passate).
-function _ocrPickBest(resA, resB, target){
+//   preferB: a parita' di numero di righe tiene la SECONDA lettura. Serve dopo il
+//   raddrizzamento della foto, dove la seconda passata vede lo stesso numero di
+//   righe ma le trascrive meglio (codici e grafia molto piu' leggibili).
+function _ocrPickBest(resA, resB, target, preferB){
   var la=(resA&&resA.articoli&&resA.articoli.length)||0;
   var lb=(resB&&resB.articoli&&resB.articoli.length)||0;
   if(!lb) return resA;
@@ -12442,7 +12474,7 @@ function _ocrPickBest(resA, resB, target){
       return out;
     }
   }
-  return (lb>la)?resB:resA;
+  return (lb>la || (preferB && lb===la)) ? resB : resA;
 }
 function ocrViaAI(dataUrlIn, cb){
   var cfg=ocrAIConfig();
@@ -12451,9 +12483,9 @@ function ocrViaAI(dataUrlIn, cb){
   // v36n — ALTA RISOLUZIONE: 2200px @ q0.90 (prima 1400px @ q0.75). Sulle bolle di
   //   reso i codici sono scritti a mano e piccoli: a 1400/0.75 il JPEG li impastava
   //   e l'AI ne perdeva 2-3 su 25. Upload piu' pesante, compensato da timeout piu' lunghi.
-  _ocrDownscale(dataUrlIn, 2200, 0.90).then(function(dataUrl){
+  _ocrDownscale(dataUrlIn, 2200, 0.92).then(function(dataUrl){
   ocrSetLoading('AI: analisi bolla…');
-  var basePrompt='Sei un esperto nella lettura di bolle/DDT italiani di reso merce, spesso COMPILATI A MANO IN CORSIVO (a volte con righe evidenziate). PRIMA DI TUTTO verifica che l\'immagine contenga DAVVERO un documento di trasporto/bolla/fattura con del testo: se non c\'è alcun documento (un tavolo, un oggetto qualunque, una foto senza testo leggibile) rispondi SOLO {"nessun_documento": true} e nient\'altro. NON INVENTARE MAI nulla: trascrivi esclusivamente ciò che è scritto e leggibile nell\'immagine; un campo non presente resta stringa vuota; in caso di dubbio sull\'esistenza stessa del documento rispondi {"nessun_documento": true}. L\'azienda stampata in ALTO (mittente) è il CLIENTE che restituisce i pezzi: mettila in "soggetto". Il destinatario è sempre TELOS: ignoralo.\n\nREGOLE FONDAMENTALI (le più importanti):\n1) LA BOLLA CONTIENE QUASI SEMPRE PIÙ ARTICOLI (2, 3, 5, anche 10+, spesso 15-25 su bolle grandi): uno per BLOCCO di righe. Devi estrarli TUTTI, uno per uno, nell\'ordine in cui compaiono dall\'alto in basso. NON fermarti mai al primo. Scorri attentamente TUTTA la tabella articoli fino alla fine, comprese le righe scritte a mano piccole o parzialmente coperte.\n\n   PROCEDURA OBBLIGATORIA DI COMPLETEZZA (v36l potenziata — la precisione è tutto):\n   a) PRIMA DI TUTTO conta VISIVAMENTE ogni riga nella tabella articoli della bolla. Scorri dall\'ALTO IN BASSO, comprese righe in fondo pagina, scritte a mano piccole, cerchiate, evidenziate, quantità frazione (0.5, 1.5). CONTA OGNI SINGOLA. Chiamalo N.\n   b) Se la bolla stampata mostra "TOTALE RIGHE" / "N. ARTICOLI" / "QTA TOTALE" / "TOTALE PZ.", confermalo: dovrebbe essere N.\n   c) Se N > 15, FERMATI e RICONTAGLI di nuovo. Le bolle grandi saltano articoli frequentemente.\n   d) Compila l\'array "articoli" con ESATTAMENTE N elementi, uno per riga, ordine top-bottom. NON fondere righe. NON saltare righe scritte a matita / piccole / abbreviate.\n   e) VERIFICA FINALE prima di rispondere: RICONTAGLI l\'array. Se lunghezza ≠ N, STOP. Torna a leggere le righe mancanti. INCLUDI TUTTE, anche parziali.\n   e-bis) OBBLIGATORIO — scrivi N nel campo "totale_righe_contate" del JSON. Questo campo e\' il tuo conteggio VISIVO delle righe presenti sulla bolla, NON la lunghezza dell\'array. Se vedi 25 righe ma riesci a trascriverne solo 23, scrivi comunque 25: e\' fondamentale per sapere quante ne mancano. Non lasciarlo mai a 0 se la bolla ha articoli.\n   f) Se una riga è parzialmente illeggibile (quantità sì, codice no; descrizione sì, prezzo no), includila comunque: pre="", cod="", quantita=quello che leggi. Una riga incompleta > perdere una riga.\n   g) ATTENZIONE SPECIALE: righe a matita (sfumate), fondo pagina, quantità frazione (0.5, 1.5), descrizione abbreviata (sigla+numero), righe "N.B." / "NOTE" / "VEDI RETRO" — sono ARTICOLI da includere.\n2) Ogni articolo di solito ha: quantità (es. "1" oppure "Ø1"), descrizione, sigla marca (es. NGK, BIR, FAU, VAL, KET, BKS, DPH, MAL) e un CODICE tra parentesi o accanto alla descrizione: quello è il codice articolo.\n   IMPORTANTISSIMO — DUE COLONNE SEPARATE: molte bolle mostrano su ogni riga\n   PRIMA la sigla MARCA/pre (SEMPRE ESATTAMENTE 3 LETTERE, es. KET, BKS, CAR, DPH, MAL, NGK, BOS, VAL, CAT, FAU)\n   e POI il CODICE ARTICOLO completo.\n   REGOLA TASSATIVA SULLA SIGLA MARCA: e\' SEMPRE lunga esattamente 3 caratteri.\n   Mai 2, mai 4, mai 5. Se non riesci a leggere UNA sigla di ESATTAMENTE 3 caratteri\n   con certezza, lascia "pre" come stringa vuota "" — la memoria del sistema o\n   l\'operatore la aggiungeranno dopo. NON tentare mai di indovinare o allungare a 4/5 (che a sua volta e\' spesso una miscela di\n   lettere+numeri+trattini: es. KDF034, KPF052, SGM0009R, CAR-BKS-SGM0009,\n   TA1030, 48244KLR). Il CODICE va copiato INTERO cosi\' come appare, SENZA\n   spezzarlo al confine lettera/numero.\n   Esempio corretto: la riga "KET KDF034 DISCO FRENO..." va estratta come\n   pre="KET", codice="KDF034" (NON pre="KDF", codice="034").\n   Esempio corretto: "BKS SGM0009R RIG.SCAT..." → pre="BKS", codice="SGM0009R".\n   Esempio corretto: "MAL 48244KLR KIT CUFF..." → pre="MAL", codice="48244KLR".\n   Se leggi una riga con DUE token alfanumerici prima della descrizione,\n   il PRIMO (piu\' corto, tipicamente 2-4 lettere pure) e\' sempre la MARCA/pre;\n   il SECONDO e\' il CODICE completo — non spezzarlo mai in "prefisso alfa" +\n   "suffisso numerico".\n3) Le righe che iniziano con "RIF." / "RIF.BL" / "RIF.BOLLA" seguite da numero e data sono il RIFERIMENTO alla bolla di consegna originaria dell\'articolo che le precede: mettile nel campo "riferimento" di QUELL\'articolo, NON sono codici articolo.\n4) Sul corsivo ambiguo scegli l\'interpretazione più plausibile per un codice ricambi (cifre e lettere maiuscole).\n\n5) TIMBRI ANOMALIA — LEGGI CON PRUDENZA (default: NON e\' anomalia):\n   Le bolle di reso NORMALI non hanno anomalie. Un\'anomalia esiste SOLO quando c\'e\' un ELEMENTO GRAFICO DISTINTO E VISIBILE sulla bolla che segnala esplicitamente un problema di ricevimento. Esempi VALIDI:\n     - Un TIMBRO A INCHIOSTRO con la parola "ANOMALIA" (caratteri grossi, spesso rossi/blu, con riquadro o cerchio)\n     - Un\'ETICHETTA ADESIVA rossa/gialla appiccicata sopra la bolla ("RIFIUTATO", "NON CONFORME", "PACCO APERTO", "DANNEGGIATO IN TRASPORTO")\n     - Una SCRITTA A MANO CERCHIATA / SOTTOLINEATA / IN EVIDENZIATORE che dice esplicitamente "ANOMALIA" (non semplici note del compilatore)\n     - Una GRANDE X ROSSA o FRECCIA disegnata sopra la bolla che punta a un problema\n\n   Cosa NON e\' un\'anomalia (non attivare mai il flag per queste):\n     - "CARCASSA", "OLD CORE", "CARCASSA DA RIGENERARE" → sono causali di reso normali (restituzione core)\n     - "USATO", "MONTATO", "SMONTATO" nel testo (spesso descrivono lo stato normale del pezzo reso in garanzia)\n     - "GARANZIA", "DIFETTOSO" scritti come CAUSALE di reso (colonna causale del DDT) — NON sono anomalie di ricevimento\n     - "SPORCO", "ROTTO" citati in una descrizione articolo o in un modulo garanzia standard\n     - Descrizioni tecniche di pezzi (candela usata, filtro sporco, ecc.)\n     - Testo stampato tipografico del template della bolla\n\n   Regola d\'oro: se non c\'e\' un timbro/etichetta/scritta GRAFICAMENTE EVIDENTE aggiunta DOPO la stampa della bolla e riferita al ricevimento (non al pezzo), allora anomalia_rilevata=false.\n\n   Se trovi un timbro/etichetta valida:\n     "flusso_suggerito": "ANOMALIA"\n     "anomalia_rilevata": true\n     "motivo_anomalia": "<trascrivi solo il testo del timbro/etichetta>"\n   In tutti gli altri casi (99% delle bolle):\n     "flusso_suggerito": "STANDARD"\n     "anomalia_rilevata": false\n     "motivo_anomalia": ""\n\n6) DATA LISTATO (timbro blu Telos) — CAMPO SEPARATO "data_listato":\n   Cerca un TIMBRO BLU a inchiostro (rettangolare o senza cornice) con SOLO una DATA scritta dentro (formato "07 AGO. 2026" oppure "07/08/2026" oppure "7-8-2026"). Questo timbro viene apposto dall\'ufficio ricevimento Telos quando registra la bolla. La data letta dal timbro va nel campo "data_listato" in formato ISO YYYY-MM-DD (es. "2026-08-07"). Se NON c\'e\' un timbro blu con data, lascia "data_listato" come stringa vuota — NON metterci la data dell\'intestazione del DDT, e NON metterci la data di oggi.\n\n   Il campo "data" invece resta la data STAMPATA nell\'intestazione del DDT (top-right, formato del template del cliente): questa e\' la data di emissione della bolla lato cliente.\n\nRispondi SOLO con JSON valido, senza testo extra prima o dopo, con la stessa struttura di questo ESEMPIO (che ha 3 articoli, per ricordarti che devi elencarli TUTTI):\n{\n  "numero_documento": "BL/TRA/44321",\n  "data": "17/05/2026",\n  "data_listato": "2026-08-07",\n  "soggetto": "AUTOFFICINA ROSSI SNC",\n  "vettore": "CIPI",\n  "causale": "GARANZIA",\n  "flusso_suggerito": "STANDARD",\n  "anomalia_rilevata": false,\n  "motivo_anomalia": "",\n  "totale_righe_contate": 3,\n  "articoli": [\n    {"pre":"KET","codice":"KDF034","descrizione":"DISCO FRENO ANT/POST","quantita":"2","prezzo":"11.40","riferimento":""},\n    {"pre":"BOS","codice":"0986444981","descrizione":"BOBINA ACCENSIONE","quantita":"1","prezzo":"58.00","riferimento":"RIF.BL/STD/2211 12/03/26"},\n    {"pre":"MAL","codice":"48244KLR","descrizione":"KIT CUFF.RUOTA","quantita":"1","prezzo":"13.24","riferimento":""}\n  ]\n}\n\nI campi mancanti devono essere stringa vuota. Se la bolla ha 1 solo articolo, l\'array avrà 1 elemento; se ne ha 8, l\'array avrà 8 elementi. Non riassumere, non raggruppare, non fondere righe diverse in una sola.';
+  var basePrompt='Sei un esperto nella lettura di bolle/DDT italiani di reso merce, spesso COMPILATI A MANO IN CORSIVO (a volte con righe evidenziate). PRIMA DI TUTTO verifica che l\'immagine contenga DAVVERO un documento di trasporto/bolla/fattura con del testo: se non c\'è alcun documento (un tavolo, un oggetto qualunque, una foto senza testo leggibile) rispondi SOLO {"nessun_documento": true} e nient\'altro. NON INVENTARE MAI nulla: trascrivi esclusivamente ciò che è scritto e leggibile nell\'immagine; un campo non presente resta stringa vuota; in caso di dubbio sull\'esistenza stessa del documento rispondi {"nessun_documento": true}. L\'azienda stampata in ALTO (mittente) è il CLIENTE che restituisce i pezzi: mettila in "soggetto". Il destinatario è sempre TELOS: ignoralo.\n\nREGOLE FONDAMENTALI (le più importanti):\n1) LA BOLLA CONTIENE QUASI SEMPRE PIÙ ARTICOLI (2, 3, 5, anche 10+, spesso 15-25 su bolle grandi): uno per BLOCCO di righe. Devi estrarli TUTTI, uno per uno, nell\'ordine in cui compaiono dall\'alto in basso. NON fermarti mai al primo. Scorri attentamente TUTTA la tabella articoli fino alla fine, comprese le righe scritte a mano piccole o parzialmente coperte.\n\n   PROCEDURA OBBLIGATORIA DI COMPLETEZZA (v36l potenziata — la precisione è tutto):\n   a) PRIMA DI TUTTO conta VISIVAMENTE ogni riga nella tabella articoli della bolla. Scorri dall\'ALTO IN BASSO, comprese righe in fondo pagina, scritte a mano piccole, cerchiate, evidenziate, quantità frazione (0.5, 1.5). CONTA OGNI SINGOLA. Chiamalo N.\n   b) Se la bolla stampata mostra "TOTALE RIGHE" / "N. ARTICOLI" / "QTA TOTALE" / "TOTALE PZ.", confermalo: dovrebbe essere N.\n   c) Se N > 15, FERMATI e RICONTAGLI di nuovo. Le bolle grandi saltano articoli frequentemente.\n   d) Compila l\'array "articoli" con ESATTAMENTE N elementi, uno per riga, ordine top-bottom. NON fondere righe. NON saltare righe scritte a matita / piccole / abbreviate.\n   e) VERIFICA FINALE prima di rispondere: RICONTAGLI l\'array. Se lunghezza ≠ N, STOP. Torna a leggere le righe mancanti. INCLUDI TUTTE, anche parziali.\n   e-bis) OBBLIGATORIO — scrivi N nel campo "totale_righe_contate" del JSON. Questo campo e\' il tuo conteggio VISIVO delle righe presenti sulla bolla, NON la lunghezza dell\'array. Se vedi 25 righe ma riesci a trascriverne solo 23, scrivi comunque 25: e\' fondamentale per sapere quante ne mancano. Non lasciarlo mai a 0 se la bolla ha articoli.\n   f) Se una riga è parzialmente illeggibile (quantità sì, codice no; descrizione sì, prezzo no), includila comunque: pre="", cod="", quantita=quello che leggi. Una riga incompleta > perdere una riga.\n   g) ATTENZIONE SPECIALE: righe a matita (sfumate), fondo pagina, quantità frazione (0.5, 1.5), descrizione abbreviata (sigla+numero), righe "N.B." / "NOTE" / "VEDI RETRO" — sono ARTICOLI da includere.\n2) Ogni articolo di solito ha: quantità (es. "1" oppure "Ø1"), descrizione, sigla marca (es. NGK, BIR, FAU, VAL, KET, BKS, DPH, MAL) e un CODICE tra parentesi o accanto alla descrizione: quello è il codice articolo.\n   IMPORTANTISSIMO — DUE COLONNE SEPARATE: molte bolle mostrano su ogni riga\n   PRIMA la sigla MARCA/pre (SEMPRE ESATTAMENTE 3 LETTERE, es. KET, BKS, CAR, DPH, MAL, NGK, BOS, VAL, CAT, FAU)\n   e POI il CODICE ARTICOLO completo.\n   REGOLA TASSATIVA SULLA SIGLA MARCA: e\' SEMPRE lunga esattamente 3 caratteri.\n   Mai 2, mai 4, mai 5. Se non riesci a leggere UNA sigla di ESATTAMENTE 3 caratteri\n   con certezza, lascia "pre" come stringa vuota "" — la memoria del sistema o\n   l\'operatore la aggiungeranno dopo. NON tentare mai di indovinare o allungare a 4/5 (che a sua volta e\' spesso una miscela di\n   lettere+numeri+trattini: es. KDF034, KPF052, SGM0009R, CAR-BKS-SGM0009,\n   TA1030, 48244KLR). Il CODICE va copiato INTERO cosi\' come appare, SENZA\n   spezzarlo al confine lettera/numero.\n   Esempio corretto: la riga "KET KDF034 DISCO FRENO..." va estratta come\n   pre="KET", codice="KDF034" (NON pre="KDF", codice="034").\n   Esempio corretto: "BKS SGM0009R RIG.SCAT..." → pre="BKS", codice="SGM0009R".\n   Esempio corretto: "MAL 48244KLR KIT CUFF..." → pre="MAL", codice="48244KLR".\n   Se leggi una riga con DUE token alfanumerici prima della descrizione,\n   il PRIMO (piu\' corto, tipicamente 2-4 lettere pure) e\' sempre la MARCA/pre;\n   il SECONDO e\' il CODICE completo — non spezzarlo mai in "prefisso alfa" +\n   "suffisso numerico".\n3) Le righe che iniziano con "RIF." / "RIF.BL" / "RIF.BOLLA" seguite da numero e data sono il RIFERIMENTO alla bolla di consegna originaria dell\'articolo che le precede: mettile nel campo "riferimento" di QUELL\'articolo, NON sono codici articolo.\n4) Sul corsivo ambiguo scegli l\'interpretazione più plausibile per un codice ricambi (cifre e lettere maiuscole).\n\n5) TIMBRI ANOMALIA — LEGGI CON PRUDENZA (default: NON e\' anomalia):\n   Le bolle di reso NORMALI non hanno anomalie. Un\'anomalia esiste SOLO quando c\'e\' un ELEMENTO GRAFICO DISTINTO E VISIBILE sulla bolla che segnala esplicitamente un problema di ricevimento. Esempi VALIDI:\n     - Un TIMBRO A INCHIOSTRO con la parola "ANOMALIA" (caratteri grossi, spesso rossi/blu, con riquadro o cerchio)\n     - Un\'ETICHETTA ADESIVA rossa/gialla appiccicata sopra la bolla ("RIFIUTATO", "NON CONFORME", "PACCO APERTO", "DANNEGGIATO IN TRASPORTO")\n     - Una SCRITTA A MANO CERCHIATA / SOTTOLINEATA / IN EVIDENZIATORE che dice esplicitamente "ANOMALIA" (non semplici note del compilatore)\n     - Una GRANDE X ROSSA o FRECCIA disegnata sopra la bolla che punta a un problema\n\n   Cosa NON e\' un\'anomalia (non attivare mai il flag per queste):\n     - "CARCASSA", "OLD CORE", "CARCASSA DA RIGENERARE" → sono causali di reso normali (restituzione core)\n     - "USATO", "MONTATO", "SMONTATO" nel testo (spesso descrivono lo stato normale del pezzo reso in garanzia)\n     - "GARANZIA", "DIFETTOSO" scritti come CAUSALE di reso (colonna causale del DDT) — NON sono anomalie di ricevimento\n     - "SPORCO", "ROTTO" citati in una descrizione articolo o in un modulo garanzia standard\n     - Descrizioni tecniche di pezzi (candela usata, filtro sporco, ecc.)\n     - Testo stampato tipografico del template della bolla\n\n   Regola d\'oro: se non c\'e\' un timbro/etichetta/scritta GRAFICAMENTE EVIDENTE aggiunta DOPO la stampa della bolla e riferita al ricevimento (non al pezzo), allora anomalia_rilevata=false.\n\n   Se trovi un timbro/etichetta valida:\n     "flusso_suggerito": "ANOMALIA"\n     "anomalia_rilevata": true\n     "motivo_anomalia": "<trascrivi solo il testo del timbro/etichetta>"\n   In tutti gli altri casi (99% delle bolle):\n     "flusso_suggerito": "STANDARD"\n     "anomalia_rilevata": false\n     "motivo_anomalia": ""\n\n6) DATA LISTATO (timbro blu Telos) — CAMPO SEPARATO "data_listato":\n   Cerca un TIMBRO BLU a inchiostro (rettangolare o senza cornice) con SOLO una DATA scritta dentro (formato "07 AGO. 2026" oppure "07/08/2026" oppure "7-8-2026"). Questo timbro viene apposto dall\'ufficio ricevimento Telos quando registra la bolla. La data letta dal timbro va nel campo "data_listato" in formato ISO YYYY-MM-DD (es. "2026-08-07"). Se NON c\'e\' un timbro blu con data, lascia "data_listato" come stringa vuota — NON metterci la data dell\'intestazione del DDT, e NON metterci la data di oggi.\n\n   Il campo "data" invece resta la data STAMPATA nell\'intestazione del DDT (top-right, formato del template del cliente): questa e\' la data di emissione della bolla lato cliente.\n\n7) BOLLE COMPILATE A MANO — LETTURA DI PRECISIONE (e\' il caso piu\' frequente):\n   7a) ORIENTAMENTO: di norma la foto ti arriva GIA\' DRITTA. Se pero\' il documento ti apparisse RUOTATO (testo che corre verticalmente), leggilo lo stesso girandolo mentalmente e segnala nel campo "orientamento_foto" di quanti gradi va ruotata l\'immagine IN SENSO ORARIO per raddrizzarla: 0, 90, 180 o 270. Se e\' gia\' dritta scrivi 0 — e\' il caso normale, non inventare rotazioni. Il documento e\' dritto quando l\'intestazione "DOCUMENTO DI TRASPORTO" e il numero DDT stanno IN ALTO e le firme/totali IN BASSO.\n   7b) CHI E\' IL CLIENTE: il mittente sta nel riquadro "MITTENTE" / "CEDENTE" / "DITTA" e puo\' essere STAMPATO (carta intestata) OPPURE SCRITTO A MANO dentro il riquadro: vale in entrambi i casi. NON confonderlo col tipografo del modulo prestampato (es. "Gruppo Buffetti"), che non e\' un cliente. "TELOS" / "TELOS SPA" compare quasi sempre SCRITTO A MANO nel riquadro DESTINATARIO/CESSIONARIO: e\' il destinatario, non metterlo MAI in "soggetto".\n   7c) DOVE STA IL CODICE: sulle bolle a mano il codice e\' spesso IN FONDO alla descrizione e TRA PARENTESI. Esempi reali:\n       "CARCASSA POMPA BOS (0986437433)"    -> pre="BOS", codice="0986437433", descrizione="CARCASSA POMPA"\n       "CAR (0986446020)"                   -> pre="BOS", codice="0986446020", descrizione="CARCASSA"\n       "1 RADIATORE R.CIRCOLO ART.(6700520)" -> pre="",   codice="6700520",   descrizione="RADIATORE R.CIRCOLO"\n       "COD CAR ELT.813161-5001S-R"         -> codice="813161-5001S-R"\n       Quindi NON pretendere sempre lo schema "MARCA CODICE DESCRIZIONE": accetta anche "DESCRIZIONE MARCA (CODICE)".\n   7d) TRAPPOLA DELLE ABBREVIAZIONI: parole di 3 lettere come "CAR" (carcassa), "POM" (pompa), "INI"/"INJ" (iniettore), "RIF" (riferimento), "COD" (codice), "ART" (articolo) sono ABBREVIAZIONI ITALIANE DELLA DESCRIZIONE, NON sigle di marca. Non metterle mai in "pre".\n   7e) CODICI BOSCH: i codici di 10 cifre che iniziano con "0986" sono Bosch -> pre="BOS". Trascrivi tutte e 10 le cifre senza spazi (es. 0986437433, 0986446020, 0986435213).\n   7f) CODICI CON TRATTINI E SUFFISSI: copiali INTERI, trattini e lettere finali compresi (es. "813161-5001S-R", "0007295-230").\n   7g) CIFRE vs LETTERE nella grafia: dentro un CODICE, in caso di dubbio preferisci la CIFRA (0 e non "O", 1 e non "I", 5 e non "S", 8 e non "B", 2 e non "Z"); dentro una SIGLA MARCA di 3 caratteri preferisci invece le LETTERE.\n   7h) QUANTITA\': spesso scritta con lo zero davanti ("01", "04"), a volte preceduta da un segno di spunta o da una barra. Estrai solo il numero: "01" -> 1, "/04" -> 4.\n   7i) RIFERIMENTI: "RIF.", "RIF DDT", "RIF.US.DDT", "RIF.BL" seguiti da numero e data appartengono alla riga articolo che li precede -> campo "riferimento". Non sono MAI un articolo a se stante e non vanno contati come riga.\n   7j) TESTO PRESTAMPATO DEL MODULO (es. "CONSEGNA PER VERIFICA CORPO DA RIGENERARE", "Gruppo Buffetti", i riferimenti di legge D.P.R.) non e\' ne\' un articolo, ne\' una causale, ne\' un\'anomalia: ignoralo.\n   7k) CAUSALE: leggila dal riquadro "CAUSALE DEL TRASPORTO" (es. "RESO", "CARCASSA", "RESO CARCASSA", "RESO CARCASSE").\n\nRispondi SOLO con JSON valido, senza testo extra prima o dopo, con la stessa struttura di questo ESEMPIO (che ha 3 articoli, per ricordarti che devi elencarli TUTTI):\n{\n  "numero_documento": "BL/TRA/44321",\n  "data": "17/05/2026",\n  "data_listato": "2026-08-07",\n  "soggetto": "AUTOFFICINA ROSSI SNC",\n  "vettore": "CIPI",\n  "causale": "GARANZIA",\n  "flusso_suggerito": "STANDARD",\n  "anomalia_rilevata": false,\n  "motivo_anomalia": "",\n  "totale_righe_contate": 3,\n  "orientamento_foto": 0,\n  "articoli": [\n    {"pre":"KET","codice":"KDF034","descrizione":"DISCO FRENO ANT/POST","quantita":"2","prezzo":"11.40","riferimento":""},\n    {"pre":"BOS","codice":"0986444981","descrizione":"BOBINA ACCENSIONE","quantita":"1","prezzo":"58.00","riferimento":"RIF.BL/STD/2211 12/03/26"},\n    {"pre":"MAL","codice":"48244KLR","descrizione":"KIT CUFF.RUOTA","quantita":"1","prezzo":"13.24","riferimento":""}\n  ]\n}\n\nI campi mancanti devono essere stringa vuota. Se la bolla ha 1 solo articolo, l\'array avrà 1 elemento; se ne ha 8, l\'array avrà 8 elementi. Non riassumere, non raggruppare, non fondere righe diverse in una sola.';
   // ── Estensione prompt: tipo documento + causale dedotta dal COLORE della scritta
   //   Aggiunge due campi al JSON di risposta ("tipo_documento" e
   //   "causale_colore") + un campo "codice_cliente" per scontrini/fatture.
@@ -12475,9 +12507,12 @@ function ocrViaAI(dataUrlIn, cb){
     '    GIALLO    → "RENDERE AL FORNITORE" (pezzo da restituire al fornitore)\n'+
     '    BLU/AZZURRO → "STOCK MAGAZZINO" (merce da rimettere a stock, non un reso in causale specifica)\n'+
     '    Se nessuna evidenziazione è visibile, lascia "".\n'+
+    '    ATTENZIONE: un evidenziatore passato SOLO per far risaltare un codice o un numero NON è un codice-colore. Se sulla bolla c\'è già una CAUSALE scritta nel riquadro "CAUSALE DEL TRASPORTO" (es. "RESO", "CARCASSA", "RESO CARCASSE"), quella vince: lascia "causale_colore" vuoto.\n'+
     '  Se identifichi una causale_colore E il campo "causale" testuale è vuoto, valorizza anche "causale" con la stessa.';
-  function attempt(extra, timeout, onDone){
-    aiComplete([{type:'text',text:basePrompt+extPrompt+(extra||'')},{type:'image_url',image_url:{url:dataUrl}}], function(content,err){
+  // v36o — img: immagine alternativa per questa passata (es. la foto raddrizzata).
+  //   Se omessa si usa quella originale ridimensionata.
+  function attempt(extra, timeout, onDone, img){
+    aiComplete([{type:'text',text:basePrompt+extPrompt+(extra||'')},{type:'image_url',image_url:{url:(img||dataUrl)}}], function(content,err){
       if(!content){ onDone(null); return; }
       var obj=ocrSafeJSON(content);
       if(obj&&(obj.nessun_documento===true||obj.nessun_documento==='true')){ onDone({noDoc:true}); return; }
@@ -12494,7 +12529,37 @@ function ocrViaAI(dataUrlIn, cb){
     //   Il caso (b) e' la vera rete di sicurezza: l'AI dichiara 25 e ne consegna 23,
     //   quindi sappiamo con certezza che ne mancano 2 e possiamo chiederle proprio quelle.
     var shortByCount = declared > 0 && artCount < declared;
-    if(artCount >= 1 && (artCount <= 7 || shortByCount)){
+    var rot = res.orient || 0;
+
+    // v36o — ORIENTAMENTO: NON raddrizziamo di default.
+    //   Le foto scattate col telefono arrivano gia' dritte: il browser applica da
+    //   solo il tag EXIF della fotocamera quando disegna l'immagine su canvas
+    //   (verificato su uno scatto iPhone con Orientation=6 — a schermo il file
+    //   grezzo sembra coricato, ma su canvas esce verticale). Ruotare un'immagine
+    //   gia' corretta la peggiorerebbe e sprecherebbe una chiamata.
+    //   Lo facciamo quindi solo come ULTIMA SPIAGGIA: prima lettura a vuoto (zero
+    //   articoli) e modello che segnala il documento di traverso. E' il caso delle
+    //   immagini senza EXIF (screenshot, foto reincollate, salvate da altre app):
+    //   li' abbiamo gia' fallito, quindi un tentativo ruotato e' solo guadagno.
+    if(artCount === 0 && rot){
+      ocrSetLoading('AI: raddrizzo la foto e rileggo…');
+      var rotMsg = '\n\nNOTA: questa e\' la STESSA bolla di prima, ma l\'immagine e\' gia\' stata RUOTATA ed e\' ora DRITTA. Rileggila da capo con la massima attenzione, riga per riga, sfruttando il fatto che ora il testo e\' orizzontale. Nel campo "orientamento_foto" rispondi 0.';
+      if(shortByCount) rotMsg += ' Nel tentativo precedente avevi contato '+declared+' righe ma ne avevi trascritte solo '+artCount+': restituiscile TUTTE.';
+      _ocrRotate(dataUrl, rot).then(function(rotUrl){
+        attempt(rotMsg, 45000, function(res2){
+          var t = declared || (res2 && res2.totaleRighe) || 0;
+          // a parita' di righe vince la lettura sulla foto dritta: stessi articoli, codici piu' affidabili
+          cb(_ocrPickBest(res, res2, t, true));
+        }, rotUrl);
+      });
+      return;
+    }
+
+    // v36o — Se il modello dichiara un totale e lo rispetta, ci fidiamo: nessuna
+    //   seconda passata. La vecchia soglia "meno di 8 articoli => rileggi" resta
+    //   valida solo quando il conteggio dichiarato manca: sulle bolle scritte a mano,
+    //   che tipicamente hanno 1-3 righe, faceva sprecare una chiamata AI ogni volta.
+    if(shortByCount || (declared === 0 && artCount >= 1 && artCount <= 7)){
       ocrSetLoading(shortByCount ? ('AI: mancano '+(declared-artCount)+' righe, rileggo…') : 'AI: verifica conteggio articoli…');
       var retryMsg;
       if(shortByCount){
@@ -12575,18 +12640,18 @@ function normalizeAIResult(o){
     else if(_tdoc.indexOf('FATTUR')>=0) _tdoc='FATTURA';
     else _tdoc='';
   }
-  // v36l — Override AGGRESSIVO: se soggetto (mittente) ≠ TELOS, FORZA VENDITA.
-  //   Questo capita quando l'AI legge "BL/TRA/123" nel numero bolla e pensa sia BL/TRA,
-  //   ma il mittente è ZENER / BOSCH / ecc. = cliente esterno = SEMPRE VENDITA.
-  //   Regola assoluta: SE MITTENTE ≠ TELOS → VENDITA, senza eccezioni.
+  // v36o — Mittente esterno ⇒ VENDITA, ma SOLO sui tipi "di trasferimento".
+  //   La versione v36m forzava VENDITA per QUALSIASI mittente non-Telos: cosi'
+  //   pero' sovrascriveva anche SCONTRINO e FATTURA (che hanno sempre un mittente
+  //   esterno), e subito sotto il codice_cliente veniva azzerato perche' vale solo
+  //   per quei due tipi. Qui la coercizione tocca solo i tipi che l'AI confonde
+  //   davvero con le bolle di reso: BL/TRA, BL/FIM, RESO FILIALE e il vuoto.
+  //   Rimosso anche il test su 'GRUPPO': i moduli DDT prestampati riportano in
+  //   calce il tipografo ("Gruppo Buffetti"), che non c'entra nulla con Telos.
   var _sogRaw = (o.soggetto||o.deposito_partenza||'').toString().toUpperCase().trim();
-  if(_sogRaw && _sogRaw.indexOf('TELOS')<0 && _sogRaw.indexOf('DI ROCCO')<0 && _sogRaw.indexOf('GRUPPO')<0){
-    // Mittente è esterno (cliente, fornitore, ecc.) → VENDITA
-    _tdoc = 'VENDITA';
-  } else if(_tdoc==='BL/TRA' && !_sogRaw){
-    // Se BL/TRA ma soggetto è vuoto/illeggibile, fallback conservativo a VENDITA
-    _tdoc = 'VENDITA';
-  }
+  var _sogIsTelos = !!_sogRaw && (_sogRaw.indexOf('TELOS')>=0 || _sogRaw.indexOf('DI ROCCO')>=0);
+  var _tdocCoercibile = (_tdoc==='' || _tdoc==='BL/TRA' || _tdoc==='BL/FIM' || _tdoc==='RESO FILIALE');
+  if(_tdocCoercibile && !_sogIsTelos){ _tdoc = 'VENDITA'; }
   var _ccli = (o.codice_cliente||'').toString().trim();
   // Solo per scontrino/fattura mantengo il codice cliente
   if(_tdoc!=='SCONTRINO' && _tdoc!=='FATTURA') _ccli='';
@@ -12621,6 +12686,12 @@ function normalizeAIResult(o){
     //   Se e' maggiore di articoli.length sappiamo che la lettura e' incompleta e
     //   ocrViaAI lancia una rilettura mirata chiedendo esattamente le righe mancanti.
     totaleRighe: (parseInt(o.totale_righe_contate||o.totale_righe||0,10)||0),
+    // v36o — Gradi da ruotare in senso ORARIO per raddrizzare la foto (0/90/180/270).
+    //   Se diverso da 0, ocrViaAI rifa' la lettura sull'immagine raddrizzata.
+    orient: (function(){
+      var _v=((parseInt(o.orientamento_foto||o.orientamento||0,10)||0)%360+360)%360;
+      return (_v===90||_v===180||_v===270)?_v:0;
+    })(),
     articoli:arts
   };
 }
