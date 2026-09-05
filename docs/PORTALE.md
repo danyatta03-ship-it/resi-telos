@@ -98,17 +98,33 @@ Due test lo verificano automaticamente.
 
 ## 3. Ruoli
 
-| Ruolo | Vede | Puo' fare |
-|---|---|---|
-| **ADMIN** | Tutto | Utenti, SLA, brand, audit, tutte le transizioni |
-| **TELOS** | Tutto | Approva, lavora, chiude, risponde |
-| **CLIENTE** | Solo i propri codici cliente | Apre richieste, carica documenti, scrive, contesta |
-| **AGENTE** | I clienti della propria zona | Come il cliente + dati economici |
-| **CORRIERE** | I resi del proprio vettore | Aggiorna ritiro/transito/consegna |
+| Ruolo | Vede | Puo' fare | Interfaccia |
+|---|---|---|---|
+| **ADMIN** | Tutto | Utenti, SLA, brand, audit, tutte le transizioni | Portale completo |
+| **TELOS** | Tutto | Approva, lavora, chiude, risponde | Portale completo |
+| **CLIENTE** | Solo i propri codici cliente | Apre richieste, carica documenti, scrive, contesta | Pagina singola |
+| **AGENTE** | I clienti della propria zona | Come il cliente + dati economici | Pagina singola |
+| **CORRIERE** | I resi del proprio vettore | Aggiorna ritiro/transito/consegna | Pagina singola |
 
 Il ruolo vive nel **custom claim `prole`**, firmato da Google e impostato solo
 dalla function `portal-claims`. Le Security Rules leggono quello: il client non
 puo' falsificarlo.
+
+### 3.1 Perche' gli esterni hanno una pagina sola
+
+Cliente, agente e corriere non stanno "dentro un gestionale": aprono il link,
+guardano i loro resi, agiscono e chiudono. Dargli dashboard, sezioni e barra di
+navigazione significa farli girare fra pagine che per loro sono quasi tutte
+vuote.
+
+Per questi ruoli il portale e' **una pagina sola** — il tracking — con il
+riepilogo in cima, i filtri, l'elenco e il dettaglio. Niente sidebar, niente tab
+bar. Notifiche e profilo restano raggiungibili dall'header. E' l'esperienza di
+un'applicazione esterna che manda informazioni al database, non di un
+gestionale in miniatura.
+
+Governato da `isTrackingOnly(role)` in `portal/js/domain/roles.js`. Gli interni
+mantengono il portale completo.
 
 ---
 
@@ -217,6 +233,48 @@ pieno di dati anche senza campo.
 
 ---
 
+## 8-bis. Modalita' di prova
+
+Il portale si puo' provare **senza configurare nulla**: ne' Firebase, ne'
+account, ne' Netlify.
+
+Dalla schermata di accesso, "🔍 Prova il portale senza account" apre un
+elenco di ruoli. Scegliendone uno si entra con un finto SDK Firebase e un
+database in memoria popolato di dati verosimili (codici Bosch reali, clienti
+nel formato del gestionale, vettori usati davvero).
+
+Serve a valutare l'interfaccia e i permessi prima di mettere il portale in
+produzione. Il resto del codice non sa di essere in prova: gira identico a
+come girera' con dati veri.
+
+- Si attiva **solo** con un click esplicito o con `?demo` nell'URL
+- Una striscia gialla sempre visibile impedisce di scambiare i dati finti per veri
+- Non tocca Firebase e non ha accesso a nessun dato reale
+- Per rimuoverla del tutto in produzione: cancella `portal/js/core/demo.js` e
+  il suo import in `portal/js/app.js`
+
+Codice: `portal/js/core/demo.js`.
+
+---
+
+## 8-ter. Badge nel gestionale
+
+Nell'header del gestionale, per UFF/MAG/ADM, compare un pulsante 🌐 con una
+pastiglia rossa in alto a destra: quante cose arrivate dall'esterno aspettano
+una risposta (richieste da esaminare + contestazioni aperte + messaggi delle
+ultime 72 ore).
+
+Il gestionale gira con auth **anonima** e non puo' leggere i nodi del portale —
+le regole glielo impediscono, ed e' giusto. Legge invece
+`portal_counters/staff`, un nodo di soli numeri aggregati: nessun nome, nessun
+codice cliente, nessun dato di una pratica specifica. E' l'unico nodo del
+portale leggibile senza il claim `prole`, e la scrittura resta riservata allo
+staff.
+
+I contatori sono ricalcolati da `portal-sync` a ogni giro (10 minuti).
+
+---
+
 ## 9. Messa in produzione
 
 ### 9.1 Dipendenze
@@ -312,7 +370,7 @@ popolare il loro perimetro.
 npm test
 ```
 
-169 test senza dipendenze esterne:
+178 test senza dipendenze esterne:
 
 | Suite | Copre |
 |---|---|

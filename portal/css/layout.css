@@ -201,6 +201,22 @@
   }
 }
 
+/* ── Modalità pagina singola (cliente, agente, corriere) ──────────────── */
+/* Nessuna barra di navigazione: il contenuto si prende tutto lo spazio,
+   e sotto non serve lasciare il posto alla tab bar. */
+html.is-solo .main {
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--sp-6));
+}
+html.is-solo .action-bar {
+  bottom: env(safe-area-inset-bottom);
+}
+html.is-solo .toasts {
+  bottom: calc(env(safe-area-inset-bottom) + var(--sp-4));
+}
+@media (min-width: 900px) {
+  html.is-solo .body { max-width: 980px; }
+}
+
 /* ── Griglie ──────────────────────────────────────────────────────────── */
 .grid { display: grid; gap: var(--sp-3); }
 .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }

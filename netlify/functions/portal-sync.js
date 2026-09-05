@@ -179,6 +179,9 @@ async function runSync(fb) {
     db.ref('portal_access').set(access)
   ]);
 
+  const counters = await computeCounters(db);
+  await db.ref('portal_counters/staff').set(counters);
+
   const stats = {
     ts: started,
     durationMs: Date.now() - started,
@@ -188,11 +191,71 @@ async function runSync(fb) {
     clientScopes: Object.keys(viewClient).length,
     agentScopes: Object.keys(viewAgent).length,
     courierScopes: Object.keys(viewCourier).length,
-    usersGranted: Object.keys(access).length
+    usersGranted: Object.keys(access).length,
+    counters
   };
   await db.ref('portal_sync_meta').set(stats);
 
   return stats;
+}
+
+// Quante cose arrivate dall'esterno aspettano una risposta di Telos.
+// Alimenta il badge sul pulsante del portale dentro il gestionale, che gira
+// con auth anonima e quindi non puo' leggere i nodi veri: legge solo questi
+// numeri aggregati.
+async function computeCounters(db) {
+  const [reqSnap, timelineSnap, msgSnap] = await Promise.all([
+    db.ref('portal_requests').once('value'),
+    db.ref('portal_timeline').once('value'),
+    db.ref('portal_messages').once('value')
+  ]);
+
+  const requests = reqSnap.val() || {};
+  let pending = 0;
+  for (const id in requests) {
+    const r = requests[id];
+    if (r && (r.state === 'INVIATA' || r.state === 'IN_ESAME')) pending++;
+  }
+
+  // Contestazioni ancora aperte: l'ultimo cambio di stato dice CONTESTATO.
+  const timeline = timelineSnap.val() || {};
+  let contested = 0;
+  for (const key in timeline) {
+    const events = timeline[key] || {};
+    let lastTs = 0;
+    let lastTo = '';
+    for (const id in events) {
+      const e = events[id];
+      if (e && e.action === 'STATE_CHANGE' && e.to && (e.ts || 0) >= lastTs) {
+        lastTs = e.ts || 0;
+        lastTo = e.to;
+      }
+    }
+    if (lastTo === 'CONTESTATO') contested++;
+  }
+
+  // Messaggi scritti da ruoli esterni nelle ultime 72 ore. Non sappiamo se un
+  // operatore li ha letti — quel dato e' per-utente e vive nel portale — ma
+  // come segnale di "c'e' movimento" e' onesto e non richiede stato aggiuntivo.
+  const cutoff = Date.now() - 72 * 3600 * 1000;
+  const threads = msgSnap.val() || {};
+  let messages = 0;
+  for (const key in threads) {
+    const thread = threads[key] || {};
+    for (const id in thread) {
+      const m = thread[id];
+      if (!m || (m.ts || 0) < cutoff) continue;
+      if (m.fromRole === 'CLIENTE' || m.fromRole === 'AGENTE' || m.fromRole === 'CORRIERE') messages++;
+    }
+  }
+
+  return {
+    pending,
+    contested,
+    messages,
+    total: pending + contested + messages,
+    ts: Date.now()
+  };
 }
 
 function project(row, fields) {

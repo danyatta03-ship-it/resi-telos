@@ -19,6 +19,13 @@
     "  la lista in portal_users/<uid>/scope/<scopeId> === true.",
     "  Questo evita di dover iterare array dentro i claim (impossibile in RTDB).",
     "",
+    "NOTA SU portal_counters: e' l'unico nodo del portale leggibile anche",
+    "dall'auth ANONIMA del gestionale, che deve poter mostrare il badge con il",
+    "numero di cose in arrivo dall'esterno. Contiene solo numeri aggregati",
+    "(quante richieste pendenti, quanti contestati, quanti messaggi): nessun",
+    "nome, nessun codice, nessun dato di un cliente specifico. La scrittura",
+    "resta riservata allo staff.",
+    "",
     "APPLICARE: Firebase Console -> Realtime Database -> Regole -> incolla -> Pubblica."
   ],
 
@@ -322,6 +329,20 @@
     "portal_sync_meta": {
       ".read": "auth != null",
       ".write": "auth != null && (auth.token.prole == 'ADMIN' || auth.token.prole == 'TELOS')"
+    },
+
+    "portal_counters": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.prole == 'ADMIN' || auth.token.prole == 'TELOS')",
+      "staff": {
+        ".validate": "newData.hasChildren(['total'])",
+        "pending":   { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "contested": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "messages":  { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "total":     { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "ts":        { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
     }
   }
 }

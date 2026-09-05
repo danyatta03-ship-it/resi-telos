@@ -9,7 +9,8 @@ import { route, setNotFound, setGuard, startRouter, navigate } from './core/rout
 import { on, EVENTS } from './core/bus.js';
 import { clear as clearStore } from './core/store.js';
 import { loadSlaConfig, setSlaConfig } from './domain/sla.js';
-import { navFor } from './domain/roles.js';
+import { isDemo, installDemoBackend, stopDemo, demoRole } from './core/demo.js';
+import { navFor, isTrackingOnly, homePathFor, reachablePaths } from './domain/roles.js';
 import { h, mount, clear } from './ui/dom.js';
 import { buildShell, teardownShell, getMain, restoreTheme, setNotifCount } from './ui/shell.js';
 import { emptyState, banner } from './ui/components.js';
@@ -113,20 +114,22 @@ setGuard(async (ctx) => {
   await whenProfileReady();
 
   const role = getRole();
+  const home = homePathFor(role);
+
   if (ctx.route && ctx.route.roles && ctx.route.roles.indexOf(role) < 0) {
     toast('Sezione non disponibile per il tuo ruolo.', 'err');
-    return '/';
+    return home;
   }
 
-  // Una rotta valida ma non prevista per il ruolo (es. /richieste per un
-  // corriere) riporta alla dashboard invece di mostrare una pagina vuota.
+  // Un ruolo esterno che arriva su '/' non ha una dashboard: lo porto sul
+  // tracking, che per lui e' la home.
+  if (ctx.path === '/' && isTrackingOnly(role)) return home;
+
+  // Rotta valida ma fuori dal perimetro del ruolo: riporto alla sua home
+  // invece di mostrare una pagina vuota.
   if (ctx.route && ctx.path !== '/' && !ctx.path.startsWith('/resi/')) {
-    const allowed = navFor(role).map((n) => n.path);
-    const base = '/' + ctx.path.split('/').filter(Boolean).slice(0, 2).join('/');
-    const simple = '/' + ctx.path.split('/').filter(Boolean)[0];
-    if (allowed.indexOf(ctx.path) < 0 && allowed.indexOf(base) < 0 && allowed.indexOf(simple) < 0) {
-      return '/';
-    }
+    const allowed = reachablePaths(role);
+    if (allowed.indexOf(ctx.path) < 0) return home;
   }
 
   ensureShell();
@@ -137,6 +140,13 @@ setGuard(async (ctx) => {
 async function boot() {
   restoreTheme();
   await loadBrandDefaults();
+
+  // La demo installa un finto SDK con dati in memoria: da qui in poi il resto
+  // dell'applicazione gira identico, senza sapere di essere in prova.
+  if (isDemo()) {
+    installDemoBackend();
+    document.documentElement.classList.add('is-demo');
+  }
 
   try {
     await initFirebase();
@@ -162,9 +172,10 @@ async function boot() {
     noRoleShown = false;
     attachConfig();
     ensureShell();
-    // Dopo il login rientro sulla rotta corrente (o sulla dashboard).
-    const target = location.hash && location.hash !== '#' ? location.hash.slice(1) : '/';
-    navigate(target, true);
+    // Dopo il login rientro sulla rotta corrente, o sulla home del ruolo.
+    const home = homePathFor(auth.role);
+    const current = location.hash && location.hash !== '#' ? location.hash.slice(1) : '';
+    navigate(current && current !== '/' ? current : home, true);
   });
 
   startRouter('/');

@@ -219,6 +219,31 @@ export async function runRulesTests() {
     assert(v2.portal_audit['.read'].indexOf("prole == 'ADMIN'") >= 0);
   });
 
+  describe('Regole — contatori per il badge del gestionale');
+
+  it('portal_counters e\' leggibile anche dall\'auth anonima del gestionale', () => {
+    // Il gestionale usa signInAnonymously e non ha il claim 'prole': se la
+    // lettura richiedesse un ruolo, il badge non funzionerebbe mai.
+    eq(v2.portal_counters['.read'], 'auth != null');
+  });
+
+  it('solo lo staff puo\' scrivere i contatori', () => {
+    const rule = v2.portal_counters['.write'];
+    assert(rule.indexOf('ADMIN') >= 0 && rule.indexOf('TELOS') >= 0);
+    assert(rule.indexOf('CLIENTE') < 0, 'un cliente potrebbe gonfiare il badge');
+  });
+
+  it('i contatori accettano solo numeri, non testo libero', () => {
+    const staff = v2.portal_counters.staff;
+    for (const field of ['pending', 'contested', 'messages', 'total']) {
+      const rule = staff[field]['.validate'];
+      assert(rule.indexOf('isNumber') >= 0, field + ' deve essere numerico');
+      assert(rule.indexOf('>= 0') >= 0, field + ' non puo\' essere negativo');
+    }
+    eq(staff.$other['.validate'], false,
+      'nessun campo extra: il nodo e\' leggibile da tutti, deve restare di soli numeri');
+  });
+
   describe('Regole — limiti di dimensione');
 
   it('i campi testuali del portale hanno un limite', () => {

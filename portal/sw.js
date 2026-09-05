@@ -28,6 +28,7 @@ var PRECACHE = [
   './js/core/store.js',
   './js/core/idb.js',
   './js/core/offline.js',
+  './js/core/demo.js',
   './js/domain/roles.js',
   './js/domain/workflow.js',
   './js/domain/timeline.js',

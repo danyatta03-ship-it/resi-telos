@@ -145,7 +145,7 @@ Il gestionale **non è stato modificato**: `index.html`, `sw.js`,
 
 ```bash
 npm install     # aggiunge firebase-admin (solo per le Netlify Functions)
-npm test        # 169 test sul portale
+npm test        # 178 test sul portale
 ```
 
 Messa in produzione, variabili d'ambiente e creazione del primo

@@ -6,10 +6,10 @@ import { h, mount, clear, debounce } from '../ui/dom.js';
 import { subscribe } from '../core/store.js';
 import { bindReturns, filterReturns, sortReturns } from '../domain/returns.js';
 import { getRole } from '../core/auth.js';
-import { can } from '../domain/roles.js';
-import { STATE_META, STATE_ORDER, STATE } from '../domain/workflow.js';
+import { can, isTrackingOnly } from '../domain/roles.js';
+import { STATE_META, STATE_ORDER, STATE, isTerminal } from '../domain/workflow.js';
 import { LEVEL } from '../domain/sla.js';
-import { returnCard, emptyState, skeletonList, pageHeader, filterChips } from '../ui/components.js';
+import { returnCard, emptyState, skeletonList, pageHeader, filterChips, kpiTile } from '../ui/components.js';
 import { navigate } from '../core/router.js';
 
 let unsubscribe = null;
@@ -57,11 +57,27 @@ export function renderReturns(container, { query }) {
     draw();
   }, 220));
 
-  const actions = can(role, 'createRequest')
-    ? [h('a.btn.btn-primary', { href: '#/richieste/nuova' }, '+ Richiesta')]
-    : null;
+  const solo = isTrackingOnly(role);
 
-  container.appendChild(pageHeader('Resi', null, actions));
+  const actions = [];
+  if (can(role, 'createRequest')) {
+    actions.push(h('a.btn.btn-primary', { href: '#/richieste/nuova' }, '+ Richiesta'));
+  }
+  // Senza barra di navigazione, le altre sezioni devono essere raggiungibili
+  // da qui: e' l'unica pagina che questi ruoli vedono.
+  if (solo && can(role, 'createRequest')) {
+    actions.push(h('a.btn', { href: '#/richieste' }, 'Le mie richieste'));
+  }
+
+  container.appendChild(pageHeader(
+    solo ? (role === 'CORRIERE' ? 'I tuoi ritiri' : 'I tuoi resi') : 'Resi',
+    solo ? subtitleFor(role) : null,
+    actions.length ? actions : null
+  ));
+
+  // Riepilogo in cima: senza dashboard, questi numeri devono stare qui.
+  const summaryZone = solo ? h('div.grid.grid-4', { style: { marginBottom: '16px' } }) : null;
+  if (summaryZone) container.appendChild(summaryZone);
   container.appendChild(h('div.row-w', { style: { marginBottom: '12px' } }, [
     h('div', { style: { flex: '1 1 240px', minWidth: '0' } }, searchInput),
     sortSelect
@@ -116,7 +132,36 @@ export function renderReturns(container, { query }) {
     if (location.hash !== hash) history.replaceState(null, '', hash);
   }
 
+  function drawSummary() {
+    if (!summaryZone) return;
+    const rows = state.rows;
+    const open = rows.filter((r) => !isTerminal(r.trackingState)).length;
+    const closed = rows.length - open;
+    const late = rows.filter((r) => r.sla && (r.sla.level === LEVEL.WARN || r.sla.level === LEVEL.CRIT)).length;
+    const contested = rows.filter((r) => r.trackingState === STATE.CONTESTATO).length;
+
+    mount(summaryZone, [
+      kpiTile({
+        value: open, label: role === 'CORRIERE' ? 'Da gestire' : 'In corso',
+        color: 'var(--brand-primary)',
+        onClick: () => { state.state = ''; state.sla = ''; state.limit = PAGE; syncUrl(); draw(); }
+      }),
+      kpiTile({
+        value: late, label: 'In ritardo',
+        color: late > 0 ? 'var(--warn)' : null,
+        onClick: () => { state.sla = LEVEL.WARN; state.limit = PAGE; syncUrl(); draw(); }
+      }),
+      kpiTile({
+        value: contested, label: 'Contestati',
+        color: contested > 0 ? 'var(--danger)' : null,
+        onClick: () => { state.state = STATE.CONTESTATO; state.limit = PAGE; syncUrl(); draw(); }
+      }),
+      kpiTile({ value: closed, label: 'Conclusi', color: 'var(--ok)' })
+    ]);
+  }
+
   function draw() {
+    drawSummary();
     drawChips();
     const filtered = sortReturns(
       filterReturns(state.rows, { q: state.q, state: state.state, sla: state.sla }),
@@ -173,4 +218,13 @@ export function renderReturns(container, { query }) {
 
 export function leaveReturns() {
   if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+}
+
+function subtitleFor(role) {
+  const map = {
+    CLIENTE: 'Stato aggiornato in tempo reale. Tocca un reso per la cronologia completa.',
+    AGENTE: 'I resi dei clienti della tua zona.',
+    CORRIERE: 'I ritiri assegnati al tuo vettore. Tocca un ritiro per aggiornarne lo stato.'
+  };
+  return map[role] || '';
 }

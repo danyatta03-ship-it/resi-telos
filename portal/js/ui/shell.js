@@ -4,7 +4,8 @@
 import { h, clear, mount, initials, colorFor } from './dom.js';
 import { getBrand } from '../core/config.js';
 import { getRole, getDisplayName, getProfile, signOut } from '../core/auth.js';
-import { navFor, roleLabel } from '../domain/roles.js';
+import { navFor, roleLabel, isTrackingOnly } from '../domain/roles.js';
+import { isDemo, demoRole, stopDemo } from '../core/demo.js';
 import { isConnected } from '../core/firebase.js';
 import { getPendingCount } from '../core/offline.js';
 import { on, EVENTS } from '../core/bus.js';
@@ -68,20 +69,60 @@ export function buildShell(container) {
   ]);
 
   // ── Sidebar (desktop) + tab bar (mobile) ──
+  // I ruoli esterni hanno una sola sezione: una navigazione con un solo
+  // elemento e' rumore, quindi sparisce del tutto e la pagina occupa
+  // tutto lo spazio.
+  const trackingOnly = isTrackingOnly(role);
   const items = navFor(role);
-  sideEl = h('aside.side', renderSideItems(items));
-  navEl = h('nav.nav', { 'aria-label': 'Navigazione principale' }, renderNavItems(items));
 
   mainEl = h('main.main', { id: 'view', role: 'main' });
 
-  root.appendChild(h('div.app', [
-    header,
-    h('div.body', [sideEl, mainEl]),
-    navEl
-  ]));
+  if (trackingOnly) {
+    document.documentElement.classList.add('is-solo');
+    root.appendChild(h('div.app', [
+      header,
+      isDemo() ? demoBanner() : null,
+      h('div.body', [mainEl])
+    ]));
+  } else {
+    document.documentElement.classList.remove('is-solo');
+    sideEl = h('aside.side', renderSideItems(items));
+    navEl = h('nav.nav', { 'aria-label': 'Navigazione principale' }, renderNavItems(items));
+    root.appendChild(h('div.app', [
+      header,
+      isDemo() ? demoBanner() : null,
+      h('div.body', [sideEl, mainEl]),
+      navEl
+    ]));
+  }
 
   bindShellEvents();
   return mainEl;
+}
+
+// Striscia sempre visibile in modalita' di prova: deve essere impossibile
+// scambiare i dati finti per quelli veri.
+function demoBanner() {
+  return h('div', {
+    style: {
+      background: 'var(--warn)', color: '#2E2205',
+      padding: '6px 14px', fontSize: '12px', fontWeight: '700',
+      display: 'flex', alignItems: 'center', gap: '10px'
+    }
+  }, [
+    h('span', '🔍'),
+    h('span', { style: { flex: '1 1 auto' } },
+      'MODALITÀ DI PROVA · ' + roleLabel(demoRole()) + ' · i dati sono finti, il database non viene toccato'),
+    h('button', {
+      type: 'button',
+      onclick: () => stopDemo(),
+      style: {
+        border: '1px solid rgba(0,0,0,.3)', background: 'rgba(255,255,255,.35)',
+        color: 'inherit', borderRadius: '999px', padding: '2px 10px',
+        fontSize: '11px', fontWeight: '700', cursor: 'pointer', fontFamily: 'inherit'
+      }
+    }, 'Esci dalla prova')
+  ]);
 }
 
 function renderSideItems(items) {
@@ -252,6 +293,7 @@ export function getMain() {
 }
 
 export function teardownShell() {
+  document.documentElement.classList.remove('is-solo');
   if (root) clear(root);
   root = null;
   mainEl = null;

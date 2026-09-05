@@ -146,12 +146,39 @@ export function roleIcon(role) {
   return (ROLE_META[role] && ROLE_META[role].icon) || '';
 }
 
+// Chi vede il portale come applicazione COMPLETA (dashboard, sezioni, admin)
+// e chi invece lo vede come una singola pagina di tracking.
+//
+// Cliente, agente e corriere non stanno "dentro un gestionale": aprono il
+// link, guardano i loro resi, agiscono e chiudono. Dargli una dashboard, una
+// sezione richieste e una barra di navigazione significa farli navigare fra
+// pagine che per loro sono quasi tutte vuote. Per questi ruoli il portale e'
+// una pagina sola — il tracking — e tutto il resto sta li' dentro.
+export function isTrackingOnly(role) {
+  return role === ROLE.CLIENTE || role === ROLE.AGENTE || role === ROLE.CORRIERE;
+}
+
+// Rotta di partenza dopo il login.
+export function homePathFor(role) {
+  return isTrackingOnly(role) ? '/resi' : '/';
+}
+
 // Voci di navigazione per ruolo. L'ordine e' quello di visualizzazione.
+// Per i ruoli esterni ritorna una sola voce: la shell in quel caso nasconde
+// del tutto la barra, perche' una navigazione con un solo elemento e' rumore.
 export function navFor(role) {
+  if (isTrackingOnly(role)) {
+    return [{
+      path: '/resi',
+      label: role === ROLE.CORRIERE ? 'Ritiri' : 'I miei resi',
+      icon: '📦',
+      roles: [role]
+    }];
+  }
   const items = [
     { path: '/',        label: 'Dashboard', icon: '📊', roles: ROLE_LIST },
     { path: '/resi',    label: 'Resi',      icon: '📦', roles: ROLE_LIST },
-    { path: '/richieste', label: 'Richieste', icon: '📝', roles: [ROLE.ADMIN, ROLE.TELOS, ROLE.CLIENTE, ROLE.AGENTE] },
+    { path: '/richieste', label: 'Richieste', icon: '📝', roles: [ROLE.ADMIN, ROLE.TELOS] },
     { path: '/notifiche', label: 'Notifiche', icon: '🔔', roles: ROLE_LIST },
     { path: '/admin/utenti', label: 'Utenti', icon: '👥', roles: [ROLE.ADMIN] },
     { path: '/admin/sla',    label: 'SLA',    icon: '⏱️', roles: [ROLE.ADMIN] },
@@ -159,6 +186,19 @@ export function navFor(role) {
     { path: '/profilo', label: 'Profilo',   icon: '👤', roles: ROLE_LIST }
   ];
   return items.filter((it) => it.roles.indexOf(role) >= 0);
+}
+
+// Rotte raggiungibili da un ruolo, anche se non compaiono nella navigazione.
+// I ruoli esterni possono comunque aprire il dettaglio di un reso, le proprie
+// richieste, le notifiche e il profilo: semplicemente non hanno una voce di
+// menu che ci porti: ci arrivano dai pulsanti dentro la pagina di tracking.
+export function reachablePaths(role) {
+  if (isTrackingOnly(role)) {
+    const base = ['/resi', '/notifiche', '/profilo'];
+    if (role !== ROLE.CORRIERE) base.push('/richieste', '/richieste/nuova');
+    return base;
+  }
+  return navFor(role).map((n) => n.path).concat(['/richieste/nuova']);
 }
 
 // Campi del record reso visibili a ciascun ruolo. Serve sia alla UI sia alla

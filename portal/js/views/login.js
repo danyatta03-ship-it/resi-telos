@@ -5,6 +5,7 @@ import { h, mount, clear } from '../ui/dom.js';
 import { getBrand } from '../core/config.js';
 import { signIn, sendPasswordReset, authErrorText } from '../core/auth.js';
 import { toast } from '../ui/toast.js';
+import { startDemo, DEMO_ROLES } from '../core/demo.js';
 
 export function renderLogin(container) {
   const brand = getBrand();
@@ -117,6 +118,7 @@ export function renderLogin(container) {
       h('div.muted', { style: { fontSize: '13.5px' } }, brand.loginTagline || brand.companyName || '')
     ]),
     h('div.card', form),
+    demoPanel(),
     h('div.txt-c.dim', { style: { marginTop: '18px', fontSize: '12px', lineHeight: '1.7' } }, [
       brand.supportEmail
         ? h('div', ['Problemi di accesso? ', h('a', { href: 'mailto:' + brand.supportEmail }, brand.supportEmail)])
@@ -131,4 +133,41 @@ export function renderLogin(container) {
 
 export function leaveLogin() {
   document.documentElement.classList.remove('is-login');
+}
+
+// Pannello di prova: entra come un ruolo qualsiasi con dati finti, senza
+// account e senza aver configurato Firebase. Serve a valutare il portale
+// prima di metterlo in produzione.
+function demoPanel() {
+  const buttons = DEMO_ROLES.map((r) => h('button.btn.btn-block', {
+    type: 'button',
+    style: { justifyContent: 'flex-start', textAlign: 'left', padding: '10px 14px' },
+    onclick: () => startDemo(r.role)
+  }, [
+    h('span', { style: { fontSize: '17px', flex: '0 0 auto' } }, r.icon),
+    h('span', { style: { flex: '1 1 auto', minWidth: '0' } }, [
+      h('div', { style: { fontWeight: '700', fontSize: '13.5px' } }, r.label),
+      h('div', { style: { fontSize: '11.5px', color: 'var(--text-3)', fontWeight: '400' } }, r.desc)
+    ]),
+    h('span', { style: { color: 'var(--text-3)' } }, '→')
+  ]));
+
+  const panel = h('div.col-2.hidden', { style: { marginTop: '12px' } }, buttons);
+
+  const toggle = h('button.btn.btn-ghost.btn-block', {
+    type: 'button',
+    style: { marginTop: '14px', fontSize: '13px' },
+    onclick: () => {
+      const open = !panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', open);
+      toggle.textContent = open ? '🔍 Prova il portale senza account' : '✕ Chiudi la modalità di prova';
+    }
+  }, '🔍 Prova il portale senza account');
+
+  return h('div', [
+    toggle,
+    panel,
+    h('div.hint.txt-c', { style: { marginTop: '10px' } },
+      'La modalità di prova usa dati finti e non tocca il database.')
+  ]);
 }

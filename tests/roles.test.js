@@ -6,6 +6,7 @@ import { describe, it, assert, eq } from './run.js';
 import {
   ROLE, ROLE_LIST, ROLE_META, ROLE_SOURCE,
   can, permsFor, isInternal, navFor,
+  isTrackingOnly, homePathFor, reachablePaths,
   VISIBLE_FIELDS, visibleFieldsFor, projectForRole
 } from '../portal/js/domain/roles.js';
 
@@ -101,17 +102,68 @@ export async function runRolesTests() {
     }
   });
 
-  it('il corriere non vede la sezione richieste', () => {
-    const paths = navFor(ROLE.CORRIERE).map((n) => n.path);
-    assert(!paths.includes('/richieste'));
-  });
-
-  it('ogni ruolo ha almeno dashboard, resi e profilo', () => {
-    for (const r of ROLE_LIST) {
+  it('i ruoli interni hanno dashboard, resi e profilo', () => {
+    for (const r of [ROLE.ADMIN, ROLE.TELOS]) {
       const paths = navFor(r).map((n) => n.path);
       assert(paths.includes('/'), r + ' senza dashboard');
       assert(paths.includes('/resi'), r + ' senza elenco resi');
       assert(paths.includes('/profilo'), r + ' senza profilo');
+    }
+  });
+
+  describe('Ruoli — portale a pagina singola per gli esterni');
+
+  it('cliente, agente e corriere vedono solo il tracking', () => {
+    for (const r of [ROLE.CLIENTE, ROLE.AGENTE, ROLE.CORRIERE]) {
+      assert(isTrackingOnly(r), r + ' dovrebbe essere in modalita\' pagina singola');
+      const nav = navFor(r);
+      eq(nav.length, 1, r + ' ha ' + nav.length + ' voci di menu invece di 1');
+      eq(nav[0].path, '/resi');
+    }
+  });
+
+  it('i ruoli interni mantengono il portale completo', () => {
+    for (const r of [ROLE.ADMIN, ROLE.TELOS]) {
+      assert(!isTrackingOnly(r), r + ' non deve essere a pagina singola');
+      assert(navFor(r).length > 1, r + ' ha perso le sezioni');
+    }
+  });
+
+  it('la home di un esterno e\' il tracking, quella di un interno la dashboard', () => {
+    eq(homePathFor(ROLE.CLIENTE), '/resi');
+    eq(homePathFor(ROLE.AGENTE), '/resi');
+    eq(homePathFor(ROLE.CORRIERE), '/resi');
+    eq(homePathFor(ROLE.ADMIN), '/');
+    eq(homePathFor(ROLE.TELOS), '/');
+  });
+
+  it('gli esterni raggiungono comunque notifiche e profilo', () => {
+    for (const r of [ROLE.CLIENTE, ROLE.AGENTE, ROLE.CORRIERE]) {
+      const paths = reachablePaths(r);
+      assert(paths.includes('/resi'), r + ' senza tracking');
+      assert(paths.includes('/notifiche'), r + ' non raggiunge le notifiche');
+      assert(paths.includes('/profilo'), r + ' non raggiunge il profilo');
+    }
+  });
+
+  it('il corriere non raggiunge le richieste di reso', () => {
+    const paths = reachablePaths(ROLE.CORRIERE);
+    assert(!paths.includes('/richieste'), 'il corriere non apre richieste');
+    assert(!paths.includes('/richieste/nuova'));
+  });
+
+  it('cliente e agente raggiungono le proprie richieste', () => {
+    for (const r of [ROLE.CLIENTE, ROLE.AGENTE]) {
+      const paths = reachablePaths(r);
+      assert(paths.includes('/richieste'), r + ' non raggiunge le richieste');
+      assert(paths.includes('/richieste/nuova'), r + ' non puo\' aprirne una nuova');
+    }
+  });
+
+  it('nessun ruolo esterno raggiunge le pagine di amministrazione', () => {
+    for (const r of [ROLE.CLIENTE, ROLE.AGENTE, ROLE.CORRIERE]) {
+      const paths = reachablePaths(r);
+      assert(!paths.some((p) => p.startsWith('/admin')), r + ' raggiunge /admin');
     }
   });
 
