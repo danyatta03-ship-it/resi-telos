@@ -12,7 +12,7 @@
 // altri. Cosi' invece l'app non ha nessun accesso al database — parla solo
 // con questo endpoint, che scrive per suo conto.
 
-const { getAdmin, corsHeaders, json } = require('./_portal-admin');
+const { getAdmin, corsHeaders, json } = require('./lib/admin');
 
 const CAUSALI = [
   'ERRATO ORDINE', 'ERRATA SPEDIZIONE', 'ORDINE DISDETTO CLIENTE', 'ORDINE MULTIPLO',

@@ -11,7 +11,7 @@
 // foto non tornano indietro (pesano e chi le ha caricate le ha gia'). Chi
 // consulta vede quello che gli serve per sapere a che punto e' la pratica.
 
-const { getAdmin, corsHeaders, json } = require('./_portal-admin');
+const { getAdmin, corsHeaders, json } = require('./lib/admin');
 
 const REF_RE = /^RS-[A-Z0-9]{6,10}$/;
 const MAX_MESSAGGIO = 2000;
