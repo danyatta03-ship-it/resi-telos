@@ -1,0 +1,188 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   BASE — reset, token di design, tipografia.
+   I colori del brand (--brand-*) sono iniettati a runtime da core/config.js
+   leggendo portal_config/brand: qui ci sono solo i fallback.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: dark light;
+
+  /* Brand (sovrascritti a runtime dal white-label) */
+  --brand-primary: #3B9FD4;
+  --brand-accent:  #2ECC71;
+  --brand-warn:    #E6B03C;
+  --brand-danger:  #E05555;
+
+  /* Superfici — tema scuro di default */
+  --bg:         #0D1117;
+  --bg-2:       #131A23;
+  --surface:    #1A222E;
+  --surface-2:  #212C3A;
+  --surface-3:  #2A3746;
+  --border:     rgba(255,255,255,.09);
+  --border-2:   rgba(255,255,255,.16);
+
+  /* Testo */
+  --text:       #E8EDF3;
+  --text-2:     #A7B4C4;
+  --text-3:     #6E7E92;
+
+  /* Feedback */
+  --ok:      #2ECC71;
+  --warn:    #E6B03C;
+  --danger:  #E05555;
+  --info:    #3B9FD4;
+
+  /* Spaziature */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-7: 32px; --sp-8: 48px;
+
+  --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --r-full: 999px;
+
+  --sh-1: 0 1px 2px rgba(0,0,0,.24);
+  --sh-2: 0 4px 12px rgba(0,0,0,.28);
+  --sh-3: 0 12px 32px rgba(0,0,0,.36);
+
+  --header-h: 56px;
+  --nav-h: 60px;
+  --sidebar-w: 232px;
+  --maxw: 1240px;
+
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  --t-fast: .12s ease;
+  --t-med:  .22s ease;
+}
+
+/* Tema chiaro: attivo su preferenza di sistema, salvo scelta esplicita. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg:        #F4F6F9;
+    --bg-2:      #FFFFFF;
+    --surface:   #FFFFFF;
+    --surface-2: #F0F3F7;
+    --surface-3: #E4EAF1;
+    --border:    rgba(16,24,40,.10);
+    --border-2:  rgba(16,24,40,.18);
+    --text:      #101828;
+    --text-2:    #48566B;
+    --text-3:    #7A8798;
+    --sh-1: 0 1px 2px rgba(16,24,40,.06);
+    --sh-2: 0 4px 12px rgba(16,24,40,.09);
+    --sh-3: 0 12px 32px rgba(16,24,40,.13);
+  }
+}
+
+/* Scelta esplicita dell'utente: vince su tutto. */
+:root[data-theme="light"] {
+  --bg:        #F4F6F9;
+  --bg-2:      #FFFFFF;
+  --surface:   #FFFFFF;
+  --surface-2: #F0F3F7;
+  --surface-3: #E4EAF1;
+  --border:    rgba(16,24,40,.10);
+  --border-2:  rgba(16,24,40,.18);
+  --text:      #101828;
+  --text-2:    #48566B;
+  --text-3:    #7A8798;
+  --sh-1: 0 1px 2px rgba(16,24,40,.06);
+  --sh-2: 0 4px 12px rgba(16,24,40,.09);
+  --sh-3: 0 12px 32px rgba(16,24,40,.13);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4 { margin: 0 0 var(--sp-3); font-weight: 700; line-height: 1.25; letter-spacing: -.01em; }
+h1 { font-size: 24px; }
+h2 { font-size: 19px; }
+h3 { font-size: 16px; }
+h4 { font-size: 14px; }
+p  { margin: 0 0 var(--sp-3); }
+
+a { color: var(--brand-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+small { font-size: 12px; color: var(--text-2); }
+code, .mono { font-family: var(--mono); font-size: .92em; }
+
+img { max-width: 100%; height: auto; display: block; }
+
+hr { border: 0; border-top: 1px solid var(--border); margin: var(--sp-5) 0; }
+
+/* Focus visibile e coerente ovunque: requisito di accessibilita', non estetica. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+::selection { background: var(--brand-primary); color: #fff; }
+
+/* Scrollbar discreta */
+* { scrollbar-width: thin; scrollbar-color: var(--surface-3) transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: var(--r-full); }
+*::-webkit-scrollbar-thumb:hover { background: var(--border-2); }
+
+/* Utility */
+.hidden { display: none !important; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+.txt-c { text-align: center; }
+.txt-r { text-align: right; }
+.muted { color: var(--text-2); }
+.dim   { color: var(--text-3); }
+.strong { font-weight: 700; }
+.nowrap { white-space: nowrap; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.break { word-break: break-word; overflow-wrap: anywhere; }
+
+.c-ok     { color: var(--ok); }
+.c-warn   { color: var(--warn); }
+.c-danger { color: var(--danger); }
+.c-info   { color: var(--info); }
+
+.mt-0 { margin-top: 0; }
+.mb-0 { margin-bottom: 0; }
+.mt-2 { margin-top: var(--sp-2); }
+.mt-3 { margin-top: var(--sp-3); }
+.mt-4 { margin-top: var(--sp-4); }
+.mt-5 { margin-top: var(--sp-5); }
+.mb-2 { margin-bottom: var(--sp-2); }
+.mb-3 { margin-bottom: var(--sp-3); }
+.mb-4 { margin-bottom: var(--sp-4); }
+.mb-5 { margin-bottom: var(--sp-5); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

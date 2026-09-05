@@ -1,10 +1,14 @@
 {
   "name": "resi-telos",
-  "version": "1.0.0",
-  "description": "Reparto Resi Telos SPA - App statica + api/gemini proxy",
+  "version": "1.1.0",
+  "description": "Reparto Resi Telos SPA + Portale Tracking Resi - App statiche + Netlify Functions",
   "private": true,
   "scripts": {
-    "dev": "node dev-server.js"
+    "dev": "node dev-server.js",
+    "test": "node tests/run.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
   },
   "devDependencies": {
     "express": "^4.18.2",

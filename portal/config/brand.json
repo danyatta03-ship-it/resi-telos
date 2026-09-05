@@ -1,0 +1,19 @@
+{
+  "_comment": "Configurazione white-label del Portale Tracking Resi. Questi valori sono i default del bundle: se in Firebase esiste portal_config/brand con un ts piu' recente, quello vince. Modificabile dall'Admin dal portale stesso.",
+  "ts": 0,
+  "appName": "Tracking Resi",
+  "companyName": "TELOS SPA",
+  "companyAddress": "Via Aosta 5, 10078 Venaria Reale (TO)",
+  "companyEmail": "resi.torino@telosgroup.it",
+  "companyPhone": "",
+  "supportEmail": "resi.torino@telosgroup.it",
+  "logoUrl": "",
+  "colorPrimary": "#3B9FD4",
+  "colorAccent": "#2ECC71",
+  "colorWarn": "#E6B03C",
+  "colorDanger": "#E05555",
+  "loginTagline": "Segui i tuoi resi in tempo reale",
+  "footerNote": "",
+  "privacyUrl": "",
+  "termsUrl": ""
+}

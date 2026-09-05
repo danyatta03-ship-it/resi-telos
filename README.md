@@ -128,7 +128,28 @@ Dettagli in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
   di vita di un reso, ruoli, blocchi/automazioni, sicurezza, PWA.
 - **[DATA-MODEL.md](docs/DATA-MODEL.md)** — schema dei record, chiavi
   localStorage/IndexedDB, path Firebase.
+- **[PORTALE.md](docs/PORTALE.md)** — Portale Tracking Resi: architettura,
+  ruoli, isolamento dei dati, messa in produzione.
 - **[CHANGELOG.md](CHANGELOG.md)** — storia delle versioni v34→v35.
+
+---
+
+## Portale Tracking Resi
+
+Applicazione **separata** in `portal/`, rivolta a clienti, agenti e corrieri.
+Usa lo stesso Firebase del gestionale ma con autenticazione reale
+(email/password + custom claims) e Security Rules per ruolo.
+
+Il gestionale **non è stato modificato**: `index.html`, `sw.js`,
+`js/taxonomies.js` e `firebase-rules.json` restano invariati.
+
+```bash
+npm install     # aggiunge firebase-admin (solo per le Netlify Functions)
+npm test        # 169 test sul portale
+```
+
+Messa in produzione, variabili d'ambiente e creazione del primo
+amministratore: vedi **[docs/PORTALE.md](docs/PORTALE.md)**.
 
 ---
 
