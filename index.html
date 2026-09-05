@@ -1227,7 +1227,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36o · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36p · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1250,6 +1250,7 @@ html[data-theme="light"] .btn-anomalia{
   <div class="online-b"><div class="opulse"></div><span id="onlineN">1</span></div>
   <div class="cdot" id="cdot" title="Connessione · click per cambiare tema" onclick="toggleTheme()"></div>
   <div class="sdot" id="sdot" title="Sync · click per cambiare tema" onclick="toggleTheme()"></div>
+  <button id="portalBtn" onclick="openPortale()" style="display:none;background:none;border:none;font-size:15px;cursor:pointer;padding:2px 4px;flex-shrink:0" title="Portale Tracking Resi (clienti, agenti, corrieri)">&#127760;</button>
   <button id="fbBtn" onclick="openFBModal()" style="background:none;border:none;font-size:14px;cursor:pointer;padding:2px 4px;flex-shrink:0" title="Configura Firebase sync">&#128293;</button>
 </div>
 
@@ -1892,7 +1893,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36o</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36p</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -2276,6 +2277,31 @@ function applyRoleUI() {
   var _uffBtns = document.querySelectorAll('.uffOnlyBtn');
   var _uffShow = (ROLE==='UFF' || ROLE==='ADM');
   for(var j=0;j<_uffBtns.length;j++) _uffBtns[j].style.display = _uffShow ? '' : 'none';
+  // Portale Tracking Resi: lo aprono solo i ruoli che parlano con l'esterno.
+  // RIC/SCA/RPC inseriscono e basta, non rispondono a clienti o corrieri.
+  var _pb = document.getElementById('portalBtn');
+  if(_pb) _pb.style.display = (ROLE==='UFF'||ROLE==='MAG'||ROLE==='ADM') ? '' : 'none';
+}
+
+// Apre il Portale Tracking Resi in una scheda separata.
+// E' un'applicazione distinta con la propria autenticazione (email/password):
+// non condivide la sessione col gestionale, che resta su auth anonima.
+function openPortale(){
+  try{
+    // Passo la config Firebase al portale se lui non ce l'ha ancora: i due
+    // vivono sullo stesso origin, quindi condividono localStorage e cosi'
+    // il portale non chiede di reinserire API key e URL del database.
+    var cfg = getFBCfg();
+    if(cfg && cfg.apiKey && cfg.dbUrl){
+      var existing = null;
+      try{ existing = JSON.parse(localStorage.getItem('portal_fbcfg')||'null'); }catch(e){}
+      if(!existing || !existing.apiKey){
+        localStorage.setItem('portal_fbcfg', JSON.stringify({apiKey:cfg.apiKey, databaseURL:cfg.dbUrl}));
+      }
+    }
+  }catch(e){ /* quota o private mode: il portale chiedera' la config da solo */ }
+  try{ window.open('./portal/index.html', '_blank', 'noopener'); }
+  catch(e){ location.href = './portal/index.html'; }
 }
 
 var setRoleSel='';
