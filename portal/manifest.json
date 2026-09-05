@@ -1,7 +1,7 @@
 {
-  "name": "Tracking Resi",
-  "short_name": "Resi",
-  "description": "Portale di tracciamento resi: stato in tempo reale, documenti e comunicazioni.",
+  "name": "Invia un reso · Telos",
+  "short_name": "Reso Telos",
+  "description": "Invia un reso all'ufficio resi Telos e segui la pratica.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -12,35 +12,11 @@
   "dir": "ltr",
   "categories": ["business", "productivity"],
   "icons": [
-    {
-      "src": "../icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "../icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "../icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "../icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "../icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "../icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    {
-      "name": "I miei resi",
-      "short_name": "Resi",
-      "url": "./index.html#/resi"
-    },
-    {
-      "name": "Nuova richiesta",
-      "short_name": "Richiesta",
-      "url": "./index.html#/richieste/nuova"
-    }
+    { "name": "Controlla un reso", "short_name": "Controlla", "url": "./index.html#/cerca" }
   ]
 }

@@ -5,13 +5,8 @@
 // Firebase in fase di import), quindi si possono importare e verificare
 // direttamente in Node.
 
-import { runWorkflowTests } from './workflow.test.js';
-import { runSlaTests } from './sla.test.js';
-import { runRolesTests } from './roles.test.js';
-import { runTimelineTests } from './timeline.test.js';
-import { runReturnsTests } from './returns.test.js';
+import { runSubmitTests } from './submit.test.js';
 import { runRulesTests } from './rules.test.js';
-import { runImportTests } from './imports.test.js';
 import { runEscapingTests } from './escaping.test.js';
 
 let passed = 0;
@@ -60,16 +55,11 @@ export function throws(fn, message) {
 }
 
 console.log('\x1b[1m\x1b[36m╔══════════════════════════════════════════════╗\x1b[0m');
-console.log('\x1b[1m\x1b[36m║   Test — Portale Tracking Resi               ║\x1b[0m');
+console.log('\x1b[1m\x1b[36m║   Test — App pubblica Reso Telos             ║\x1b[0m');
 console.log('\x1b[1m\x1b[36m╚══════════════════════════════════════════════╝\x1b[0m');
 
-await runWorkflowTests();
-await runSlaTests();
-await runRolesTests();
-await runTimelineTests();
-await runReturnsTests();
+await runSubmitTests();
 await runRulesTests();
-await runImportTests();
 await runEscapingTests();
 
 console.log('\n' + '─'.repeat(48));

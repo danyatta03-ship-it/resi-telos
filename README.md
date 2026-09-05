@@ -128,28 +128,34 @@ Dettagli in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
   di vita di un reso, ruoli, blocchi/automazioni, sicurezza, PWA.
 - **[DATA-MODEL.md](docs/DATA-MODEL.md)** — schema dei record, chiavi
   localStorage/IndexedDB, path Firebase.
-- **[PORTALE.md](docs/PORTALE.md)** — Portale Tracking Resi: architettura,
-  ruoli, isolamento dei dati, messa in produzione.
+- **[PORTALE.md](docs/PORTALE.md)** — app pubblica di invio reso:
+  come funziona, sicurezza, messa in produzione.
 - **[CHANGELOG.md](CHANGELOG.md)** — storia delle versioni v34→v35.
 
 ---
 
-## Portale Tracking Resi
+## App pubblica "Reso Telos"
 
-Applicazione **separata** in `portal/`, rivolta a clienti, agenti e corrieri.
-Usa lo stesso Firebase del gestionale ma con autenticazione reale
-(email/password + custom claims) e Security Rules per ruolo.
+Una pagina in `portal/` da dare a **clienti, agenti e corrieri**: compilano il
+reso, scrivono il proprio nome, inviano. L'invio arriva nel gestionale nella
+scheda **PORTALE**, con la notifica sul badge.
 
-Il gestionale **non è stato modificato**: `index.html`, `sw.js`,
-`js/taxonomies.js` e `firebase-rules.json` restano invariati.
+Nessun login e nessun account: si pubblica e si manda il link.
+
+L'app pubblica **non ha l'SDK Firebase**. Manda i dati a due Netlify Functions
+che scrivono al posto suo, così chi apre il link non ha nessun accesso al
+database — se lo avesse, avrebbe le stesse credenziali anonime del gestionale
+e potrebbe leggere gli invii altrui.
 
 ```bash
 npm install     # aggiunge firebase-admin (solo per le Netlify Functions)
-npm test        # 178 test sul portale
+npm test        # 66 test
 ```
 
-Messa in produzione, variabili d'ambiente e creazione del primo
-amministratore: vedi **[docs/PORTALE.md](docs/PORTALE.md)**.
+Link da distribuire: `https://<sito>/portal/` — lo copi anche dal gestionale,
+scheda PORTALE → *🔗 Link pubblico*.
+
+Dettagli e messa in produzione: **[docs/PORTALE.md](docs/PORTALE.md)**.
 
 ---
 

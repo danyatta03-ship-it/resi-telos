@@ -1241,7 +1241,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36p · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36q · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1288,6 +1288,7 @@ html[data-theme="light"] .btn-anomalia{
   <button class="tab"    id="tabTri"  onclick="gTab('pgTri')">PREGRESSO</button>
   <button class="tab"    id="tabHist" onclick="gTab('pgHist')">RESOCONTO</button>
   <button class="tab"    id="tabNotif" onclick="gTab('pgNotif')">🔔 NOTIFICHE <span class="nbadge" id="notifBadge" style="display:none">0</span></button>
+  <button class="tab"    id="tabPortale" onclick="gTab('pgPortale')">🌐 PORTALE <span class="nbadge" id="portaleTabBadge" style="display:none">0</span></button>
   <button class="tab"    id="tabCon"  onclick="gTab('pgCon')">CONTATTI</button>
 </div>
 
@@ -1685,6 +1686,28 @@ html[data-theme="light"] .btn-anomalia{
 </div>
 
 
+<!-- ═══ PORTALE — invii dall'app pubblica (v36q) ═══ -->
+<div class="pg" id="pgPortale" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--brd)">
+    <div style="font-size:13px;font-weight:800;color:#3B9FD4">🌐 RESI DAL PORTALE</div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <select id="portaleFiltro" onchange="portaleRender()" style="background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:6px 10px;font-size:11px;border-radius:7px;-webkit-appearance:none;outline:none;font-family:inherit">
+        <option value="DALEGGERE">Da leggere</option>
+        <option value="NUOVO">Nuovi</option>
+        <option value="IN_ESAME">In esame</option>
+        <option value="ACCETTATO">Accettati</option>
+        <option value="RIFIUTATO">Non accettati</option>
+        <option value="CHIUSO">Conclusi</option>
+        <option value="all">Tutti</option>
+      </select>
+      <input id="portaleCerca" oninput="portaleRender()" placeholder="Cerca…" autocomplete="off"
+        style="background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:6px 10px;font-size:11px;border-radius:7px;outline:none;font-family:inherit;width:130px">
+      <button onclick="portaleCopiaLink()" style="background:none;border:1px solid var(--brd2);color:var(--txt2);padding:6px 10px;font-size:11px;border-radius:7px;cursor:pointer;font-family:inherit" title="Copia il link da mandare a clienti, agenti e corrieri">🔗 Link pubblico</button>
+    </div>
+  </div>
+  <div id="portaleLista"></div>
+</div>
+
 <!-- ═══ CENTRO NOTIFICHE (v34c) ═══ -->
 <div class="pg" id="pgNotif" style="display:none">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--brd)">
@@ -1910,7 +1933,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36p</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36q</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -2349,7 +2372,352 @@ function portalSetBadge(n, detail){
   }
 }
 
-// Apre il Portale Tracking Resi in una scheda separata.
+// ══════════════════════════════════════════════════════════════════════
+// SCHEDA PORTALE — i resi che arrivano dall'app pubblica
+// ══════════════════════════════════════════════════════════════════════
+// L'app pubblica non scrive su Firebase: manda i dati a una Netlify Function
+// che scrive lei in portal_submissions. Qui il gestionale legge quel nodo,
+// mostra gli invii e permette di lavorarli: prendere in carico, rispondere,
+// accettare (precompilando l'inserimento) o rifiutare.
+
+var PORTALE = {};        // ref -> invio
+var _portaleBound = false;
+
+var PORTALE_STATI = {
+  NUOVO:     { label: 'Nuovo',         col: '#8FA4B8' },
+  IN_ESAME:  { label: 'In esame',      col: '#E6B03C' },
+  ACCETTATO: { label: 'Accettato',     col: '#2ECC71' },
+  RIFIUTATO: { label: 'Non accettato', col: '#E05555' },
+  CHIUSO:    { label: 'Concluso',      col: '#5BB8E0' }
+};
+
+function portaleInit(){
+  if(_portaleBound){ portaleRender(); return; }
+  if(typeof FB_REF==='undefined' || !FB_REF || !FB_REF.root){
+    var el=document.getElementById('portaleLista');
+    if(el) el.innerHTML='<div style="text-align:center;padding:40px 16px;color:#666;font-size:12px">Connessione al database in corso…</div>';
+    setTimeout(portaleInit, 2000);
+    return;
+  }
+  _portaleBound = true;
+  try{
+    FB_REF.root.child('portal_submissions').on('value', function(snap){
+      PORTALE = snap.val() || {};
+      portaleRender();
+      portaleAggiornaContatori();
+    }, function(err){
+      var el=document.getElementById('portaleLista');
+      if(el) el.innerHTML='<div style="text-align:center;padding:40px 16px;color:#E05555;font-size:12px">Non riesco a leggere gli invii dal portale.<br>'+xe(fbErrText(err))+'</div>';
+    });
+  }catch(e){}
+}
+
+function portaleElenco(){
+  var out=[];
+  for(var k in PORTALE){ var s=PORTALE[k]; if(s&&s.ref) out.push(s); }
+  out.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  return out;
+}
+
+function portaleRender(){
+  var host=document.getElementById('portaleLista'); if(!host) return;
+  var filtro=(document.getElementById('portaleFiltro')||{}).value||'DALEGGERE';
+  var q=((document.getElementById('portaleCerca')||{}).value||'').trim().toUpperCase();
+
+  var righe=portaleElenco().filter(function(s){
+    if(filtro==='DALEGGERE'){ if(s.letto) return false; }
+    else if(filtro!=='all' && s.stato!==filtro) return false;
+    if(q){
+      var hay=[s.ref,s.causale,s.codiceCliente,s.note,
+        (s.mittente&&s.mittente.nome),(s.mittente&&s.mittente.azienda)]
+        .concat((s.articoli||[]).map(function(a){return a.cod+' '+(a.marca||'')+' '+(a.forn||'');}))
+        .join(' ').toUpperCase();
+      if(hay.indexOf(q)<0) return false;
+    }
+    return true;
+  });
+
+  if(!righe.length){
+    host.innerHTML='<div style="text-align:center;padding:44px 16px;color:#666">'+
+      '<div style="font-size:34px;margin-bottom:10px;opacity:.5">📭</div>'+
+      '<div style="font-size:13px;font-weight:700;color:#999;margin-bottom:6px">Nessun invio</div>'+
+      '<div style="font-size:12px;line-height:1.7">'+
+      (filtro==='DALEGGERE'?'Hai già guardato tutto quello che è arrivato.':'Nessun invio con questi filtri.')+
+      '<br>Il link pubblico si trova nel pulsante qui sopra.</div></div>';
+    return;
+  }
+
+  var h='';
+  for(var i=0;i<righe.length;i++) h+=portaleCard(righe[i]);
+  host.innerHTML=h;
+}
+
+function portaleCard(s){
+  var st=PORTALE_STATI[s.stato]||PORTALE_STATI.NUOVO;
+  var m=s.mittente||{};
+  var arts=s.articoli||[];
+  var nMsg=s.messaggi?Object.keys(s.messaggi).length:0;
+  var nFoto=s.foto?s.foto.length:0;
+
+  var art='';
+  for(var i=0;i<Math.min(arts.length,4);i++){
+    var a=arts[i];
+    art+='<div style="font-size:11.5px;color:var(--txt2)"><b style="color:var(--txt)">'+
+      xe((a.marca?a.marca+' ':'')+a.cod)+'</b> × '+(a.qty||1)+
+      (a.forn?' · '+xe(a.forn):'')+'</div>';
+  }
+  if(arts.length>4) art+='<div style="font-size:11px;color:#666">+ altri '+(arts.length-4)+'</div>';
+
+  return '<div class="card" style="margin-bottom:10px'+(s.letto?'':';border-left:3px solid #3B9FD4')+'">'+
+    '<div class="cb">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">'+
+        '<div style="min-width:0;flex:1 1 200px">'+
+          '<div style="font-size:13px;font-weight:800">'+xe(m.nome||'—')+
+            '<span style="font-weight:400;color:var(--txt2)"> · '+xe(m.azienda||'')+'</span></div>'+
+          '<div style="font-size:11px;color:#666;margin-top:2px">'+
+            xe(s.ref)+' · '+portaleQuando(s.ts)+' · '+xe(portaleTipo(m.tipo))+
+            (s.codiceCliente?' · cliente '+xe(s.codiceCliente):'')+'</div>'+
+        '</div>'+
+        '<span style="background:'+st.col+'22;color:'+st.col+';border:1px solid '+st.col+'55;'+
+          'padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:800;white-space:nowrap">'+st.label+'</span>'+
+      '</div>'+
+      '<div style="margin-top:8px;font-size:12px;color:var(--txt2)"><b>Motivo:</b> '+xe(s.causale||'—')+'</div>'+
+      '<div style="margin-top:6px">'+art+'</div>'+
+      (s.note?'<div style="margin-top:8px;padding:7px 10px;background:var(--bg2);border-radius:7px;font-size:11.5px;white-space:pre-wrap">'+xe(s.note)+'</div>':'')+
+      (s.esito?'<div style="margin-top:8px;padding:7px 10px;background:'+(s.stato==='RIFIUTATO'?'rgba(224,85,85,.1)':'rgba(46,204,113,.1)')+';border-radius:7px;font-size:11.5px"><b>Risposta:</b> '+xe(s.esito)+'</div>':'')+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center">'+
+        (nFoto?'<button class="sb sn" style="padding:5px 10px;font-size:11px" onclick="portaleFoto(\''+xe(s.ref)+'\')">📷 '+nFoto+'</button>':'')+
+        '<button class="sb sn" style="padding:5px 10px;font-size:11px" onclick="portaleChat(\''+xe(s.ref)+'\')">💬 '+(nMsg||'Rispondi')+'</button>'+
+        (s.stato==='NUOVO'||s.stato==='IN_ESAME'?
+          '<button class="sb sg" style="padding:5px 10px;font-size:11px" onclick="portaleAccetta(\''+xe(s.ref)+'\')">✓ Accetta e inserisci</button>'+
+          '<button class="sb sn" style="padding:5px 10px;font-size:11px;color:#E05555" onclick="portaleRifiuta(\''+xe(s.ref)+'\')">✕ Non accettare</button>':'')+
+        (s.stato==='ACCETTATO'?'<button class="sb sn" style="padding:5px 10px;font-size:11px" onclick="portaleStato(\''+xe(s.ref)+'\',\'CHIUSO\')">Concludi</button>':'')+
+        '<span style="flex:1"></span>'+
+        '<button class="sb sn" style="padding:5px 10px;font-size:11px" onclick="portaleLetto(\''+xe(s.ref)+'\','+(s.letto?'false':'true')+')">'+(s.letto?'Segna da leggere':'Segna letto')+'</button>'+
+      '</div>'+
+    '</div></div>';
+}
+
+function portaleTipo(t){
+  return {CLIENTE:'Cliente',AGENTE:'Agente',CORRIERE:'Corriere',FILIALE:'Filiale',ALTRO:'Altro'}[t]||'Altro';
+}
+
+function portaleQuando(ts){
+  if(!ts) return '—';
+  var d=new Date(ts), diff=Date.now()-ts, min=Math.floor(diff/60000);
+  if(min<1) return 'adesso';
+  if(min<60) return min+' min fa';
+  var h=Math.floor(min/60);
+  if(h<24) return h+(h===1?' ora fa':' ore fa');
+  var g=Math.floor(h/24);
+  if(g===1) return 'ieri';
+  if(g<7) return g+' giorni fa';
+  return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+}
+
+function portaleRef(ref){
+  return FB_REF.root.child('portal_submissions/'+ref);
+}
+
+function portaleLetto(ref, letto){
+  try{ portaleRef(ref).child('letto').set(!!letto); }catch(e){}
+}
+
+function portaleStato(ref, stato, esito){
+  var upd={stato:stato, letto:true, gestitoDa:deviceName||'', gestitoTs:Date.now()};
+  if(esito) upd.esito=esito;
+  try{
+    portaleRef(ref).update(upd);
+    toast('Invio '+ (PORTALE_STATI[stato]||{}).label, 'g');
+    if(typeof notifLog==='function') notifLog('mod','ha aggiornato l\'invio portale '+ref+' → '+stato);
+  }catch(e){ toast('Aggiornamento non riuscito','r'); }
+}
+
+function portaleRifiuta(ref){
+  var motivo=prompt('Perché non accetti questo reso?\nIl mittente lo vedrà nella sua pagina.');
+  if(motivo===null) return;
+  motivo=String(motivo).trim();
+  if(!motivo){ toast('Serve una motivazione','r'); return; }
+  portaleStato(ref,'RIFIUTATO',motivo.slice(0,2000));
+}
+
+// Chiude qualunque finestra del portale sia aperta. Senza questo due click
+// ravvicinati impilerebbero due modali, e l'utente si troverebbe a chiuderne
+// una per scoprire che sotto ce n'e' un'altra.
+function portaleChiudiModale(){
+  var m=document.getElementById('portaleModal');
+  if(m) m.remove();
+}
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape') portaleChiudiModale();
+});
+
+function portaleFoto(ref){
+  var s=PORTALE[ref]; if(!s||!s.foto||!s.foto.length) return;
+  portaleChiudiModale();
+  var d=document.createElement('div');
+  d.id='portaleModal';
+  d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:1700;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch';
+  var h='<div style="max-width:760px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+    '<b style="color:#fff;font-size:13px">Foto di '+xe((s.mittente&&s.mittente.nome)||'')+' · '+xe(ref)+'</b>'+
+    '<button onclick="portaleChiudiModale()" style="background:none;border:1px solid #444;color:#ccc;border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:inherit">Chiudi</button></div>';
+  for(var i=0;i<s.foto.length;i++){
+    h+='<img src="'+s.foto[i]+'" style="width:100%;border-radius:10px;margin-bottom:12px" alt="Foto '+(i+1)+'">';
+  }
+  d.innerHTML=h+'</div>';
+  d.addEventListener('click',function(e){ if(e.target===d) d.remove(); });
+  document.body.appendChild(d);
+}
+
+function portaleChat(ref){
+  var s=PORTALE[ref]; if(!s) return;
+  portaleChiudiModale();
+  var msgs=[];
+  for(var k in (s.messaggi||{})){ var m=s.messaggi[k]; if(m&&m.testo) msgs.push(m); }
+  msgs.sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+
+  var d=document.createElement('div');
+  d.id='portaleModal';
+  d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1700;display:flex;align-items:center;justify-content:center;padding:14px';
+  var lista='';
+  if(!msgs.length) lista='<div style="color:#666;font-size:12px;padding:10px 0">Nessun messaggio.</div>';
+  for(var i=0;i<msgs.length;i++){
+    var m=msgs[i], mio=(m.da==='TELOS');
+    lista+='<div style="margin-bottom:9px;text-align:'+(mio?'right':'left')+'">'+
+      '<div style="font-size:10px;color:#777;margin-bottom:2px">'+xe(m.autore||(mio?'Telos':'Mittente'))+' · '+portaleQuando(m.ts)+'</div>'+
+      '<div style="display:inline-block;max-width:85%;text-align:left;padding:8px 11px;border-radius:11px;font-size:12.5px;white-space:pre-wrap;'+
+      (mio?'background:#3B9FD4;color:#fff':'background:#222;color:#ddd')+'">'+xe(m.testo)+'</div></div>';
+  }
+  d.innerHTML='<div style="background:#111;border:1px solid #333;border-radius:14px;padding:16px;width:100%;max-width:520px;max-height:88vh;display:flex;flex-direction:column">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+      '<b style="font-size:13px;color:#3B9FD4">💬 '+xe((s.mittente&&s.mittente.nome)||'')+' · '+xe(ref)+'</b>'+
+      '<button onclick="portaleChiudiModale()" style="background:none;border:none;color:#666;font-size:20px;cursor:pointer;font-family:inherit">×</button></div>'+
+    '<div style="flex:1;overflow-y:auto;margin-bottom:10px;-webkit-overflow-scrolling:touch">'+lista+'</div>'+
+    '<textarea id="portaleMsgTxt" rows="2" placeholder="Scrivi al mittente…" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #333;border-radius:8px;padding:9px;font-size:13px;font-family:inherit;resize:vertical;outline:none;margin-bottom:8px"></textarea>'+
+    '<button onclick="portaleInviaMsg(\''+xe(ref)+'\',this)" class="sb sg" style="padding:9px">Invia risposta</button>'+
+  '</div>';
+  d.addEventListener('click',function(e){ if(e.target===d) d.remove(); });
+  document.body.appendChild(d);
+  setTimeout(function(){ var t=document.getElementById('portaleMsgTxt'); if(t)t.focus(); },60);
+}
+
+function portaleInviaMsg(ref, btn){
+  var ta=document.getElementById('portaleMsgTxt'); if(!ta) return;
+  var t=ta.value.trim();
+  if(!t){ toast('Scrivi qualcosa','r'); return; }
+  var id='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  try{
+    portaleRef(ref).child('messaggi/'+id).set({
+      ts:Date.now(), da:'TELOS', autore:(deviceName||'Ufficio resi'), testo:t.slice(0,2000)
+    });
+    portaleRef(ref).child('letto').set(true);
+    toast('Risposta inviata','g');
+    portaleChiudiModale();
+  }catch(e){ toast('Invio non riuscito','r'); }
+}
+
+// Accetta l'invio e precompila il form di inserimento col primo articolo.
+// E' il punto in cui un reso arrivato dall'esterno diventa una riga vera del
+// gestionale: gli altri articoli restano elencati nell'invio, che resta
+// aperto finche' non lo si conclude.
+function portaleAccetta(ref){
+  var s=PORTALE[ref]; if(!s) return;
+  var arts=s.articoli||[];
+  if(!arts.length){ toast('Nessun articolo nell\'invio','r'); return; }
+
+  portaleStato(ref,'ACCETTATO','Reso accettato: procediamo con la lavorazione.');
+
+  try{ gTab('pgIns'); }catch(e){}
+
+  // Ogni campo si riempie per conto suo: se uno fallisce — perche' domani
+  // qualcuno lo rinomina — gli altri arrivano comunque a destinazione.
+  // Un catch unico attorno a tutto avrebbe nascosto il problema lasciando
+  // il form vuoto senza dire niente.
+  var a=arts[0];
+  var riempiti=0;
+  var sv=function(id,val){
+    if(!val) return;
+    try{
+      var el=document.getElementById(id);
+      if(!el) return;
+      el.value=val;
+      try{ ce(el); }catch(e){}
+      riempiti++;
+    }catch(e){}
+  };
+  sv('cCod', a.cod);
+  sv('cPre', a.marca);
+  sv('cQty', String(a.qty||1));
+  sv('cFor', a.forn);
+  sv('cCau', portaleCausaleGestionale(s.causale));
+  if(s.codiceCliente) sv('hSogg', s.codiceCliente);
+
+  try{
+    var note=document.getElementById('cNote');
+    if(note){
+      var testo='Da portale '+ref+' — '+((s.mittente&&s.mittente.nome)||'')+
+        ' ('+((s.mittente&&s.mittente.azienda)||'')+')'+(s.note?' — '+s.note:'');
+      note.value=(note.value?note.value+'\n':'')+testo;
+      riempiti++;
+    }
+  }catch(e){}
+
+  if(!riempiti){
+    toast('Invio accettato, ma non sono riuscito a precompilare: inserisci a mano.','r');
+  } else if(arts.length>1){
+    toast('Inserito il 1° di '+arts.length+' articoli. Gli altri restano nell\'invio.','b');
+  } else {
+    toast('Dati precompilati: controlla e salva','g');
+  }
+}
+
+// Le causali del portale sono scritte per chi sta al banco; il gestionale usa
+// le sue. Traduco quelle che hanno un corrispondente esatto, sul resto lascio
+// scegliere all'operatore invece di indovinare.
+function portaleCausaleGestionale(c){
+  var map={
+    'ERRATO ORDINE':'"NON CONFORME" - ERRATO ORDINE',
+    'ERRATA SPEDIZIONE':'ERRATA SPEDIZIONE',
+    'ORDINE DISDETTO CLIENTE':'ORDINE DISDETTO CLIENTE',
+    'ORDINE MULTIPLO':'ORDINE MULTIPLO',
+    'DIVERSO DA OE / INCOMPATIBILE':'DIVERSO DA OE/INCOMPATIBILE',
+    'ERRATO CONFEZIONAMENTO':'ERRATO CONFEZIONAMENTO',
+    'INCOMPLETO - MANCA UN PEZZO':"INCOMPLETO - MANCA UN PZ ALL'INTERNO",
+    'CARCASSA':'CARCASSA',
+    'GARANZIA':'GARANZIA',
+    'DANNEGGIATO':'DANNEGGIATO - SEGNALATO AL BANCO'
+  };
+  return map[c]||'';
+}
+
+function portaleAggiornaContatori(){
+  var nuovi=0, inEsame=0, daLeggere=0;
+  for(var k in PORTALE){
+    var s=PORTALE[k]; if(!s) continue;
+    if(s.stato==='NUOVO') nuovi++;
+    if(s.stato==='IN_ESAME') inEsame++;
+    if(!s.letto) daLeggere++;
+  }
+  portalSetBadge(daLeggere,{nuovi:nuovi,inEsame:inEsame,daLeggere:daLeggere});
+  var tb=document.getElementById('portaleTabBadge');
+  if(tb){ tb.textContent=daLeggere>99?'99+':String(daLeggere); tb.style.display=daLeggere?'':'none'; }
+  // Riallineo il nodo dei contatori: la funzione lo scrive all'arrivo di un
+  // invio, ma dopo che l'operatore lavora le pratiche va aggiornato da qui.
+  try{ FB_REF.root.child('portal_counters/staff').set({nuovi:nuovi,inEsame:inEsame,daLeggere:daLeggere,total:daLeggere,ts:Date.now()}); }catch(e){}
+}
+
+function portaleCopiaLink(){
+  var url=location.origin+location.pathname.replace(/[^/]*$/,'')+'portal/';
+  var ok=function(){ toast('Link copiato: mandalo a clienti, agenti e corrieri','g'); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(ok,function(){ prompt('Copia questo link:',url); });
+  } else {
+    prompt('Copia questo link:',url);
+  }
+}
+
+// Apre l'app pubblica in una scheda separata.
 // E' un'applicazione distinta con la propria autenticazione (email/password):
 // non condivide la sessione col gestionale, che resta su auth anonima.
 function openPortale(){
@@ -3063,8 +3431,8 @@ function setDataContatto() {
 // NAVIGATION
 // ══════════════════════════════════════════════════
 function gTab(pg) {
-  var all=['pgIns','pgList','pgAno','pgUbi','pgTri','pgHist','pgNotif','pgCon'];
-  var tabs=['tabIns','tabList','tabAno','tabUbi','tabTri','tabHist','tabNotif','tabCon'];
+  var all=['pgIns','pgList','pgAno','pgUbi','pgTri','pgHist','pgNotif','pgPortale','pgCon'];
+  var tabs=['tabIns','tabList','tabAno','tabUbi','tabTri','tabHist','tabNotif','tabPortale','tabCon'];
   // Blocco accesso a tab non permessi al ruolo corrente
   var perms = (typeof ROLE_PERMS!=='undefined' && ROLE_PERMS[ROLE]) || {};
   var allowedTabs = perms.canSeeTabs || ['*'];
@@ -3092,6 +3460,7 @@ function gTab(pg) {
   if(pg==='pgAno'){syncListToAnomalie();renderAnoList();}
   if(pg==='pgCon')renderContatti();
   if(pg==='pgNotif'){ try{ renderNotifCenter(); if(typeof notifClearBadge==='function')notifClearBadge(); }catch(e){} }
+  if(pg==='pgPortale'){ try{ portaleInit(); }catch(e){} }
   if(pg==='pgIns'){
     try{ if(typeof renderOcrLivePanel==='function') renderOcrLivePanel(); }catch(e){}
     try{ if(typeof renderModePickerPanel==='function') renderModePickerPanel(); }catch(e){}

@@ -10,28 +10,16 @@
 
 # ── Portale Tracking Resi ────────────────────────────────────────────────
 [[redirects]]
-  from = "/api/portal-claims"
-  to = "/.netlify/functions/portal-claims"
+  from = "/api/portal-submit"
+  to = "/.netlify/functions/portal-submit"
   status = 200
   force = true
 
 [[redirects]]
-  from = "/api/portal-sync"
-  to = "/.netlify/functions/portal-sync"
+  from = "/api/portal-status"
+  to = "/.netlify/functions/portal-status"
   status = 200
   force = true
-
-[[redirects]]
-  from = "/api/portal-notify"
-  to = "/.netlify/functions/portal-notify"
-  status = 200
-  force = true
-
-# Le proiezioni per i ruoli esterni vengono ricostruite ogni 10 minuti.
-# Un cliente vede quindi lo stato aggiornato entro quel margine; le azioni
-# fatte DAL portale (timeline, messaggi, documenti) sono invece immediate.
-[functions."portal-sync"]
-  schedule = "*/10 * * * *"
 
 # v35o — Security headers (audit cybersec).
 # Applicati a TUTTE le route dell'app; le SPA le vedono sulle response del CDN Netlify.
@@ -77,8 +65,4 @@
     Cache-Control = "no-store, no-cache, must-revalidate"
     Service-Worker-Allowed = "/portal/"
 
-[[headers]]
-  for = "/portal/firebase-messaging-sw.js"
-  [headers.values]
-    Cache-Control = "no-store, no-cache, must-revalidate"
-    Service-Worker-Allowed = "/portal/"
+
