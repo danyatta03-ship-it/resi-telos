@@ -1241,7 +1241,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36s · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v37 · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1933,7 +1933,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36s</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v37</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -7313,6 +7313,43 @@ window.forceAppReload = function(){
 // FIREBASE SYNC
 // ══════════════════════════════════════════
 var FB_REF = null;
+
+// v37 — REGISTRO DEGLI ASCOLTATORI FIREBASE
+//
+// Qui stava la causa dei guasti "a caso". _fbConnectDb registra sette
+// ascoltatori permanenti (.info/connected, presence, _killswitch, i tre
+// child_* su returns, onAuthStateChanged) e non ne staccava nessuno. Quando
+// una connessione falliva, _vFail si limitava a FB_REF=null: gli ascoltatori
+// restavano vivi, agganciati a un riferimento che l'app considerava morto.
+// Intanto ensureFB ritenta dopo 5 secondi e poi ogni 30 — quindi ogni
+// tentativo fallito aggiungeva sette ascoltatori sopra i precedenti.
+//
+// Un PC lasciato in errore per un'ora accumulava un centinaio di copie di
+// ogni ascoltatore. Alla riconnessione partivano tutte insieme: cento
+// renderAll per ogni riga arrivata, cento notifiche "+ COD da ...", cento
+// scritture di presenza, il carico iniziale di returns scaricato cento
+// volte. Da fuori si vede come lentezza improvvisa, righe doppie, contatore
+// online sbagliato, consumo di banda inspiegabile. Sintomi diversi ogni
+// volta, tutti dalla stessa radice.
+//
+// Da qui in poi ogni .on() passa da _fbOn e viene richiamato da
+// _fbDetachAll prima di ogni nuovo tentativo.
+var _FB_ON = [];
+var _FB_AUTH_OFF = null;
+var _FB_GEN = 0;   // generazione: le risposte di un tentativo superato vanno ignorate
+
+function _fbOn(ref, ev, fn){
+  try{ ref.on(ev, fn); _FB_ON.push({ref:ref, ev:ev, fn:fn}); }catch(e){}
+  return fn;
+}
+function _fbDetachAll(){
+  for(var i=0;i<_FB_ON.length;i++){
+    try{ _FB_ON[i].ref.off(_FB_ON[i].ev, _FB_ON[i].fn); }catch(e){}
+  }
+  _FB_ON = [];
+  if(_FB_AUTH_OFF){ try{ _FB_AUTH_OFF(); }catch(e){} _FB_AUTH_OFF = null; }
+}
+
 // Debounce per il sync incrementale: una raffica di delta coalesce in un solo render/salvataggio
 var _fbRT=null, _fbPT=null;
 function fbRender(){ if(_fbRT)return; _fbRT=setTimeout(function(){_fbRT=null; renderAll();}, 80); }
@@ -7371,7 +7408,13 @@ function fbDiagnose(){
      ko:'Nessun accesso attivo'+(FB_LAST_ERR?(': '+FB_LAST_ERR):'. Se è la prima volta, attiva l\'accesso Anonimo: Firebase Console → Authentication → Sign-in method.')},
     {ok:!!FB_REF, t:'Connessione attiva',
      ko:'Non connesso'+(FB_LAST_ERR?(': '+FB_LAST_ERR):'. Premi CONNETTI nella finestra Firebase.')},
-    {ok:(typeof rows==='object' && Object.keys(rows||{}).length>=0), t:'Dati locali leggibili', ko:'Archivio locale non leggibile'}
+    {ok:(typeof rows==='object' && Object.keys(rows||{}).length>=0), t:'Dati locali leggibili', ko:'Archivio locale non leggibile'},
+    // Una connessione sana ne tiene sette. Se qui compare un numero grosso
+    // vuol dire che i tentativi falliti non stanno staccando quelli vecchi:
+    // e' la fabbrica dei rallentamenti e delle notifiche doppie. Meglio
+    // vederlo scritto che scoprirlo dai sintomi.
+    {ok:(_FB_ON.length<=8), t:'Ascoltatori attivi: '+_FB_ON.length+(_FB_ON.length<=8?' (normale)':' — TROPPI'),
+     ko:'Ogni tentativo di riconnessione ne ha aggiunti altri senza staccare i precedenti: l\'app rifà lo stesso lavoro N volte. Ricarica la pagina e segnalalo.'}
   ];
   var old=document.getElementById('fbDiagBox'); if(old) old.remove();
   var box=document.createElement('div'); box.id='fbDiagBox';
@@ -7381,7 +7424,7 @@ function fbDiagnose(){
   // sta girando la build aggiornata o una copia vecchia rimasta nella cache del
   // service worker — e si finisce a cercare un guasto in un codice che su quel
   // dispositivo non è mai arrivato.
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">🩺 Diagnostica Firebase <span style="font-size:10px;color:#666;font-weight:600">v36s</span></div><button onclick="document.getElementById(\'fbDiagBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">🩺 Diagnostica Firebase <span style="font-size:10px;color:#666;font-weight:600">v37</span></div><button onclick="document.getElementById(\'fbDiagBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>';
   var allOk=true;
   checks.forEach(function(c){
     if(!c.ok) allOk=false;
@@ -7769,7 +7812,8 @@ function fbAnonLogin(app){
 
 // Azzeramento locale del PC (richiesto dall'interruttore di emergenza remoto)
 function performLocalWipe(ksv){
-  try { if (FB_REF) FB_REF.off(); } catch(e) {}   // stop sync: niente ripopola
+  _fbDetachAll();                                 // stop sync: niente ripopola
+  try { if (FB_REF) FB_REF.off(); } catch(e) {}   // e chiudo anche eventuali agganci fuori registro
   rows = {}; arch = {};
   try { if (typeof ANOMALIE_STORE !== 'undefined') ANOMALIE_STORE = []; } catch(e){}
   try { if (typeof UBI !== 'undefined') UBI = {}; } catch(e){}
@@ -7826,15 +7870,24 @@ function startFB(cfg, cb) {
 // Collegamento al database vero e proprio, eseguito solo dopo il login anonimo.
 function _fbConnectDb(app, cb) {
     try {
+      // Prima di riagganciarsi, stacca tutto quello che il tentativo
+      // precedente aveva lasciato attaccato. Senza questa riga ogni retry
+      // raddoppia il lavoro dell'app fino a farla strisciare.
+      _fbDetachAll();
+      var _mia = ++_FB_GEN;
+      // Le risposte in volo di un tentativo ormai superato non devono
+      // riscrivere niente: arriverebbero dopo, con dati piu' vecchi.
+      function _viva(){ return _mia === _FB_GEN; }
+
       var db = firebase.database(app);
       FB_REF = db.ref('returns');
       // Se la sessione anonima decade (per esempio perché la pulizia automatica di
       // Firebase ha rimosso l'utenza dopo 30 giorni) rientro da solo: senza questo
       // l'app resterebbe agganciata a un token morto e ogni scrittura verrebbe respinta.
       try{
-        firebase.auth(app).onAuthStateChanged(function(u){
-          if(!u && FB_REF){
-            try{ FB_REF.off(); }catch(e){}
+        _FB_AUTH_OFF = firebase.auth(app).onAuthStateChanged(function(u){
+          if(!u && FB_REF && _viva()){
+            _fbDetachAll();
             FB_REF = null; _fbConnecting = false;
             setTimeout(ensureFB, 500);
           }
@@ -7842,7 +7895,8 @@ function _fbConnectDb(app, cb) {
       }catch(e){}
       // Presence tracking
       var presRef = db.ref('presence/' + deviceId);
-      db.ref('.info/connected').on('value', function(snap) {
+      _fbOn(db.ref('.info/connected'), 'value', function(snap) {
+        if(!_viva()) return;
         var on = snap.val() === true;
         upCD(on);
         try{ setConnUI(on); }catch(e){} // Firebase è la fonte di verità del pill quando configurato
@@ -7861,7 +7915,8 @@ function _fbConnectDb(app, cb) {
       //   crash tab / sleep telefono / cambio rete, lasciando presence stale
       //   che gonfiano il conteggio (vedeva "4 online" con solo lei attiva).
       //   Cleanup opportunistico: ogni tot rimuovo presence > 5 min.
-      db.ref('presence').on('value', function(snap) {
+      _fbOn(db.ref('presence'), 'value', function(snap) {
+        if(!_viva()) return;
         var data = snap.val() || {};
         var now = Date.now();
         var freshMs = 90*1000;
@@ -7882,7 +7937,8 @@ function _fbConnectDb(app, cb) {
       // ── INTERRUTTORE DI EMERGENZA (kill switch remoto) ──────────────────
       // L'amministratore, dalla pagina privata protetta, scrive _killswitch{ts}.
       // Ogni PC connesso azzera la PROPRIA memoria locale e mostra la schermata di blocco.
-      db.ref('_killswitch').on('value', function(snap) {
+      _fbOn(db.ref('_killswitch'), 'value', function(snap) {
+        if(!_viva()) return;
         var ksv = snap.val(); if (!ksv || !ksv.ts) return;
         var ack = 0; try { ack = parseInt(localStorage.getItem('_killAck') || '0', 10) || 0; } catch(e) {}
         if (ksv.ts > ack) {
@@ -7895,23 +7951,28 @@ function _fbConnectDb(app, cb) {
       // Ora: carico iniziale unico, poi solo i DELTA (la singola riga aggiunta/cambiata/rimossa ~1KB).
       var fbInitKeys={};
       function _fbAttachChild() {
+        if (!_viva() || !FB_REF) return;   // il tentativo e' stato superato: non agganciare niente
         // Da qui in poi ascolto SOLO le variazioni delle singole righe (l'SDK le rigioca anche dopo una riconnessione)
-        FB_REF.on('child_added', function(s) {
+        _fbOn(FB_REF, 'child_added', function(s) {
+          if (!_viva()) return;
           if (fbInitKeys[s.key]) { fbInitKeys[s.key] = false; return; } // replay del carico iniziale: ignora una volta
           var v = s.val(); if (!v || !v._key) return;
           rows[s.key] = v; fbPersist(); fbRender();
           if (v._who && v._who !== deviceName) toast('+ ' + (v.cod || '') + ' da ' + v._who, 'b');
         });
-        FB_REF.on('child_changed', function(s) {
+        _fbOn(FB_REF, 'child_changed', function(s) {
+          if (!_viva()) return;
           var v = s.val(); if (!v) return;
           rows[s.key] = v; fbPersist(); fbRender();
         });
-        FB_REF.on('child_removed', function(s) {
+        _fbOn(FB_REF, 'child_removed', function(s) {
+          if (!_viva()) return;
           if (rows[s.key]) { delete rows[s.key]; fbPersist(); fbRender(); }
         });
         setTimeout(function(){ try{ autoBackup(); }catch(e){} }, 8000); // backup giornaliero (non blocca l'avvio)
       }
       FB_REF.once('value', function(snap) {
+        if (!_viva()) return;   // risposta di un tentativo superato: sovrascriverebbe rows con dati piu' vecchi
         try{ upCD(true); setConnUI(true); }catch(e){} // dati ricevuti = siamo connessi → pill ONLINE (affidabile anche dove .info/connected è incostante)
         var data = snap.val() || {};
         var fbKeys = []; for (var k in data) { if (data[k] && data[k]._key) fbKeys.push(k); }
@@ -7919,6 +7980,7 @@ function _fbConnectDb(app, cb) {
           // Database condiviso VUOTO → NON azzerare i dati locali. Se ne ho, li carico io su Firebase
           // (prima sincronizzazione): così collegando un PC con dati a un DB vuoto NON si perde nulla.
           idbGet('td').then(function(v) {
+            if (!_viva()) return;
             var local = {}; try { local = JSON.parse(v || '{}') || {}; } catch(e) {}
             var lk = []; for (var x in local) { if (local[x] && local[x]._key) lk.push(x); }
             if (lk.length) { rows = local; try { FB_REF.update(local); } catch(e) {} }
@@ -7948,6 +8010,10 @@ function _fbConnectDb(app, cb) {
         if(_verified) return; _verified=true;
         if(_vTimer) clearTimeout(_vTimer);
         FB_LAST_ERR=msg||'Connessione non confermata';
+        // Il punto in cui si perdeva il controllo: azzerare FB_REF non stacca
+        // gli ascoltatori, li rende solo irraggiungibili. Restavano attivi, e
+        // il tentativo successivo ne aggiungeva altri sette.
+        _fbDetachAll();
         try{ FB_REF=null; }catch(e){}
         cb(false, FB_LAST_ERR);
       }
