@@ -8,6 +8,7 @@
 import { runSubmitTests } from './submit.test.js';
 import { runRulesTests } from './rules.test.js';
 import { runEscapingTests } from './escaping.test.js';
+import { runVersioneTests } from './versione.test.js';
 
 let passed = 0;
 let failed = 0;
@@ -61,6 +62,7 @@ console.log('\x1b[1m\x1b[36m╚════════════════�
 await runSubmitTests();
 await runRulesTests();
 await runEscapingTests();
+await runVersioneTests();
 
 console.log('\n' + '─'.repeat(48));
 if (failed === 0) {

@@ -1241,7 +1241,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36r · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v36s · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1933,7 +1933,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36r</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v36s</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -7377,7 +7377,11 @@ function fbDiagnose(){
   var box=document.createElement('div'); box.id='fbDiagBox';
   box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1600;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
   var h='<div style="background:#111;border:2px solid #3B9FD4;border-radius:14px;padding:18px;width:100%;max-width:430px;max-height:86vh;overflow-y:auto">';
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">🩺 Diagnostica Firebase</div><button onclick="document.getElementById(\'fbDiagBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>';
+  // La versione va scritta QUI: senza, non c'è modo di sapere se il dispositivo
+  // sta girando la build aggiornata o una copia vecchia rimasta nella cache del
+  // service worker — e si finisce a cercare un guasto in un codice che su quel
+  // dispositivo non è mai arrivato.
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">🩺 Diagnostica Firebase <span style="font-size:10px;color:#666;font-weight:600">v36s</span></div><button onclick="document.getElementById(\'fbDiagBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>';
   var allOk=true;
   checks.forEach(function(c){
     if(!c.ok) allOk=false;
@@ -7392,6 +7396,9 @@ function fbDiagnose(){
            :'<b>Come sistemare:</b><br>1. Verifica di avere rete.<br>2. Firebase Console → <b>Authentication → Sign-in method</b>: abilita <b>Anonimo</b>.<br>3. Firebase Console → <b>Realtime Database → Regole</b>: <code>{"rules":{".read":"auth != null",".write":"auth != null"}}</code><br>4. Controlla <b>apiKey</b> e <b>databaseURL</b> con “Apri configurazione Firebase”.')+'</div>';
   h+='<div id="fbTestOut" style="display:none;font-size:11px;line-height:1.6;border-radius:8px;padding:10px;margin-bottom:8px"></div>';
   h+='<button onclick="fbLiveTest()" style="width:100%;background:#12331d;color:#5ce080;border:1.5px solid #1e5a35;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">🧪 Prova lettura e scrittura adesso</button>';
+  // Quando il test rapido finisce in timeout non dice QUALE strato è caduto:
+  // questo lo dice, una prova per volta, senza mai restare appeso.
+  h+='<button onclick="fbDeepTest()" style="width:100%;background:#2a1f36;color:#c9a0ff;border:1.5px solid #4a3566;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">🔬 Diagnosi approfondita — dice cosa blocca</button>';
   if(!sdk || !authSdk)
     h+='<button onclick="_fbSdkRetry=false;fbReloadSdk();toast(\'Ricarico i moduli Firebase…\',\'b\');setTimeout(function(){FB_REF=null;_fbConnecting=false;ensureFB();fbDiagnose();},2500)" style="width:100%;background:#3a2c1c;color:#e6b03c;border:1.5px solid #6a5024;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">📦 Ricarica moduli Firebase</button>';
   h+='<button onclick="document.getElementById(\'fbDiagBox\').remove();openFBModal()" style="width:100%;background:#0a1e3a;color:#3B9FD4;border:1.5px solid #3B9FD4;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;-webkit-appearance:none;font-family:inherit;margin-bottom:6px">⚙ Apri configurazione Firebase</button>';
@@ -7428,6 +7435,16 @@ function fbLiveTest(){
     return;
   }
   var readOk=false, authOk=false;
+  // Se il database non risponde, l'SDK non fallisce: tace. Senza questo
+  // controllo il test restava per sempre su "Test in corso…" — cioè proprio
+  // nel caso in cui serviva di più.
+  var _ltFatto=false;
+  var _ltWatch=setTimeout(function(){
+    if(_ltFatto) return;
+    show('rgba(224,160,85,.08)','rgba(224,160,85,.35)','#E0A055',
+      '⌛ <b>Nessuna risposta dal database</b><br>Il test è rimasto appeso: non è un rifiuto, è silenzio.<br>Premi <b>🔬 Diagnosi approfondita</b>: separa i quattro strati e dice quale è caduto.');
+  }, 15000);
+  function _ltFine(){ _ltFatto=true; clearTimeout(_ltWatch); }
   fbAnonLogin(firebase.app())
     .then(function(u){
       authOk=true;
@@ -7443,6 +7460,7 @@ function fbLiveTest(){
       return db.ref('presence').once('value');
     })
     .then(function(snap){
+      _ltFine();
       var n=Object.keys(snap.val()||{}).length;
       show('rgba(46,204,113,.08)','rgba(46,204,113,.35)','#5ce080',
         '✅ <b>Accesso OK</b><br>✅ <b>Lettura OK</b><br>✅ <b>Scrittura OK</b><br>👥 Dispositivi presenti sul database: <b>'+n+'</b>'+
@@ -7450,6 +7468,7 @@ function fbLiveTest(){
             :'<br>La sincronizzazione funziona.'));
     })
     .catch(function(err){
+      _ltFine();
       var head;
       if(!authOk)      head='❌ <b>Accesso rifiutato</b><br>';
       else if(!readOk) head='✅ Accesso OK<br>❌ <b>Lettura rifiutata</b><br>';
@@ -7457,6 +7476,201 @@ function fbLiveTest(){
       show('rgba(224,85,85,.08)','rgba(224,85,85,.35)','#E0A0A0', head+xe(fbErrText(err)));
     });
 }
+
+// Mette un limite di tempo a una promessa che potrebbe non rispondere mai.
+// Serve perché il caso peggiore del Realtime Database non è un errore: è il
+// silenzio. Se il token non viene accettato, once('value') non risolve e non
+// fallisce — resta appeso, e un test senza scadenza resta appeso con lui.
+function _fbConScadenza(p, ms, etichetta){
+  return new Promise(function(res, rej){
+    var fatto = false;
+    var t = setTimeout(function(){
+      if(fatto) return; fatto = true;
+      rej(new Error('TIMEOUT: nessuna risposta entro '+Math.round(ms/1000)+'s ('+(etichetta||'')+')'));
+    }, ms);
+    Promise.resolve(p).then(
+      function(v){ if(!fatto){ fatto=true; clearTimeout(t); res(v); } },
+      function(e){ if(!fatto){ fatto=true; clearTimeout(t); rej(e); } }
+    );
+  });
+}
+
+// v36s — DIAGNOSI APPROFONDITA
+//
+// Il messaggio "Timeout: nessuna risposta dal database (URL errato o rete
+// bloccata)" mette insieme quattro guasti diversi che si curano in modo
+// diverso. Questa funzione li separa con quattro prove indipendenti, ognuna
+// con una scadenza, così nessuna può restare appesa:
+//
+//   1. TOKEN     — l'account anonimo esiste ancora sul server?
+//   2. HTTPS     — il database risponde via REST, senza websocket?
+//   3. WEBSOCKET — il canale realtime dell'SDK riesce ad aprirsi?
+//   4. LETTURA   — la lettura vera arriva a destinazione?
+//
+// La combinazione che conta: 2 ✅ + 3 ❌ vuol dire che https passa e il
+// websocket no. Non è Firebase, non sono le regole, non è l'URL: è la rete
+// di questo dispositivo (firewall aziendale, proxy, antivirus che ispeziona
+// il traffico) che blocca *.firebasedatabase.app sul canale realtime.
+window.fbDeepTest = function(){
+  var out = document.getElementById('fbTestOut'); if(!out) return;
+  var righe = [], testo = [];
+
+  function disegna(){
+    out.style.display='block';
+    out.style.background='rgba(0,0,0,.35)';
+    out.style.border='1px solid #333';
+    out.style.color='#ccc';
+    out.style.textAlign='left';
+    var h='';
+    righe.forEach(function(r){
+      var ic = r.st==='ok' ? '✅' : (r.st==='ko' ? '❌' : '⏳');
+      var col= r.st==='ok' ? '#5ce080' : (r.st==='ko' ? '#E0A0A0' : '#7db8ff');
+      h += '<div style="margin-bottom:7px"><div style="color:'+col+';font-weight:700">'+ic+' '+xe(r.t)+'</div>'+
+           (r.d ? '<div style="color:#999;font-size:10.5px;line-height:1.55;margin-top:2px;word-break:break-word">'+r.d+'</div>' : '')+
+           '</div>';
+    });
+    out.innerHTML = h;
+  }
+  function riga(st, t, d){ righe.push({st:st, t:t, d:d||''}); disegna(); return righe.length-1; }
+  function agg(i, st, t, d){ righe[i]={st:st, t:t, d:d||''}; disegna(); }
+  function verdetto(col, html){
+    righe.push({st:'', t:'', d:''}); righe.pop();
+    out.innerHTML += '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(59,159,212,.07);'+
+      'border:1px solid rgba(59,159,212,.25);color:'+col+';font-size:11.5px;line-height:1.6">'+html+'</div>'+
+      '<div style="margin-top:8px;font-size:10px;color:#555;font-family:monospace;word-break:break-all">'+xe(testo.join(' | '))+'</div>';
+  }
+
+  var cfg = getFBCfg();
+  if(!cfg || !cfg.apiKey || !cfg.dbUrl){
+    riga('ko','Configurazione assente','Nessun apiKey/URL salvato su questo dispositivo.'); return;
+  }
+  if(typeof firebase==='undefined' || !firebase.database || typeof firebase.auth!=='function'){
+    riga('ko','Librerie Firebase non caricate','Sei offline oppure la rete blocca www.gstatic.com.'); return;
+  }
+
+  var app; try{ app=firebase.app(); }catch(e){ app=firebase.initializeApp({apiKey:cfg.apiKey, databaseURL:cfg.dbUrl}); }
+  var auth = firebase.auth(app), db = firebase.database(app);
+  var base = String(cfg.dbUrl).replace(/\/+$/,'');
+  var token='', rinnovato=false, restOk=false, restStato=0, wsOk=false;
+
+  var i1 = riga('go','1/4 · Account anonimo — chiedo un token nuovo al server');
+
+  function accessoDaZero(){
+    rinnovato = true;
+    return Promise.resolve(auth.signOut())['catch'](function(){})
+      .then(function(){ return auth.signInAnonymously(); })
+      .then(function(c){ return (c && c.user ? c.user : auth.currentUser).getIdToken(); });
+  }
+
+  var p1 = auth.currentUser
+    ? auth.currentUser.getIdToken(true)['catch'](accessoDaZero)
+    : accessoDaZero();
+
+  _fbConScadenza(p1, 20000, 'token')
+    .then(function(tk){
+      token = tk || '';
+      testo.push('token=' + (rinnovato ? 'rinnovato' : 'valido'));
+      agg(i1,'ok','1/4 · Account anonimo valido',
+        rinnovato
+          ? '<b style="color:#E0A055">La sessione salvata su questo dispositivo non era più valida: ne ho creata una nuova.</b> Se fin qui la sincronizzazione era ferma, la causa era questa.'
+          : 'Il server ha rilasciato un token nuovo: l\'account esiste ed è attivo.');
+    })
+    ['catch'](function(e){
+      testo.push('token=KO:'+(e&&(e.code||e.message)));
+      agg(i1,'ko','1/4 · Nessun token',
+        xe(fbErrText(e))+'<br><span style="color:#777">Senza token il database resta chiuso: le prove successive non possono riuscire.</span>');
+    })
+    .then(function(){
+      // 2 — HTTPS puro. Legge "presence", che le regole aprono a chiunque sia
+      // autenticato. Non usa il websocket: se questa passa e la 3 no, il
+      // colpevole è il trasporto realtime, non Firebase.
+      var i2 = riga('go','2/4 · Il database risponde via https (senza websocket)');
+      var url = base + '/presence.json?shallow=true' + (token ? '&auth='+encodeURIComponent(token) : '');
+      return _fbConScadenza(
+          fetch(url, {cache:'no-store'}).then(function(r){
+            return r.text().then(function(t){ return {s:r.status, t:t}; });
+          }), 12000, 'https')
+        .then(function(r){
+          restStato = r.s; restOk = (r.s === 200);
+          testo.push('https='+r.s);
+          if(restOk){
+            var n = 0; try{ n = Object.keys(JSON.parse(r.t||'{}')||{}).length; }catch(e){}
+            agg(i2,'ok','2/4 · Il database risponde via https',
+              'Risposta 200. Dispositivi presenti sul database in questo momento: <b>'+n+'</b>. URL corretto, token accettato, regole in ordine.');
+          } else {
+            agg(i2,'ko','2/4 · Il database rifiuta la lettura via https',
+              'Risposta HTTP <b>'+r.s+'</b>: '+xe(String(r.t||'').slice(0,180))+
+              '<br><span style="color:#777">401/403 = token non accettato oppure regole del Realtime Database chiuse.</span>');
+          }
+        })
+        ['catch'](function(e){
+          testo.push('https=KO');
+          agg(i2,'ko','2/4 · Il database non risponde nemmeno via https',
+            xe(String(e&&e.message||e))+'<br><span style="color:#777">Qui non c\'entra il websocket: è la rete a non arrivare a '+xe(base)+', oppure l\'URL è sbagliato.</span>');
+        });
+    })
+    .then(function(){
+      // 3 — Il canale realtime. .info/connected è stato locale dell'SDK:
+      // diventa true appena il websocket si apre, indipendentemente dalle
+      // regole. Se resta false, il socket non si apre proprio.
+      var i3 = riga('go','3/4 · Il canale realtime si apre (websocket)');
+      var ref = db.ref('.info/connected');
+      return new Promise(function(res){
+        var chiuso = false;
+        function fine(v){
+          if(chiuso) return; chiuso = true;
+          try{ ref.off(); }catch(e){}
+          wsOk = v; testo.push('ws='+(v?'ok':'ko'));
+          if(v) agg(i3,'ok','3/4 · Canale realtime aperto','Il websocket verso Firebase è collegato.');
+          else  agg(i3,'ko','3/4 · Canale realtime non aperto',
+            'In 15 secondi il websocket non si è collegato: la rete di questo dispositivo lo sta bloccando, oppure l\'SDK non riesce a autenticarsi.');
+          res(v);
+        }
+        var t = setTimeout(function(){ fine(false); }, 15000);
+        try{
+          ref.on('value', function(s){ if(s.val()===true){ clearTimeout(t); fine(true); } });
+        }catch(e){ clearTimeout(t); fine(false); }
+      });
+    })
+    .then(function(){
+      // 4 — La lettura vera, quella che l'app fa all'avvio e che oggi resta
+      // appesa. Con la scadenza, "appesa" diventa un esito leggibile.
+      var i4 = riga('go','4/4 · Lettura reale dal database');
+      return _fbConScadenza(db.ref('presence').once('value'), 12000, 'lettura')
+        .then(function(snap){
+          var n = Object.keys(snap.val()||{}).length;
+          testo.push('read=ok');
+          agg(i4,'ok','4/4 · Lettura riuscita','Dispositivi visti sul database: <b>'+n+'</b>.');
+        })
+        ['catch'](function(e){
+          testo.push('read=KO');
+          agg(i4,'ko','4/4 · Lettura non riuscita', xe(String(e&&e.message||e)));
+        });
+    })
+    .then(function(){
+      if(restOk && !wsOk){
+        verdetto('#E0A055',
+          '<b>Trovato.</b> Il database risponde perfettamente via https, ma il <b>canale realtime (websocket) è bloccato su questo dispositivo</b>.<br><br>'+
+          'Non sono le regole di Firebase, non è l\'URL, non è l\'account: è la rete.<br><br>'+
+          '<b>Conferma in 30 secondi:</b> collega il dispositivo all\'hotspot del telefono e riapri l\'app. Se torna ONLINE, è la rete dell\'ufficio.<br><br>'+
+          '<b>Da far sbloccare a chi gestisce la rete:</b> connessioni <b>WebSocket (wss://)</b> verso <code>*.firebasedatabase.app</code> e <code>*.firebaseio.com</code>, porta 443. Spesso è l\'antivirus con ispezione TLS, o un proxy che accetta https ma non l\'upgrade a websocket.');
+      } else if(restOk && wsOk){
+        verdetto('#5ce080',
+          '<b>Adesso funziona.</b> Token, https, websocket e lettura sono tutti a posto.'+
+          (rinnovato ? ' Il blocco era la sessione anonima scaduta: rinnovandola la sincronizzazione è ripartita. Chiudi questa finestra e premi <b>Riprova connessione</b>.' :
+                       ' Chiudi questa finestra e premi <b>Riprova connessione</b>.'));
+      } else if(restStato === 401 || restStato === 403){
+        verdetto('#E0A0A0',
+          '<b>Il database rifiuta il token</b> (HTTP '+restStato+'). Due cause possibili:<br>'+
+          '1. le <b>Regole</b> del Realtime Database non consentono più la lettura agli utenti autenticati;<br>'+
+          '2. l\'accesso <b>Anonimo</b> è stato disattivato in Authentication → Sign-in method.<br><br>'+
+          'Firebase Console → Realtime Database → Regole: il nodo <code>presence</code> deve avere <code>".read": "auth != null"</code>.');
+      } else {
+        verdetto('#E0A0A0',
+          '<b>Il database non è raggiungibile da questo dispositivo</b>, nemmeno via https. Controlla la rete, e che l\'URL sia esattamente quello della Console: <code>'+xe(base)+'</code>');
+      }
+    });
+};
 
 function getFBCfg() {
   // 1° prova: config locale (impostata da questo dispositivo in modale Firebase)
