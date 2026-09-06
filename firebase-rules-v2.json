@@ -140,6 +140,24 @@
       ".write": "auth != null"
     },
 
+    "_diag": {
+      ".read": "auth != null",
+      "$device": {
+        ".write": "auth != null",
+        ".validate": "!newData.exists() || newData.hasChildren(['ts'])",
+        "ts":  { ".validate": "newData.isNumber()" },
+        "who": { ".validate": "newData.isString() && newData.val().length < 80" },
+        "$other": { ".validate": false }
+      }
+    },
+
+    "_backups_meta": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "lastAuto": { ".validate": "newData.isNumber() || newData.isString()" },
+      "$other": { ".validate": true }
+    },
+
     "portal_submissions": {
       ".read": "auth != null",
       "$ref": {

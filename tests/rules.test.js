@@ -48,11 +48,44 @@ export async function runRulesTests() {
     eq(v2.returns.$key['.write'], 'auth != null');
   });
 
+  describe('Regole — copertura di quello che il gestionale usa davvero');
+
+  it('ogni nodo toccato da index.html ha una regola', () => {
+    // Nasce da un bug reale: _diag (il nodo su cui il pulsante "Test
+    // connessione" prova a scrivere) non aveva regole, quindi cadeva sul
+    // ".write": false della radice. Il test riportava "Scrittura rifiutata"
+    // anche quando i resi si salvavano benissimo — e faceva pensare che la
+    // sincronizzazione fosse rotta. Stessa storia per _backups_meta, che
+    // coordina il backup giornaliero fra i PC.
+    const html = readFileSync(join(root, 'index.html'), 'utf8');
+
+    // Cerco solo i nodi di PRIMO livello: .ref('X') e root.child('X').
+    // Un .child('y') su un riferimento gia' annidato non e' un nodo radice.
+    const radice = new Set();
+    const re = /(?:\.ref\(|\broot\.child\()'([A-Za-z_][A-Za-z0-9_]*)/g;
+    let m;
+    while ((m = re.exec(html))) radice.add(m[1]);
+
+    // '.info/connected' e' un nodo di servizio dell'SDK, non del database.
+    radice.delete('info');
+
+    const scoperti = Array.from(radice).filter((n) => v2[n] === undefined).sort();
+    eq(scoperti.length, 0,
+      'nodi usati dal gestionale ma senza regole (verrebbero negati):\n      ' + scoperti.join('\n      '));
+  });
+
+  it('_diag e _backups_meta sono scrivibili', () => {
+    assert(v2._diag, '_diag serve al pulsante "Test connessione"');
+    assert(v2._backups_meta, '_backups_meta coordina il backup automatico');
+    eq(v2._diag.$device['.write'], 'auth != null');
+    eq(v2._backups_meta['.write'], 'auth != null');
+  });
+
   describe('Regole — nodi nuovi');
 
-  it('esistono solo i due nodi previsti', () => {
+  it('esistono solo i due nodi del portale, piu\' i due di servizio', () => {
     const nuovi = Object.keys(v2).filter((k) => !k.startsWith('.') && LEGACY.indexOf(k) < 0);
-    eq(nuovi.sort().join(','), 'portal_counters,portal_submissions',
+    eq(nuovi.sort().join(','), '_backups_meta,_diag,portal_counters,portal_submissions',
       'nodi inattesi: ' + nuovi.join(', '));
   });
 
