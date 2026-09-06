@@ -48,6 +48,17 @@ export async function runRulesTests() {
     eq(v2.returns.$key['.write'], 'auth != null');
   });
 
+  it('il file contiene SOLO la chiave "rules"', () => {
+    // La Console Firebase rifiuta qualsiasi altra chiave di primo livello.
+    // Un file con dentro una sezione di commenti sembra valido — e' JSON
+    // corretto — ma non si riesce a incollare: la Console risponde con un
+    // errore di parsing e le regole vecchie restano attive.
+    for (const f of ['firebase-rules.json', 'firebase-rules-v2.json']) {
+      const chiavi = Object.keys(JSON.parse(readFileSync(join(root, f), 'utf8')));
+      eq(chiavi.join(','), 'rules', f + ' ha chiavi extra: ' + chiavi.join(', '));
+    }
+  });
+
   describe('Regole — copertura di quello che il gestionale usa davvero');
 
   it('ogni nodo toccato da index.html ha una regola', () => {

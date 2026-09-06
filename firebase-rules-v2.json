@@ -1,76 +1,60 @@
 {
-  "_README": [
-    "Regole Firebase Realtime Database — Resi Telos + app pubblica di invio reso.",
-    "",
-    "RETROCOMPATIBILITA': tutti i nodi usati dal gestionale (returns, chat,",
-    "presence, admin, security_log, notifEvents, notif, ocrLive, mailFollowups,",
-    "pkgphotos, _backups, codeMem, _killswitch) mantengono ESATTAMENTE le regole",
-    "della v1. Il gestionale continua a funzionare con auth anonima senza alcuna",
-    "modifica. Un test automatico (tests/rules.test.js) confronta i due file e",
-    "fallisce se anche una sola di quelle regole cambia.",
-    "",
-    "NOVITA': due soli nodi.",
-    "",
-    "  portal_submissions/<RS-XXXXXX>",
-    "    Gli invii che arrivano dall'app pubblica. Li SCRIVE la Netlify Function",
-    "    portal-submit con l'Admin SDK, che bypassa queste regole: percio' qui",
-    "    la scrittura serve solo al GESTIONALE, che aggiorna stato, esito e",
-    "    risposte. L'app pubblica non ha credenziali Firebase e non compare mai",
-    "    in questo nodo: parla solo con le funzioni.",
-    "",
-    "  portal_counters/staff",
-    "    Numeri aggregati per il badge nell'header del gestionale. Nessun nome,",
-    "    nessun codice, nessuna pratica: solo quanti invii aspettano risposta.",
-    "",
-    "PERCHE' L'APP PUBBLICA NON PARLA CON FIREBASE",
-    "  Il link gira fra clienti, agenti e corrieri. Se l'app avesse credenziali",
-    "  Firebase, chiunque lo aprisse avrebbe lo stesso livello di accesso del",
-    "  gestionale (entrambi auth anonima) e potrebbe leggere gli invii altrui:",
-    "  le regole RTDB non sanno distinguere due utenti anonimi. Facendo passare",
-    "  tutto dalle funzioni, l'app pubblica non ha proprio modo di interrogare",
-    "  il database.",
-    "",
-    "APPLICARE: Firebase Console -> Realtime Database -> Regole -> incolla -> Pubblica."
-  ],
-
   "rules": {
     ".read": false,
     ".write": false,
-
     "returns": {
       ".read": "auth != null",
       "$key": {
         ".write": "auth != null",
         ".validate": "newData.hasChildren(['cod']) || !newData.exists()",
-        "cod":  { ".validate": "newData.isString() && newData.val().length < 200" },
-        "note": { ".validate": "newData.isString() && newData.val().length < 5000" },
-        "$other": { ".validate": true }
+        "cod": {
+          ".validate": "newData.isString() && newData.val().length < 200"
+        },
+        "note": {
+          ".validate": "newData.isString() && newData.val().length < 5000"
+        },
+        "$other": {
+          ".validate": true
+        }
       }
     },
-
     "chat": {
       ".read": "auth != null",
       "$msgId": {
         ".write": "auth != null && (!data.exists() || data.child('who').val() == newData.child('who').val())",
         ".validate": "newData.hasChildren(['who','ts'])",
-        "who":   { ".validate": "newData.isString() && newData.val().length < 80" },
-        "role":  { ".validate": "newData.isString() && newData.val().length < 20" },
-        "text":  { ".validate": "newData.isString() && newData.val().length < 4000" },
-        "photo": { ".validate": "newData.isString() && (newData.val().matches(/^data:image\\//) || newData.val().matches(/^https:\\/\\//)) && newData.val().length < 400000" },
-        "file":  { ".validate": "newData.isString() && (newData.val().matches(/^data:/) || newData.val().matches(/^https:\\/\\//)) && newData.val().length < 400000" },
-        "fileName": { ".validate": "newData.isString() && newData.val().length < 200" },
-        "ts":    { ".validate": "newData.isNumber()" },
-        "$other": { ".validate": true }
+        "who": {
+          ".validate": "newData.isString() && newData.val().length < 80"
+        },
+        "role": {
+          ".validate": "newData.isString() && newData.val().length < 20"
+        },
+        "text": {
+          ".validate": "newData.isString() && newData.val().length < 4000"
+        },
+        "photo": {
+          ".validate": "newData.isString() && (newData.val().matches(/^data:image\\//) || newData.val().matches(/^https:\\/\\//)) && newData.val().length < 400000"
+        },
+        "file": {
+          ".validate": "newData.isString() && (newData.val().matches(/^data:/) || newData.val().matches(/^https:\\/\\//)) && newData.val().length < 400000"
+        },
+        "fileName": {
+          ".validate": "newData.isString() && newData.val().length < 200"
+        },
+        "ts": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": true
+        }
       }
     },
-
     "presence": {
       ".read": "auth != null",
       "$user": {
         ".write": "auth != null"
       }
     },
-
     "admin": {
       "pinHash": {
         ".read": "auth != null",
@@ -82,38 +66,46 @@
         ".write": "auth != null"
       }
     },
-
     "security_log": {
       ".read": "auth != null",
       "$k": {
         ".write": "auth != null && !data.exists()",
         ".validate": "newData.hasChildren(['ts','who'])",
-        "ts":  { ".validate": "newData.isNumber()" },
-        "who": { ".validate": "newData.isString() && newData.val().length < 80" },
-        "$other": { ".validate": true }
+        "ts": {
+          ".validate": "newData.isNumber()"
+        },
+        "who": {
+          ".validate": "newData.isString() && newData.val().length < 80"
+        },
+        "$other": {
+          ".validate": true
+        }
       }
     },
-
     "notifEvents": {
       ".read": "auth != null",
-      "$k": { ".write": "auth != null" }
+      "$k": {
+        ".write": "auth != null"
+      }
     },
-
     "notif": {
       ".read": "auth != null",
-      "$k": { ".write": "auth != null" }
+      "$k": {
+        ".write": "auth != null"
+      }
     },
-
     "ocrLive": {
       ".read": "auth != null",
-      "$k": { ".write": "auth != null" }
+      "$k": {
+        ".write": "auth != null"
+      }
     },
-
     "mailFollowups": {
       ".read": "auth != null",
-      "$k": { ".write": "auth != null" }
+      "$k": {
+        ".write": "auth != null"
+      }
     },
-
     "pkgphotos": {
       ".read": "auth != null",
       "$k": {
@@ -121,12 +113,12 @@
         ".validate": "!newData.exists() || newData.child('dataUrl').val().length < 4000000"
       }
     },
-
     "_backups": {
       ".read": "auth != null",
-      "$k": { ".write": "auth != null" }
+      "$k": {
+        ".write": "auth != null"
+      }
     },
-
     "codeMem": {
       ".read": "auth != null",
       "$cod": {
@@ -134,95 +126,174 @@
         ".validate": "!newData.exists() || (newData.hasChild('pre') && newData.child('pre').isString() && newData.child('pre').val().length < 10)"
       }
     },
-
     "_killswitch": {
       ".read": true,
       ".write": "auth != null"
     },
-
     "_diag": {
       ".read": "auth != null",
       "$device": {
         ".write": "auth != null",
         ".validate": "!newData.exists() || newData.hasChildren(['ts'])",
-        "ts":  { ".validate": "newData.isNumber()" },
-        "who": { ".validate": "newData.isString() && newData.val().length < 80" },
-        "$other": { ".validate": false }
+        "ts": {
+          ".validate": "newData.isNumber()"
+        },
+        "who": {
+          ".validate": "newData.isString() && newData.val().length < 80"
+        },
+        "$other": {
+          ".validate": false
+        }
       }
     },
-
     "_backups_meta": {
       ".read": "auth != null",
       ".write": "auth != null",
-      "lastAuto": { ".validate": "newData.isNumber() || newData.isString()" },
-      "$other": { ".validate": true }
+      "lastAuto": {
+        ".validate": "newData.isNumber() || newData.isString()"
+      },
+      "$other": {
+        ".validate": true
+      }
     },
-
     "portal_submissions": {
       ".read": "auth != null",
       "$ref": {
         ".write": "auth != null",
         ".validate": "!newData.exists() || newData.hasChildren(['ref','ts','stato'])",
-        "ref":       { ".validate": "newData.isString() && newData.val().matches(/^RS-[A-Z0-9]{6,10}$/)" },
-        "ts":        { ".validate": "newData.isNumber()" },
-        "stato":     { ".validate": "newData.isString() && newData.val().matches(/^(NUOVO|IN_ESAME|ACCETTATO|RIFIUTATO|CHIUSO)$/)" },
-        "letto":     { ".validate": "newData.isBoolean()" },
-        "causale":   { ".validate": "newData.isString() && newData.val().length < 120" },
-        "note":      { ".validate": "newData.isString() && newData.val().length < 2000" },
-        "esito":     { ".validate": "newData.isString() && newData.val().length < 2000" },
-        "codiceCliente": { ".validate": "newData.isString() && newData.val().length < 40" },
-        "origine":   { ".validate": "newData.isString() && newData.val().length < 30" },
-        "ip":        { ".validate": "newData.isString() && newData.val().length < 50" },
-        "gestitoDa": { ".validate": "newData.isString() && newData.val().length < 80" },
-        "gestitoTs": { ".validate": "newData.isNumber()" },
+        "ref": {
+          ".validate": "newData.isString() && newData.val().matches(/^RS-[A-Z0-9]{6,10}$/)"
+        },
+        "ts": {
+          ".validate": "newData.isNumber()"
+        },
+        "stato": {
+          ".validate": "newData.isString() && newData.val().matches(/^(NUOVO|IN_ESAME|ACCETTATO|RIFIUTATO|CHIUSO)$/)"
+        },
+        "letto": {
+          ".validate": "newData.isBoolean()"
+        },
+        "causale": {
+          ".validate": "newData.isString() && newData.val().length < 120"
+        },
+        "note": {
+          ".validate": "newData.isString() && newData.val().length < 2000"
+        },
+        "esito": {
+          ".validate": "newData.isString() && newData.val().length < 2000"
+        },
+        "codiceCliente": {
+          ".validate": "newData.isString() && newData.val().length < 40"
+        },
+        "origine": {
+          ".validate": "newData.isString() && newData.val().length < 30"
+        },
+        "ip": {
+          ".validate": "newData.isString() && newData.val().length < 50"
+        },
+        "gestitoDa": {
+          ".validate": "newData.isString() && newData.val().length < 80"
+        },
+        "gestitoTs": {
+          ".validate": "newData.isNumber()"
+        },
         "returnKeys": {
-          "$i": { ".validate": "newData.isString() && newData.val().length < 200" }
+          "$i": {
+            ".validate": "newData.isString() && newData.val().length < 200"
+          }
         },
         "mittente": {
-          "nome":     { ".validate": "newData.isString() && newData.val().length < 120" },
-          "azienda":  { ".validate": "newData.isString() && newData.val().length < 200" },
-          "tipo":     { ".validate": "newData.isString() && newData.val().length < 20" },
-          "telefono": { ".validate": "newData.isString() && newData.val().length < 40" },
-          "email":    { ".validate": "newData.isString() && newData.val().length < 200" },
-          "$other": { ".validate": false }
+          "nome": {
+            ".validate": "newData.isString() && newData.val().length < 120"
+          },
+          "azienda": {
+            ".validate": "newData.isString() && newData.val().length < 200"
+          },
+          "tipo": {
+            ".validate": "newData.isString() && newData.val().length < 20"
+          },
+          "telefono": {
+            ".validate": "newData.isString() && newData.val().length < 40"
+          },
+          "email": {
+            ".validate": "newData.isString() && newData.val().length < 200"
+          },
+          "$other": {
+            ".validate": false
+          }
         },
         "articoli": {
           "$i": {
-            "cod":   { ".validate": "newData.isString() && newData.val().length < 60" },
-            "marca": { ".validate": "newData.isString() && newData.val().length < 20" },
-            "qty":   { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 9999" },
-            "forn":  { ".validate": "newData.isString() && newData.val().length < 120" },
-            "$other": { ".validate": false }
+            "cod": {
+              ".validate": "newData.isString() && newData.val().length < 60"
+            },
+            "marca": {
+              ".validate": "newData.isString() && newData.val().length < 20"
+            },
+            "qty": {
+              ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 9999"
+            },
+            "forn": {
+              ".validate": "newData.isString() && newData.val().length < 120"
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         },
         "foto": {
-          "$i": { ".validate": "newData.isString() && newData.val().matches(/^data:image\\/(jpeg|png|webp);base64,/) && newData.val().length < 2200000" }
+          "$i": {
+            ".validate": "newData.isString() && newData.val().matches(/^data:image\\/(jpeg|png|webp);base64,/) && newData.val().length < 2200000"
+          }
         },
         "messaggi": {
           "$mid": {
             ".validate": "newData.hasChildren(['ts','da','testo'])",
-            "ts":     { ".validate": "newData.isNumber()" },
-            "da":     { ".validate": "newData.isString() && newData.val().matches(/^(TELOS|MITTENTE)$/)" },
-            "autore": { ".validate": "newData.isString() && newData.val().length < 120" },
-            "testo":  { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length < 2000" },
-            "$other": { ".validate": false }
+            "ts": {
+              ".validate": "newData.isNumber()"
+            },
+            "da": {
+              ".validate": "newData.isString() && newData.val().matches(/^(TELOS|MITTENTE)$/)"
+            },
+            "autore": {
+              ".validate": "newData.isString() && newData.val().length < 120"
+            },
+            "testo": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length < 2000"
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         },
-        "$other": { ".validate": false }
+        "$other": {
+          ".validate": false
+        }
       }
     },
-
     "portal_counters": {
       ".read": "auth != null",
       ".write": "auth != null",
       "staff": {
         ".validate": "newData.hasChildren(['total'])",
-        "nuovi":     { ".validate": "newData.isNumber() && newData.val() >= 0" },
-        "inEsame":   { ".validate": "newData.isNumber() && newData.val() >= 0" },
-        "daLeggere": { ".validate": "newData.isNumber() && newData.val() >= 0" },
-        "total":     { ".validate": "newData.isNumber() && newData.val() >= 0" },
-        "ts":        { ".validate": "newData.isNumber()" },
-        "$other": { ".validate": false }
+        "nuovi": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "inEsame": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "daLeggere": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "total": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "ts": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
+        }
       }
     }
   }

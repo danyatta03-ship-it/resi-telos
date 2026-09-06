@@ -63,7 +63,7 @@ portal/                       app pubblica (nessuna dipendenza esterna)
 netlify/functions/
 ├── portal-submit.js          riceve e valida gli invii
 ├── portal-status.js          consultazione e risposte del mittente
-└── _portal-admin.js          Firebase Admin condiviso
+└── lib/admin.js              Firebase Admin condiviso
 
 index.html                    gestionale: scheda PORTALE + badge
 firebase-rules-v2.json        regole (gestionale invariato + 2 nodi nuovi)
@@ -181,6 +181,47 @@ Contiene le regole del gestionale **invariate** piu' i due nodi nuovi; un test
 fallisce se le prime cambiano.
 
 Non serve altro: niente Authentication da configurare, niente Storage.
+
+### 7.2-bis Cosa contengono le regole
+
+Il file `firebase-rules-v2.json` contiene **solo** la chiave `rules`, perche'
+la Console Firebase rifiuta qualsiasi altra chiave di primo livello: un file
+con dentro una sezione di commenti non si riesce a incollare. Le spiegazioni
+stanno qui.
+
+Regole Firebase Realtime Database — Resi Telos + app pubblica di invio reso.
+
+RETROCOMPATIBILITA': tutti i nodi usati dal gestionale (returns, chat,
+presence, admin, security_log, notifEvents, notif, ocrLive, mailFollowups,
+pkgphotos, _backups, codeMem, _killswitch) mantengono ESATTAMENTE le regole
+della v1. Il gestionale continua a funzionare con auth anonima senza alcuna
+modifica. Un test automatico (tests/rules.test.js) confronta i due file e
+fallisce se anche una sola di quelle regole cambia.
+
+NOVITA': due soli nodi.
+
+  portal_submissions/<RS-XXXXXX>
+    Gli invii che arrivano dall'app pubblica. Li SCRIVE la Netlify Function
+    portal-submit con l'Admin SDK, che bypassa queste regole: percio' qui
+    la scrittura serve solo al GESTIONALE, che aggiorna stato, esito e
+    risposte. L'app pubblica non ha credenziali Firebase e non compare mai
+    in questo nodo: parla solo con le funzioni.
+
+  portal_counters/staff
+    Numeri aggregati per il badge nell'header del gestionale. Nessun nome,
+    nessun codice, nessuna pratica: solo quanti invii aspettano risposta.
+
+PERCHE' L'APP PUBBLICA NON PARLA CON FIREBASE
+  Il link gira fra clienti, agenti e corrieri. Se l'app avesse credenziali
+  Firebase, chiunque lo aprisse avrebbe lo stesso livello di accesso del
+  gestionale (entrambi auth anonima) e potrebbe leggere gli invii altrui:
+  le regole RTDB non sanno distinguere due utenti anonimi. Facendo passare
+  tutto dalle funzioni, l'app pubblica non ha proprio modo di interrogare
+  il database.
+
+APPLICARE: Firebase Console -> Realtime Database -> Regole -> incolla -> Pubblica.
+
+---
 
 ### 7.3 Variabili d'ambiente Netlify
 
