@@ -52,6 +52,24 @@ export async function runVersioneTests() {
     eq(v, attesa, 'sw.js serve ancora la cache di un\'altra versione');
   });
 
+  describe('Runner — i test asincroni devono essere davvero eseguiti');
+
+  it('ogni gruppo viene atteso prima del riepilogo', () => {
+    // it() contava un successo appena fn() tornava, senza guardare se
+    // avesse restituito una promessa: due test async sono rimasti verdi e
+    // vuoti per settimane, e puntavano a un file che non esiste piu'. Un
+    // test che non puo' fallire e' peggio di nessun test, perche' occupa il
+    // posto di quello vero.
+    const run = readFileSync(join(root, 'tests/run.js'), 'utf8');
+    const chiamate = (run.match(/await run\w+Tests\(\);/g) || []).length;
+    const attese = (run.match(/await attendi\(\);/g) || []).length;
+    assert(chiamate > 0, 'nessun gruppo di test invocato');
+    eq(attese, chiamate,
+      'ogni "await runXTests()" deve essere seguito da "await attendi()": senza, i test asincroni finiscono dopo il riepilogo');
+    assert(run.indexOf('typeof esito.then') > 0,
+      'it() deve riconoscere una funzione asincrona invece di contarla come superata');
+  });
+
   describe('Diagnostica — nessuna prova puo\' restare appesa');
 
   const corpo = (() => {

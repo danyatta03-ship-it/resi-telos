@@ -30,7 +30,7 @@ function listJsFiles(dir) {
 }
 
 export async function runEscapingTests() {
-  const files = listJsFiles(portalJs).filter((f) => !f.endsWith('ui/dom.js'));
+  const files = listJsFiles(portalJs).filter((f) => !f.endsWith('/dom.js'));
 
   describe('Escaping — nessuna doppia codifica');
 
@@ -90,23 +90,45 @@ export async function runEscapingTests() {
       'html: con contenuto dinamico non protetto:\n      ' + offenders.join('\n      '));
   });
 
-  describe('Escaping — comportamento di esc()');
+  describe('Escaping — xe(), la protezione del gestionale');
 
-  it('esc() neutralizza i caratteri pericolosi', async () => {
-    const dom = await import('../portal/js/ui/dom.js');
-    eq(dom.esc('<script>alert(1)</script>'),
-       '&lt;script&gt;alert(1)&lt;/script&gt;');
-    eq(dom.esc('a & b'), 'a &amp; b');
-    eq(dom.esc('"virgolette"'), '&quot;virgolette&quot;');
-    eq(dom.esc("l'apostrofo"), 'l&#39;apostrofo');
+  // Questi due test prima importavano esc() da portal/js/ui/dom.js: un
+  // percorso che non esiste piu' e una funzione che il portale non ha mai
+  // riavuto dopo la riscrittura (h() usa createTextNode, che neutralizza da
+  // solo). Restavano verdi perche' il runner non aspettava i test async: la
+  // promessa falliva nel vuoto e it() contava un successo. Un test che non
+  // puo' fallire e' peggio di nessun test, perche' occupa il posto di
+  // quello vero.
+  //
+  // Ora verificano xe(), che il gestionale usa davvero — anche nella
+  // Diagnostica, dove finiscono in pagina l'URL del database e il testo
+  // grezzo degli errori restituiti dal server.
+  const xe = (() => {
+    const html = readFileSync(join(root, 'index.html'), 'utf8');
+    const m = html.match(/function xe\(v\)\{[^\n]*\}/);
+    assert(m, 'xe() non trovata in index.html');
+    return new Function('return ' + m[0].replace('function xe', 'function') + ';')();
+  })();
+
+  it('xe() neutralizza i caratteri che aprono un tag', () => {
+    eq(xe('<script>alert(1)</script>'), '&lt;script&gt;alert(1)&lt;/script&gt;');
+    eq(xe('a & b'), 'a &amp; b');
+    eq(xe('"virgolette"'), '&quot;virgolette&quot;');
   });
 
-  it('esc() gestisce null e undefined senza esplodere', async () => {
-    const dom = await import('../portal/js/ui/dom.js');
-    eq(dom.esc(null), '');
-    eq(dom.esc(undefined), '');
-    eq(dom.esc(0), '0');
-    eq(dom.esc(false), 'false');
+  it('xe() codifica la e commerciale per prima', () => {
+    // Se & venisse sostituita dopo <, "&lt;" diventerebbe "&amp;lt;" e in
+    // pagina si leggerebbe "&lt;" invece del segno di minore.
+    eq(xe('&lt;'), '&amp;lt;');
+  });
+
+  it('xe() regge valori vuoti senza esplodere', () => {
+    // Li riceve davvero: fbErrText puo' tornare stringa vuota, e i campi
+    // della configurazione possono mancare.
+    eq(xe(null), '');
+    eq(xe(undefined), '');
+    eq(xe(''), '');
+    eq(xe(0), '');   // String(0 || '') e' '': documentato qui perche' sorprende
   });
 
   describe('Escaping — precedenza degli operatori');

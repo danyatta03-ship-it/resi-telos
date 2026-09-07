@@ -1241,7 +1241,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v37 · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v38 · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1933,7 +1933,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v37</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v38</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -3018,7 +3018,11 @@ function setConnUI(on){
   var el=document.getElementById('hdrMode'); if(!el) return;
   var hasFB=!!(getFBCfg()&&getFBCfg().dbUrl);
   var txt,bg,col;
-  if(on){ txt='● ONLINE'; bg='rgba(52,211,153,.18)'; col='#34D399'; }
+  // Il ripiego https e' una modalita' degradata, non un guasto: va detto,
+  // altrimenti l'operatore vede ONLINE e non capisce perche' le righe dei
+  // colleghi compaiono con qualche secondo di ritardo.
+  if(on && FB_REST.attivo){ txt='● ONLINE · HTTPS'; bg='rgba(224,160,85,.18)'; col='#E0A055'; }
+  else if(on){ txt='● ONLINE'; bg='rgba(52,211,153,.18)'; col='#34D399'; }
   else if(hasFB){ txt='● OFFLINE'; bg='rgba(224,85,85,.18)'; col='#E05555'; }
   else { txt='● LOCALE'; bg='rgba(255,255,255,.07)'; col='#999'; }
   el.textContent=txt;
@@ -7350,6 +7354,176 @@ function _fbDetachAll(){
   if(_FB_AUTH_OFF){ try{ _FB_AUTH_OFF(); }catch(e){} _FB_AUTH_OFF = null; }
 }
 
+// ══════════════════════════════════════════════════════════════════
+// v38 — TRASPORTO DI RISERVA VIA HTTPS
+//
+// L'SDK del Realtime Database parla su websocket (wss://). Quando una rete
+// aziendale lascia passare https ma blocca l'upgrade a websocket — proxy,
+// firewall, antivirus con ispezione TLS — l'SDK non fallisce: tace. Ogni
+// lettura resta appesa, l'app resta OFFLINE, e non c'e' niente da
+// correggere nel codice perche' il codice e' giusto: e' il canale a non
+// esistere.
+//
+// Firebase pero' espone lo STESSO database anche via REST, su https
+// normale. Questo modulo riscrive i nove metodi che il gestionale usa
+// davvero (child, set, update, remove, push, once, on, off, limitTo*)
+// sopra fetch(). Quando il canale realtime non passa, l'app ci si appoggia
+// da sola e continua a funzionare: non piu' istantanea, aggiornata ogni
+// pochi secondi, ma viva.
+//
+// Il prezzo e' dichiarato: niente notifiche immediate, niente
+// onDisconnect. In cambio non esiste piu' una rete che possa fermare il
+// gestionale senza che nessuno possa farci niente.
+// ══════════════════════════════════════════════════════════════════
+var FB_REST = { attivo:false, base:'', intervallo:8000, polls:[], presTimer:null };
+
+// Il token di accesso viaggia gia' su https (Identity Toolkit e' REST):
+// l'autenticazione funziona anche dove il websocket non passa. getIdToken()
+// restituisce quello in cache e lo rinnova da solo prima della scadenza.
+function _fbRestToken(){
+  try{
+    var u = firebase.auth().currentUser;
+    if(u) return u.getIdToken();
+  }catch(e){}
+  return Promise.reject(new Error('Nessun accesso attivo'));
+}
+
+// Riproduce la snapshot dell'SDK: val/key/forEach/child/exists/numChildren
+// sono tutto quello che il gestionale legge davvero.
+function _fbSnap(key, val){
+  return {
+    key: key,
+    val: function(){ return val === undefined ? null : val; },
+    exists: function(){ return val !== null && val !== undefined; },
+    numChildren: function(){ return (val && typeof val==='object') ? Object.keys(val).length : 0; },
+    child: function(p){
+      var v = val, parti = String(p).split('/');
+      for(var i=0;i<parti.length;i++) v = (v && typeof v==='object') ? v[parti[i]] : null;
+      return _fbSnap(parti[parti.length-1], v===undefined?null:v);
+    },
+    forEach: function(fn){
+      if(!val || typeof val!=='object') return false;
+      var ks = Object.keys(val);
+      for(var i=0;i<ks.length;i++){ if(fn(_fbSnap(ks[i], val[ks[i]])) === true) return true; }
+      return false;
+    }
+  };
+}
+
+// Un riferimento con la stessa forma di quello dell'SDK, ma via REST.
+function fbRestRef(path, query){
+  path = path || ''; query = query || '';
+  var self = {};
+  self._path = path;
+  self._rest = true;
+  self.key = path ? path.split('/').pop() : null;
+  Object.defineProperty(self, 'root', { get: function(){ return fbRestRef(''); } });
+
+  function chiama(metodo, corpo){
+    return _fbRestToken().then(function(tk){
+      var u = FB_REST.base + '/' + path + '.json?auth=' + encodeURIComponent(tk) + query;
+      var o = { method: metodo, cache: 'no-store' };
+      if(corpo !== undefined){ o.body = JSON.stringify(corpo); o.headers = {'Content-Type':'application/json'}; }
+      return fetch(u, o).then(function(r){
+        return r.text().then(function(t){
+          if(!r.ok){
+            // 401/403 dal REST significano la stessa cosa che PERMISSION_DENIED
+            // sull'SDK: fbErrText sa gia' tradurlo in una frase utile.
+            var e = new Error((r.status===401||r.status===403) ? 'PERMISSION_DENIED' : ('HTTP '+r.status+': '+t.slice(0,120)));
+            e.code = 'REST_'+r.status;
+            throw e;
+          }
+          try{ return t ? JSON.parse(t) : null; }catch(err){ return null; }
+        });
+      });
+    });
+  }
+
+  self.child = function(p){ return fbRestRef(path ? path+'/'+p : String(p)); };
+  self.set    = function(v){ return chiama('PUT', v===undefined?null:v); };
+  self.update = function(v){ return chiama('PATCH', v); };
+  self.remove = function(){ return chiama('DELETE'); };
+  self.push   = function(v){
+    if(v === undefined) return fbRestRef(path+'/'+('r'+Date.now()+Math.random().toString(36).slice(2,7)));
+    return chiama('POST', v).then(function(res){
+      return fbRestRef(path + '/' + ((res && res.name) || ''));
+    });
+  };
+  self.once = function(ev, cb){
+    var p = chiama('GET').then(function(v){ return _fbSnap(self.key, v); });
+    if(typeof cb === 'function'){ p.then(cb)['catch'](function(){}); return p; }
+    return p;
+  };
+  // orderBy="$key" e' obbligatorio perche' il REST accetti limitTo*.
+  self.limitToLast  = function(n){ return fbRestRef(path, query+'&orderBy=%22%24key%22&limitToLast='+n); };
+  self.limitToFirst = function(n){ return fbRestRef(path, query+'&orderBy=%22%24key%22&limitToFirst='+n); };
+  self.orderByChild = function(c){ return fbRestRef(path, query+'&orderBy='+encodeURIComponent('"'+c+'"')); };
+  // Senza websocket non esiste il "quando cadi": lo dichiaro invece di
+  // fingere che funzioni. Le presenze scadute le pulisce gia' il gestionale
+  // per eta' (oltre 5 minuti), quindi nessuno resta online per sempre.
+  self.onDisconnect = function(){
+    return { remove: function(){ return Promise.resolve(); }, set: function(){ return Promise.resolve(); }, cancel: function(){ return Promise.resolve(); } };
+  };
+
+  // Gli ascoltatori diventano interrogazioni ripetute, con il confronto
+  // fatto qui: il gestionale riceve gli stessi eventi di prima.
+  self.on = function(ev, cb){
+    var stato = { ultimo: undefined, timer: null, morto: false };
+    function giro(){
+      if(stato.morto) return;
+      chiama('GET').then(function(v){
+        if(stato.morto) return;
+        if(ev === 'value'){
+          if(JSON.stringify(v) !== JSON.stringify(stato.ultimo)){ stato.ultimo = v; cb(_fbSnap(self.key, v)); }
+          return;
+        }
+        var vecchio = (stato.ultimo && typeof stato.ultimo==='object') ? stato.ultimo : {};
+        var nuovo = (v && typeof v==='object') ? v : {};
+        var k;
+        if(stato.ultimo === undefined){
+          // Primo giro: l'SDK emette child_added per tutto quello che c'e' gia'.
+          if(ev === 'child_added') for(k in nuovo) cb(_fbSnap(k, nuovo[k]));
+        } else if(ev === 'child_added'){
+          for(k in nuovo) if(!(k in vecchio)) cb(_fbSnap(k, nuovo[k]));
+        } else if(ev === 'child_changed'){
+          for(k in nuovo) if((k in vecchio) && JSON.stringify(vecchio[k]) !== JSON.stringify(nuovo[k])) cb(_fbSnap(k, nuovo[k]));
+        } else if(ev === 'child_removed'){
+          for(k in vecchio) if(!(k in nuovo)) cb(_fbSnap(k, vecchio[k]));
+        }
+        stato.ultimo = nuovo;
+      })['catch'](function(){})
+      .then(function(){ if(!stato.morto) stato.timer = setTimeout(giro, FB_REST.intervallo); });
+    }
+    giro();
+    FB_REST.polls.push({ path: path+query, ev: ev, cb: cb, stato: stato });
+    return cb;
+  };
+  self.off = function(ev, fn){
+    for(var i=FB_REST.polls.length-1; i>=0; i--){
+      var p = FB_REST.polls[i];
+      if(p.path !== path+query) continue;
+      if(ev && p.ev !== ev) continue;
+      if(fn && p.cb !== fn) continue;
+      p.stato.morto = true;
+      if(p.stato.timer) clearTimeout(p.stato.timer);
+      FB_REST.polls.splice(i,1);
+    }
+  };
+  return self;
+}
+
+// Ferma tutte le interrogazioni ripetute. Stessa disciplina del registro
+// degli ascoltatori: se non si spengono, si accumulano.
+function fbRestStop(){
+  for(var i=0;i<FB_REST.polls.length;i++){
+    FB_REST.polls[i].stato.morto = true;
+    if(FB_REST.polls[i].stato.timer) clearTimeout(FB_REST.polls[i].stato.timer);
+  }
+  FB_REST.polls = [];
+  if(FB_REST.presTimer){ clearInterval(FB_REST.presTimer); FB_REST.presTimer = null; }
+  FB_REST.attivo = false;
+}
+
 // Debounce per il sync incrementale: una raffica di delta coalesce in un solo render/salvataggio
 var _fbRT=null, _fbPT=null;
 function fbRender(){ if(_fbRT)return; _fbRT=setTimeout(function(){_fbRT=null; renderAll();}, 80); }
@@ -7424,7 +7598,7 @@ function fbDiagnose(){
   // sta girando la build aggiornata o una copia vecchia rimasta nella cache del
   // service worker — e si finisce a cercare un guasto in un codice che su quel
   // dispositivo non è mai arrivato.
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">🩺 Diagnostica Firebase <span style="font-size:10px;color:#666;font-weight:600">v37</span></div><button onclick="document.getElementById(\'fbDiagBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">🩺 Diagnostica Firebase <span style="font-size:10px;color:#666;font-weight:600">v38</span></div><button onclick="document.getElementById(\'fbDiagBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>';
   var allOk=true;
   checks.forEach(function(c){
     if(!c.ok) allOk=false;
@@ -7874,6 +8048,7 @@ function _fbConnectDb(app, cb) {
       // precedente aveva lasciato attaccato. Senza questa riga ogni retry
       // raddoppia il lavoro dell'app fino a farla strisciare.
       _fbDetachAll();
+      fbRestStop();          // se eravamo in ripiego https, il realtime ha la precedenza
       var _mia = ++_FB_GEN;
       // Le risposte in volo di un tentativo ormai superato non devono
       // riscrivere niente: arriverebbero dopo, con dati piu' vecchi.
@@ -8072,6 +8247,88 @@ function doFBConnect() {
   });
 }
 
+// v38 — Connessione via REST: stesso database, stessi dati, canale https.
+// Ricalca _fbConnectDb nelle parti che contano (carico iniziale, ascolto
+// delle variazioni, presenza, interruttore di emergenza) usando i
+// riferimenti di fbRestRef al posto di quelli dell'SDK.
+function _fbConnectRest(cfg, cb) {
+  cb = cb || function(){};
+  FB_REST.base = String(cfg.dbUrl).replace(/\/+$/, '');
+
+  // Sonda: una lettura vera via https. Se non passa nemmeno questa, il
+  // problema non e' il websocket — e' la rete o le regole.
+  fbRestRef('presence').once('value').then(function() {
+    _fbDetachAll();
+    fbRestStop();
+    FB_REST.attivo = true;
+    FB_REF = fbRestRef('returns');
+
+    var fbInitKeys = {};
+    return FB_REF.once('value').then(function(snap) {
+      var data = snap.val() || {};
+      var chiavi = []; for (var k in data) { if (data[k] && data[k]._key) chiavi.push(k); }
+      if (chiavi.length === 0) {
+        // Database vuoto: come nel percorso realtime, i dati locali NON si
+        // buttano — semmai e' questo PC a fare la prima sincronizzazione.
+        return idbGet('td').then(function(v) {
+          var local = {}; try { local = JSON.parse(v || '{}') || {}; } catch(e) {}
+          var lk = []; for (var x in local) { if (local[x] && local[x]._key) lk.push(x); }
+          if (lk.length) { rows = local; try { FB_REF.update(local); } catch(e) {} }
+          for (var i = 0; i < lk.length; i++) fbInitKeys[lk[i]] = true;
+          renderAll();
+        });
+      }
+      rows = {};
+      for (var k2 in data) { if (data[k2] && data[k2]._key) { rows[k2] = data[k2]; fbInitKeys[k2] = true; } }
+      svl();
+      renderAll();
+    }).then(function() {
+      FB_REF.on('child_added', function(s) {
+        if (fbInitKeys[s.key]) { fbInitKeys[s.key] = false; return; }
+        var v = s.val(); if (!v || !v._key) return;
+        rows[s.key] = v; fbPersist(); fbRender();
+        if (v._who && v._who !== deviceName) toast('+ ' + (v.cod || '') + ' da ' + v._who, 'b');
+      });
+      FB_REF.on('child_changed', function(s) {
+        var v = s.val(); if (!v) return;
+        rows[s.key] = v; fbPersist(); fbRender();
+      });
+      FB_REF.on('child_removed', function(s) {
+        if (rows[s.key]) { delete rows[s.key]; fbPersist(); fbRender(); }
+      });
+
+      // L'interruttore di emergenza deve funzionare anche qui: e' l'unico
+      // modo di azzerare un PC a distanza, e in ripiego serve piu' che mai.
+      fbRestRef('_killswitch').on('value', function(s) {
+        var ksv = s.val(); if (!ksv || !ksv.ts) return;
+        var ack = 0; try { ack = parseInt(localStorage.getItem('_killAck') || '0', 10) || 0; } catch(e) {}
+        if (ksv.ts > ack) {
+          try { localStorage.setItem('_killAck', String(ksv.ts)); } catch(e) {}
+          performLocalWipe(ksv);
+        }
+      });
+
+      // Senza onDisconnect la presenza va tenuta fresca a mano: il
+      // gestionale considera online chi ha battuto negli ultimi 90 secondi.
+      function battito() {
+        try { fbRestRef('presence/' + deviceId).set({name: deviceName, role: ROLE, ts: Date.now()}); } catch(e) {}
+      }
+      battito();
+      FB_REST.presTimer = setInterval(battito, 45000);
+
+      FB_LAST_ERR = '';
+      try { upCD(true); setConnUI(true); } catch(e) {}
+      var b = document.getElementById('fbBtn'); if (b) b.textContent = '🛟';
+      toast('🛟 Canale realtime bloccato dalla rete: sincronizzo via https. Tutto funziona, con qualche secondo di ritardo.', 'y');
+      cb(true);
+    });
+  })['catch'](function(err) {
+    fbRestStop();
+    FB_LAST_ERR = fbErrText(err);
+    cb(false);
+  });
+}
+
 var _fbConnecting = false;
 // Connette Firebase se configurato e non già connesso. L'SDK gestisce poi la riconnessione del websocket.
 function ensureFB() {
@@ -8079,15 +8336,27 @@ function ensureFB() {
   if (!cfg || !cfg.apiKey || !cfg.dbUrl) return;     // Firebase non configurato → niente da fare
   if (FB_REF || _fbConnecting) return;               // già connesso / in connessione
   _fbConnecting = true;
+
+  // Quello che va fatto una volta che la sincronizzazione e' viva, su
+  // qualunque dei due canali.
+  function dopoLaConnessione() {
+    try{ if(typeof initChat==='function') initChat(); }catch(e){}
+    try{ if(typeof syncPkgPhotosFromFB==='function') syncPkgPhotosFromFB(); }catch(e){}
+    try{ if(typeof secFlushBuffer==='function') secFlushBuffer(); }catch(e){}
+    try{ if(typeof _ofpFlush==='function') setTimeout(_ofpFlush, 1500); }catch(e){}
+  }
+
   startFB(cfg, function(ok) {
     _fbConnecting = false;
-    if (!ok) setTimeout(ensureFB, 5000);             // connessione fallita (rete non pronta) → ritenta
-    else {
-      try{ if(typeof initChat==='function') initChat(); }catch(e){}
-      try{ if(typeof syncPkgPhotosFromFB==='function') syncPkgPhotosFromFB(); }catch(e){}
-      try{ if(typeof secFlushBuffer==='function') secFlushBuffer(); }catch(e){}
-      try{ if(typeof _ofpFlush==='function') setTimeout(_ofpFlush, 1500); }catch(e){}
-    }
+    if (ok) { dopoLaConnessione(); return; }
+    // Il canale realtime non ha risposto. Prima di arrendersi e lasciare il
+    // gestionale OFFLINE, prova lo stesso database via https: e' il caso
+    // delle reti che accettano https ma bloccano il websocket, e senza
+    // questo tentativo non c'e' niente che l'utente possa fare.
+    _fbConnectRest(cfg, function(okRest) {
+      if (!okRest) setTimeout(ensureFB, 5000);       // nemmeno https → ritenta piu' tardi
+      else dopoLaConnessione();
+    });
   });
 }
 function autoFB() { ensureFB(); }

@@ -10,6 +10,7 @@ import { runRulesTests } from './rules.test.js';
 import { runEscapingTests } from './escaping.test.js';
 import { runVersioneTests } from './versione.test.js';
 import { runSyncTests } from './sync.test.js';
+import { runRestTests } from './rest.test.js';
 
 let passed = 0;
 let failed = 0;
@@ -21,17 +22,45 @@ export function describe(name) {
   console.log('\n\x1b[1m' + name + '\x1b[0m');
 }
 
+// Test asincroni in attesa. Prima non esistevano: it() chiamava fn() e
+// basta, quindi un test async restituiva una promessa che nessuno guardava
+// e veniva contato come superato SENZA aver eseguito una sola asserzione.
+// Due test sull'escaping sono rimasti cosi' per settimane, verdi e vuoti,
+// e puntavano per giunta a un file che non esiste piu'.
+const inCorso = [];
+
+function ok(name) {
+  passed++;
+  console.log('  \x1b[32m✓\x1b[0m ' + name);
+}
+function ko(suiteName, name, err) {
+  failed++;
+  failures.push({ suite: suiteName, name, err });
+  console.log('  \x1b[31m✗\x1b[0m ' + name);
+  console.log('    \x1b[31m' + (err && err.message) + '\x1b[0m');
+}
+
 export function it(name, fn) {
+  const suiteCorrente = suite;
+  let esito;
   try {
-    fn();
-    passed++;
-    console.log('  \x1b[32m✓\x1b[0m ' + name);
+    esito = fn();
   } catch (err) {
-    failed++;
-    failures.push({ suite, name, err });
-    console.log('  \x1b[31m✗\x1b[0m ' + name);
-    console.log('    \x1b[31m' + (err && err.message) + '\x1b[0m');
+    ko(suiteCorrente, name, err);
+    return;
   }
+  if (esito && typeof esito.then === 'function') {
+    inCorso.push(esito.then(() => ok(name), (err) => ko(suiteCorrente, name, err)));
+    return;
+  }
+  ok(name);
+}
+
+// Da chiamare dopo ogni gruppo: senza, i test asincroni verrebbero contati
+// dopo il riepilogo — cioe' mai.
+export async function attendi() {
+  await Promise.all(inCorso);
+  inCorso.length = 0;
 }
 
 export function assert(condition, message) {
@@ -60,11 +89,12 @@ console.log('\x1b[1m\x1b[36m╔════════════════�
 console.log('\x1b[1m\x1b[36m║   Test — App pubblica Reso Telos             ║\x1b[0m');
 console.log('\x1b[1m\x1b[36m╚══════════════════════════════════════════════╝\x1b[0m');
 
-await runSubmitTests();
-await runRulesTests();
-await runEscapingTests();
-await runVersioneTests();
-await runSyncTests();
+await runSubmitTests(); await attendi();
+await runRulesTests(); await attendi();
+await runEscapingTests(); await attendi();
+await runVersioneTests(); await attendi();
+await runSyncTests(); await attendi();
+await runRestTests(); await attendi();
 
 console.log('\n' + '─'.repeat(48));
 if (failed === 0) {
