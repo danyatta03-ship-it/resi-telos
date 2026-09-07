@@ -1,0 +1,9 @@
+{
+  "name": "reso-telos-portale",
+  "version": "1.0.0",
+  "description": "Sito pubblico per l'invio dei resi a Telos (clienti, agenti, corrieri)",
+  "private": true,
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}

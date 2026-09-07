@@ -8,18 +8,10 @@
   status = 200
   force = true
 
-# ── Portale Tracking Resi ────────────────────────────────────────────────
-[[redirects]]
-  from = "/api/portal-submit"
-  to = "/.netlify/functions/portal-submit"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/portal-status"
-  to = "/.netlify/functions/portal-status"
-  status = 200
-  force = true
+# L'invio dei resi NON sta piu' qui: e' un sito Netlify separato, con base
+# directory "portal" e le sue due function. Le rotte /api/portal-* sono state
+# tolte perche' puntavano a function che questo sito non ha piu'.
+# Vedi PORTALE.md.
 
 # v35o — Security headers (audit cybersec).
 # Applicati a TUTTE le route dell'app; le SPA le vedono sulle response del CDN Netlify.
@@ -57,12 +49,11 @@
     Cache-Control = "no-store, no-cache, must-revalidate"
     Service-Worker-Allowed = "/"
 
-# Stesso trattamento per i worker del portale: se venissero serviti dalla
-# cache, un aggiornamento non arriverebbe mai agli utenti gia' installati.
-[[headers]]
-  for = "/portal/sw.js"
-  [headers.values]
-    Cache-Control = "no-store, no-cache, must-revalidate"
-    Service-Worker-Allowed = "/portal/"
-
-
+# Chi arriva su /portal/ con un vecchio link trova la pagina che indica
+# l'indirizzo giusto, invece di una copia dell'app senza le sue function
+# (che fallirebbe ad ogni invio, in silenzio).
+[[redirects]]
+  from = "/portal/*"
+  to = "/portale-spostato.html"
+  status = 302
+  force = true

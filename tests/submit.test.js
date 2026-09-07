@@ -12,8 +12,8 @@ import { dirname, join } from 'node:path';
 
 const require = createRequire(import.meta.url);
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const { valida, generaRiferimento, CAUSALI, TIPI } = require(join(root, 'netlify/functions/portal-submit.js')).__test__;
-const { pubblico, REF_RE } = require(join(root, 'netlify/functions/portal-status.js')).__test__;
+const { valida, generaRiferimento, CAUSALI, TIPI } = require(join(root, 'portal/netlify/functions/portal-submit.js')).__test__;
+const { pubblico, REF_RE } = require(join(root, 'portal/netlify/functions/portal-status.js')).__test__;
 
 function base(extra) {
   return Object.assign({

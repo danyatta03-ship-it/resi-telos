@@ -197,15 +197,16 @@ export async function runRulesTests() {
   describe('Pulizia — niente resti dell\'impianto precedente');
 
   it('le funzioni con utenti e ruoli sono state rimosse', () => {
-    for (const f of ['portal-claims.js', 'portal-sync.js', 'portal-notify.js']) {
-      assert(!existsSync(join(root, 'netlify/functions', f)),
-        'funzione obsoleta ancora presente: ' + f);
+    for (const dir of ['netlify/functions', 'portal/netlify/functions']) {
+      for (const f of ['portal-claims.js', 'portal-sync.js', 'portal-notify.js']) {
+        assert(!existsSync(join(root, dir, f)), 'funzione obsoleta ancora presente: ' + dir + '/' + f);
+      }
     }
   });
 
-  it('le due funzioni nuove esistono', () => {
+  it('le due funzioni nuove stanno nel sito del portale', () => {
     for (const f of ['portal-submit.js', 'portal-status.js']) {
-      assert(existsSync(join(root, 'netlify/functions', f)), 'funzione mancante: ' + f);
+      assert(existsSync(join(root, 'portal/netlify/functions', f)), 'funzione mancante: ' + f);
     }
   });
 
@@ -233,12 +234,75 @@ export async function runRulesTests() {
       'endpoint inattesi: ' + urls.join(', '));
   });
 
-  it('netlify.toml instrada solo gli endpoint esistenti', () => {
-    const toml = readFileSync(join(root, 'netlify.toml'), 'utf8');
-    assert(toml.indexOf('/api/portal-submit') >= 0);
-    assert(toml.indexOf('/api/portal-status') >= 0);
-    assert(toml.indexOf('portal-claims') < 0, 'rotta obsoleta in netlify.toml');
-    assert(toml.indexOf('portal-sync') < 0, 'rotta obsoleta in netlify.toml');
-    assert(toml.indexOf('portal-notify') < 0, 'rotta obsoleta in netlify.toml');
+  describe('Due siti — il gestionale e l\'invio resi non devono toccarsi');
+
+  it('ogni sito instrada solo le function che possiede', () => {
+    // Una rotta verso una function che il sito non ha produce un 404 al
+    // primo invio, in silenzio: la pagina sembra funzionare e il reso non
+    // arriva da nessuna parte.
+    const gest = readFileSync(join(root, 'netlify.toml'), 'utf8');
+    const port = readFileSync(join(root, 'portal/netlify.toml'), 'utf8');
+
+    assert(gest.indexOf('/api/gemini') >= 0, 'il gestionale ha perso la rotta /api/gemini');
+    for (const rotta of ['/api/portal-submit', '/api/portal-status']) {
+      assert(gest.indexOf('to = "/.netlify/functions/' + rotta.replace('/api/', '')) < 0,
+        'il gestionale instrada ancora ' + rotta + ', ma la function non e\' piu\' qui');
+      assert(port.indexOf(rotta) >= 0, 'manca ' + rotta + ' nel sito del portale');
+    }
+    for (const morta of ['portal-claims', 'portal-sync', 'portal-notify']) {
+      assert(gest.indexOf(morta) < 0 && port.indexOf(morta) < 0, 'rotta obsoleta: ' + morta);
+    }
+  });
+
+  it('il sito del portale e\' autonomo', () => {
+    // Base directory "portal": Netlify ci cerca dentro netlify.toml,
+    // package.json e le function. Se manca uno dei tre, il deploy parte lo
+    // stesso ma le function non vengono costruite.
+    for (const f of ['portal/netlify.toml', 'portal/package.json', 'portal/index.html']) {
+      assert(existsSync(join(root, f)), 'manca ' + f + ': il secondo sito non si costruisce');
+    }
+    const pkg = JSON.parse(readFileSync(join(root, 'portal/package.json'), 'utf8'));
+    assert(pkg.dependencies && pkg.dependencies['firebase-admin'],
+      'senza firebase-admin nel package.json del portale le function non possono scrivere sul database');
+    const toml = readFileSync(join(root, 'portal/netlify.toml'), 'utf8');
+    assert(/functions\s*=\s*"netlify\/functions"/.test(toml),
+      'il percorso delle function e\' relativo alla base directory "portal"');
+  });
+
+  it('il gestionale non serve piu\' una copia dell\'app pubblica', () => {
+    // Restava servita da /portal/ ma senza le sue function: ogni invio
+    // sarebbe fallito. Peggio di una pagina assente, perche' sembra viva.
+    const gest = readFileSync(join(root, 'netlify.toml'), 'utf8');
+    assert(gest.indexOf('from = "/portal/*"') >= 0,
+      'manca il rinvio da /portal/*: chi usa un vecchio link trova una copia rotta');
+    assert(existsSync(join(root, 'portale-spostato.html')), 'manca la pagina di rinvio');
+  });
+
+  it('il gestionale sa che il portale ha un indirizzo suo', () => {
+    // Prima il link si ricavava da location.origin + '/portal/': con due
+    // siti distinti quell'indirizzo non esiste piu', e "Copia link" avrebbe
+    // consegnato ai clienti un indirizzo morto.
+    const html = readFileSync(join(root, 'index.html'), 'utf8');
+    assert(html.indexOf('function portaleUrlPubblico(') > 0, 'manca la lettura dell\'indirizzo configurato');
+    assert(html.indexOf('function portaleImpostaLink(') > 0, 'manca il modo di impostarlo');
+    const fn = html.slice(html.indexOf('function portaleCopiaLink('), html.indexOf('function portaleCopiaLink(') + 700);
+    assert(fn.indexOf("location.origin") < 0,
+      'portaleCopiaLink ricava ancora il link dall\'indirizzo del gestionale');
+    assert(fn.indexOf('portaleUrlPubblico()') > 0, 'deve usare l\'indirizzo configurato');
+  });
+
+  it('l\'app pubblica non puo\' parlare con nessuno tranne le sue function', () => {
+    // La CSP del portale e' piu' stretta di quella del gestionale: se un
+    // giorno qualcuno ci aggiungesse una chiamata a Firebase, il browser la
+    // bloccherebbe prima che diventi una falla.
+    const toml = readFileSync(join(root, 'portal/netlify.toml'), 'utf8');
+    // Solo la direttiva vera: cercare "connect-src" in tutto il file
+    // pescherebbe anche il commento che la spiega.
+    const riga = toml.split('\n').find((l) => /^\s*Content-Security-Policy\s*=/.test(l));
+    assert(riga, 'manca la Content-Security-Policy nel sito del portale');
+    const m = /connect-src ([^;]+)[;"]/.exec(riga);
+    assert(m, 'manca connect-src nella CSP del portale');
+    eq(m[1].trim(), "'self'",
+      'il portale deve poter contattare solo il proprio sito, non il database');
   });
 }

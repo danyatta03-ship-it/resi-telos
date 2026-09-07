@@ -5,8 +5,10 @@
 // nelle env var Netlify: FIREBASE_SERVICE_ACCOUNT (JSON del service account)
 // e FIREBASE_DB_URL.
 //
-// Ogni function del portale che scrive dati passa da requireRole(): senza
-// quel controllo chiunque conosca l'URL potrebbe promuoversi ad amministratore.
+// Non c'e' nessun controllo di ruolo perche' non ci sono ruoli: l'app
+// pubblica non ha login. La validazione di quello che arriva la fa
+// portal-submit, campo per campo, e le credenziali restano solo qui sul
+// server — l'app pubblica non ha mai accesso al database.
 
 let admin = null;
 let initError = null;
@@ -81,46 +83,4 @@ function json(statusCode, body, headers) {
   return { statusCode, headers, body: JSON.stringify(body) };
 }
 
-// Verifica il bearer token e, se richiesto, che il chiamante abbia uno dei
-// ruoli ammessi. Il ruolo si legge dal custom claim, non dal database:
-// il claim e' firmato da Google e non falsificabile dal client.
-async function requireRole(event, allowedRoles) {
-  const header = (event.headers && (event.headers.authorization || event.headers.Authorization)) || '';
-  const match = /^Bearer\s+(.+)$/i.exec(header.trim());
-  if (!match) {
-    const err = new Error('Token di autenticazione mancante.');
-    err.statusCode = 401;
-    throw err;
-  }
-  const fb = getAdmin();
-  let decoded;
-  try {
-    // checkRevoked: un utente a cui e' stato revocato l'accesso non deve
-    // poter continuare a operare col token ancora in corso di validita'.
-    decoded = await fb.auth().verifyIdToken(match[1], true);
-  } catch (e) {
-    const err = new Error('Token non valido o scaduto.');
-    err.statusCode = 401;
-    throw err;
-  }
-  const role = decoded.prole || null;
-  if (allowedRoles && allowedRoles.indexOf(role) < 0) {
-    const err = new Error('Operazione non consentita per il ruolo ' + (role || 'non assegnato') + '.');
-    err.statusCode = 403;
-    throw err;
-  }
-  return { uid: decoded.uid, email: decoded.email, role, token: decoded };
-}
-
-// Chiavi Firebase: stessa normalizzazione del client (portal/js/core/firebase.js).
-// Se le due divergono, uno scope scritto dal server non viene letto dal client.
-function safeKey(value) {
-  return String(value == null ? '' : value)
-    .trim()
-    .toUpperCase()
-    .replace(/[.#$/[\]]/g, '_')
-    .replace(/\s+/g, ' ')
-    .slice(0, 200);
-}
-
-module.exports = { getAdmin, corsHeaders, json, requireRole, safeKey };
+module.exports = { getAdmin, corsHeaders, json };

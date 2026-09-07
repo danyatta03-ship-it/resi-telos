@@ -1703,6 +1703,7 @@ html[data-theme="light"] .btn-anomalia{
       <input id="portaleCerca" oninput="portaleRender()" placeholder="Cerca…" autocomplete="off"
         style="background:var(--bg2);color:var(--txt);border:1px solid var(--brd2);padding:6px 10px;font-size:11px;border-radius:7px;outline:none;font-family:inherit;width:130px">
       <button onclick="portaleCopiaLink()" style="background:none;border:1px solid var(--brd2);color:var(--txt2);padding:6px 10px;font-size:11px;border-radius:7px;cursor:pointer;font-family:inherit" title="Copia il link da mandare a clienti, agenti e corrieri">🔗 Link pubblico</button>
+      <button onclick="portaleImpostaLink()" style="background:none;border:1px solid var(--brd2);color:var(--txt2);padding:6px 9px;font-size:11px;border-radius:7px;cursor:pointer;font-family:inherit" title="Imposta l'indirizzo del sito pubblico (e' un sito separato dal gestionale)">&#9881;</button>
     </div>
   </div>
   <div id="portaleLista"></div>
@@ -2707,8 +2708,34 @@ function portaleAggiornaContatori(){
   try{ FB_REF.root.child('portal_counters/staff').set({nuovi:nuovi,inEsame:inEsame,daLeggere:daLeggere,total:daLeggere,ts:Date.now()}); }catch(e){}
 }
 
+// v38 — L'app pubblica sta su un SITO SEPARATO, con un indirizzo suo. Non si
+// puo' piu' ricavare dall'indirizzo del gestionale: va detto una volta, qui,
+// e resta salvato su questo dispositivo.
+function portaleUrlPubblico(){
+  var u='';
+  try{ u=(localStorage.getItem('portalUrl')||'').trim(); }catch(e){}
+  if(!u) return '';
+  if(u.indexOf('http')!==0) u='https://'+u;
+  if(u.slice(-1)!=='/') u+='/';
+  return u;
+}
+function portaleImpostaLink(){
+  var v=prompt('Indirizzo del sito pubblico per l\'invio dei resi\n(quello che mandi a clienti, agenti e corrieri):', portaleUrlPubblico());
+  if(v===null) return;
+  v=v.trim();
+  try{
+    if(v) localStorage.setItem('portalUrl', v);
+    else localStorage.removeItem('portalUrl');
+  }catch(e){}
+  toast(v?('Indirizzo salvato: '+portaleUrlPubblico()):'Indirizzo azzerato','g');
+}
 function portaleCopiaLink(){
-  var url=location.origin+location.pathname.replace(/[^/]*$/,'')+'portal/';
+  var url=portaleUrlPubblico();
+  if(!url){
+    toast('Prima indica l\'indirizzo del sito pubblico (pulsante ⚙ qui accanto)','y');
+    portaleImpostaLink();
+    return;
+  }
   var ok=function(){ toast('Link copiato: mandalo a clienti, agenti e corrieri','g'); };
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(url).then(ok,function(){ prompt('Copia questo link:',url); });

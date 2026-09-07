@@ -1,0 +1,58 @@
+# ══════════════════════════════════════════════════════════════════════
+# SITO 2 — Invio resi (clienti, agenti, corrieri)
+#
+# Sito Netlify separato dal gestionale, con base directory "portal".
+# La separazione non e' estetica: il gestionale contiene il pannello
+# amministratore, l'interruttore di emergenza e la configurazione Firebase.
+# Tenerlo sullo stesso indirizzo di una pagina che si manda per email a
+# chiunque significa che quel codice e' scaricabile da chiunque. Due siti,
+# due domini, nessuna sovrapposizione.
+#
+# Il collegamento fra i due passa SOLO dal database Firebase: questo sito
+# scrive gli invii in portal_submissions tramite le due function qui sotto,
+# il gestionale li legge nella scheda PORTALE. L'app pubblica non carica
+# l'SDK Firebase e non conosce l'URL del database: chi ha il link non ha
+# nessun accesso ai dati.
+#
+# Variabili d'ambiente richieste su questo sito (Site settings → Environment):
+#   FIREBASE_SERVICE_ACCOUNT  JSON del service account (o la sua versione base64)
+#   FIREBASE_DB_URL           https://<progetto>-default-rtdb.<regione>.firebasedatabase.app
+# ══════════════════════════════════════════════════════════════════════
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/portal-submit"
+  to = "/.netlify/functions/portal-submit"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/portal-status"
+  to = "/.netlify/functions/portal-status"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+    # Piu' stretto di quello del gestionale, perche' qui non serve niente:
+    # nessuna libreria esterna, nessun SDK, nessuna chiamata fuori dal sito.
+    # connect-src 'self' vuol dire che questa pagina puo' parlare solo con le
+    # proprie due function — non con Firebase, non con nessun altro.
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+
+# Il service worker non deve finire in cache, o un aggiornamento non
+# arriverebbe mai a chi ha gia' installato l'app.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+    Service-Worker-Allowed = "/"
