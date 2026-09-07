@@ -130,6 +130,21 @@ export async function runSyncTests() {
       'il conteggio deve avere una soglia, altrimenti e\' solo un numero');
   });
 
+  it('il service worker non intercetta le chiamate al database', () => {
+    // Il ripiego https parla con *.firebasedatabase.app, un'origine diversa
+    // da quella del sito. Il service worker la lascia passare solo grazie
+    // al controllo sull'origine: se cadesse, metterebbe in cache le
+    // risposte del database e il gestionale servirebbe dati vecchi per
+    // sempre, senza nessun errore visibile. Peggio, la cache network-first
+    // restituirebbe l'ultima copia buona anche a database irraggiungibile.
+    const sw = readFileSync(join(root, 'sw.js'), 'utf8');
+    const i = sw.indexOf("addEventListener('fetch'");
+    assert(i > 0, 'manca il gestore fetch nel service worker');
+    const testa = sw.slice(i, i + 400);
+    assert(/url\.origin\s*!==\s*location\.origin\)\s*return/.test(testa),
+      'il service worker deve ignorare le richieste verso altre origini, database compreso');
+  });
+
   it('l\'azzeramento di emergenza stacca tutto', () => {
     const i = html.indexOf('function performLocalWipe(');
     const corpo = html.slice(i, i + 900);
