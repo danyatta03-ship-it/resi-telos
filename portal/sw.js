@@ -9,7 +9,7 @@
  * qualcuno di aver mandato un reso che non e' partito.
  */
 
-var CACHE = 'reso-telos-v2';
+var CACHE = 'reso-telos-v3';
 
 var PRECACHE = [
   './',

@@ -72,6 +72,16 @@ export function fmtDate(ts) {
   return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
 }
 
+// Le date del modulo (installazione, DDT, documento) sono gia' AAAA-MM-GG:
+// arrivano da <input type="date"> e vengono salvate cosi'. Passarle da Date
+// le trasformerebbe in mezzanotte UTC, e getDate() legge l'ora locale: in un
+// fuso negativo si leggerebbe il giorno prima. Qui non c'e' nessun fuso di
+// mezzo, e' solo riordinare tre pezzi di stringa.
+export function fmtDateIso(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+  return m ? m[3] + '/' + m[2] + '/' + m[1] : '—';
+}
+
 export function fmtDateTime(ts) {
   if (!ts) return '—';
   const d = new Date(ts);

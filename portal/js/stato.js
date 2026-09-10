@@ -5,7 +5,7 @@
 // non indovinabile, e chi non ce l'ha non puo' arrivare a quell'invio ne' a
 // nessun altro — l'app pubblica non ha proprio modo di interrogare l'elenco.
 
-import { h, mount, clear, fmtDateTime, fmtRelative, withBusy, toast } from './dom.js';
+import { h, mount, clear, fmtDateTime, fmtDateIso, fmtRelative, withBusy, toast } from './dom.js';
 import { loadStato, inviaMessaggio } from './api.js';
 import { statoLabel, statoColore, statoDesc, ORDINE_STATI, LIMITI } from './costanti.js';
 
@@ -140,16 +140,27 @@ function disegna(zona, d, ref) {
       riga('Inviato il', fmtDateTime(d.ts)),
       riga('Da', (d.mittente && d.mittente.nome) || '—'),
       riga('Azienda', (d.mittente && d.mittente.azienda) || '—'),
-      riga('Motivo', d.causale),
+      riga('Causale', d.causale),
       d.codiceCliente ? riga('Codice cliente', d.codiceCliente) : null,
-      d.note ? riga('Note', d.note) : null
+      d.documento && d.documento.ddtNumero ? riga('DDT di reso', d.documento.ddtNumero) : null,
+      d.documento && d.documento.tipo ? riga('Documento di acquisto',
+        d.documento.tipo + (d.documento.numero ? ' n. ' + d.documento.numero : '')) : null,
+      d.note ? riga('Descrizione difetto', d.note) : null
     ]),
+
+    d.garanzia ? h('section.card', [
+      h('h2', 'Reso in garanzia'),
+      d.garanzia.dataInst ? riga('Installazione', fmtDateIso(d.garanzia.dataInst)) : null,
+      d.garanzia.kmInst != null ? riga('Km installazione', String(d.garanzia.kmInst)) : null,
+      d.garanzia.dataDisinst ? riga('Disinstallazione', fmtDateIso(d.garanzia.dataDisinst)) : null,
+      d.garanzia.kmDisinst != null ? riga('Km disinstallazione', String(d.garanzia.kmDisinst)) : null
+    ]) : null,
 
     h('section.card', [
       h('h2', 'Articoli'),
       h('div.col-2', (d.articoli || []).map((a, i) => h('div.art-row', [
         h('b', (a.marca ? a.marca + ' ' : '') + a.cod),
-        h('span.dim', '× ' + a.qty + (a.forn ? ' · ' + a.forn : ''))
+        h('span.dim', '× ' + a.qty + (a.descr ? ' · ' + a.descr : ''))
       ])))
     ]),
 

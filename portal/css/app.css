@@ -281,6 +281,11 @@ img { max-width: 100%; display: block; }
 .banner li { margin-bottom: 2px; }
 .banner-err { background: rgba(224,85,85,.12); border-color: rgba(224,85,85,.35); }
 .banner-ok  { background: rgba(46,204,113,.12); border-color: rgba(46,204,113,.35); }
+/* Avviso legato a una causale (il danno va segnalato entro 24h) e elenco
+   degli allegati per la garanzia: sono informazioni che sul modulo cartaceo
+   stanno stampate accanto alla voce, qui compaiono solo quando servono. */
+.banner-warn { background: rgba(230,176,60,.12); border-color: rgba(230,176,60,.38); }
+.banner-info { background: rgba(59,159,212,.10); border-color: rgba(59,159,212,.30); }
 
 /* ── Toast ────────────────────────────────────────────────────────────── */
 .toasts {

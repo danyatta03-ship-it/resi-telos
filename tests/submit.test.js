@@ -12,14 +12,14 @@ import { dirname, join } from 'node:path';
 
 const require = createRequire(import.meta.url);
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const { valida, generaRiferimento, CAUSALI, TIPI } = require(join(root, 'portal/netlify/functions/portal-submit.js')).__test__;
+const { valida, generaRiferimento, dataIso, km, CAUSALI, TIPI, TIPI_DOCUMENTO } = require(join(root, 'portal/netlify/functions/portal-submit.js')).__test__;
 const { pubblico, REF_RE } = require(join(root, 'portal/netlify/functions/portal-status.js')).__test__;
 
 function base(extra) {
   return Object.assign({
     mittente: { nome: 'Mario Rossi', azienda: 'Autofficina Rossi', tipo: 'CLIENTE' },
     causale: 'GARANZIA',
-    articoli: [{ cod: '0986444981', marca: 'BOS', qty: 1, forn: 'BOSCH' }]
+    articoli: [{ cod: '0986444981', marca: 'BOS', qty: 1, descr: 'Pastiglie freno' }]
   }, extra || {});
 }
 
@@ -52,6 +52,110 @@ export async function runSubmitTests() {
     eq(r.dati.note, undefined);
     eq(r.dati.codiceCliente, undefined);
     eq(r.dati.mittente.telefono, undefined);
+  });
+
+
+  describe('Modulo — sezione 1: documento');
+
+  it('accetta DDT e documento di acquisto', () => {
+    const r = valida(base({ documento: {
+      ddtNumero: 'ddt/2026/17', ddtData: '2026-09-01',
+      tipo: 'FATTURA', numero: 'ft-900', data: '2026-08-12'
+    } }));
+    assert(r.ok, (r.errori || []).join(' '));
+    eq(r.dati.documento.ddtNumero, 'DDT/2026/17');
+    eq(r.dati.documento.tipo, 'FATTURA');
+    eq(r.dati.documento.numero, 'FT-900');
+    eq(r.dati.documento.data, '2026-08-12');
+  });
+
+  it('accetta tutti i tipi di documento del modulo cartaceo', () => {
+    for (const t of TIPI_DOCUMENTO) {
+      const r = valida(base({ documento: { tipo: t } }));
+      assert(r.ok && r.dati.documento.tipo === t, 'tipo rifiutato: ' + t);
+    }
+  });
+
+  it('scarta un tipo di documento inventato invece di salvarlo', () => {
+    const r = valida(base({ documento: { tipo: 'PERMUTA', numero: 'X1' } }));
+    assert(r.ok, 'non deve bloccare l\'invio per un campo facoltativo');
+    eq(r.dati.documento.tipo, undefined, 'un tipo fuori elenco non deve entrare nel database');
+    eq(r.dati.documento.numero, 'X1', 'il resto del documento resta');
+  });
+
+  it('non salva un documento vuoto', () => {
+    const r = valida(base({ documento: { ddtNumero: '', tipo: '', numero: '' } }));
+    assert(r.ok);
+    eq(r.dati.documento, undefined, 'un oggetto vuoto nel database e\' solo rumore');
+  });
+
+  describe('Modulo — date');
+
+  it('accetta solo date nel formato dei campi data', () => {
+    eq(dataIso('2026-09-10'), '2026-09-10');
+    eq(dataIso('10/09/2026'), '', 'una data scritta a mano non deve entrare');
+    eq(dataIso('2026-9-10'), '');
+    eq(dataIso(''), '');
+    eq(dataIso(null), '');
+  });
+
+  it('rifiuta date che non esistono', () => {
+    // 31 febbraio ha il formato giusto: senza il controllo sul calendario
+    // finirebbe nel database e poi ogni ordinamento per data mentirebbe.
+    eq(dataIso('2026-02-31'), '');
+    eq(dataIso('2026-13-01'), '');
+  });
+
+  describe('Modulo — sezione 4: reso in garanzia');
+
+  it('salva date e chilometri quando la causale e\' di garanzia', () => {
+    const r = valida(base({ causale: 'GARANZIA MANODOPERA', garanzia: {
+      dataInst: '2025-03-04', kmInst: '41000',
+      dataDisinst: '2026-01-20', kmDisinst: '78500'
+    } }));
+    assert(r.ok, (r.errori || []).join(' '));
+    eq(r.dati.garanzia.dataInst, '2025-03-04');
+    eq(r.dati.garanzia.kmInst, 41000);
+    eq(r.dati.garanzia.kmDisinst, 78500);
+  });
+
+  it('ignora la garanzia se la causale non la prevede', () => {
+    // Date e chilometri di un reso che non e\' in garanzia sono rumore, e in
+    // un elenco fanno credere che la pratica sia di un tipo che non e\'.
+    const r = valida(base({ causale: 'CARCASSA', garanzia: { dataInst: '2025-03-04', kmInst: '10' } }));
+    assert(r.ok);
+    eq(r.dati.garanzia, undefined);
+  });
+
+  it('scarta chilometraggi impossibili', () => {
+    eq(km('-5'), null);
+    eq(km('abc'), null);
+    eq(km('99999999999'), null);
+    eq(km('0'), 0, 'zero km e\' legittimo: un pezzo montato e mai usato');
+    eq(km('120000'), 120000);
+  });
+
+  it('salva la garanzia parziale senza inventare campi', () => {
+    const r = valida(base({ causale: 'GARANZIA', garanzia: { dataInst: '2025-03-04' } }));
+    assert(r.ok);
+    eq(r.dati.garanzia.dataInst, '2025-03-04');
+    eq(r.dati.garanzia.kmInst, undefined);
+  });
+
+  describe('Modulo — sezione 2: materiale');
+
+  it('non esiste piu\' il campo fornitore', () => {
+    // Il cliente non sa da quale fornitore arriva il pezzo: chiederglielo
+    // produceva campi vuoti o sbagliati. Lo assegna l'ufficio resi.
+    const r = valida(base({ articoli: [{ cod: 'X1', qty: 1, forn: 'BOSCH' }] }));
+    assert(r.ok);
+    eq(r.dati.articoli[0].forn, undefined, 'il fornitore non deve piu\' entrare nel database');
+  });
+
+  it('salva la descrizione del pezzo', () => {
+    const r = valida(base({ articoli: [{ cod: 'X1', qty: 1, descr: 'Pompa acqua' }] }));
+    assert(r.ok);
+    eq(r.dati.articoli[0].descr, 'Pompa acqua');
   });
 
   describe('Invio — dati mancanti');

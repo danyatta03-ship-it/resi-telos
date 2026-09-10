@@ -114,6 +114,8 @@ function pubblico(d) {
       nome: (d.mittente && d.mittente.nome) || '',
       azienda: (d.mittente && d.mittente.azienda) || ''
     },
+    documento: d.documento || null,
+    garanzia: d.garanzia || null,
     articoli: Array.isArray(d.articoli) ? d.articoli : [],
     nFoto: Array.isArray(d.foto) ? d.foto.length : 0,
     messaggi

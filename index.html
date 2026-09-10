@@ -1241,7 +1241,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v39 · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v40 · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1934,7 +1934,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v39</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v40</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -2453,6 +2453,40 @@ function portaleRender(){
   host.innerHTML=h;
 }
 
+// Riga del documento di acquisto e del DDT (sezione 1 del modulo cartaceo).
+// Resta vuota se il mittente non li ha compilati: sono facoltativi online,
+// ma l'ufficio resi li chiede quasi sempre.
+function portaleDocumento(d){
+  if(!d) return '';
+  var p=[];
+  if(d.ddtNumero) p.push('DDT '+xe(d.ddtNumero)+(d.ddtData?' del '+portaleData(d.ddtData):''));
+  if(d.tipo) p.push(xe(d.tipo)+(d.numero?' n. '+xe(d.numero):'')+(d.data?' del '+portaleData(d.data):''));
+  if(!p.length) return '';
+  return '<div style="margin-top:4px;font-size:11.5px;color:var(--txt2)">'+p.join(' &nbsp;·&nbsp; ')+'</div>';
+}
+
+// Sezione 4 — reso in garanzia. La percorrenza fra installazione e
+// disinstallazione e' il primo dato che l'ufficio guarda per decidere.
+function portaleGaranzia(g){
+  if(!g) return '';
+  var p=[];
+  if(g.dataInst) p.push('Inst. '+portaleData(g.dataInst)+(g.kmInst!=null?' · '+g.kmInst+' km':''));
+  if(g.dataDisinst) p.push('Disinst. '+portaleData(g.dataDisinst)+(g.kmDisinst!=null?' · '+g.kmDisinst+' km':''));
+  if(g.kmInst!=null && g.kmDisinst!=null && g.kmDisinst>=g.kmInst){
+    p.push('<b>percorsi '+(g.kmDisinst-g.kmInst)+' km</b>');
+  }
+  if(!p.length) return '';
+  return '<div style="margin-top:6px;padding:6px 9px;background:rgba(230,176,60,.09);border:1px solid rgba(230,176,60,.25);'+
+    'border-radius:7px;font-size:11.5px;color:var(--txt2)"><b style="color:#E6B03C">Garanzia</b> &nbsp;'+p.join(' &nbsp;·&nbsp; ')+'</div>';
+}
+
+// Le date del modulo sono gia' AAAA-MM-GG: le giro senza passare da Date,
+// che le interpreterebbe come mezzanotte UTC.
+function portaleData(iso){
+  var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||''));
+  return m ? m[3]+'/'+m[2]+'/'+m[1] : '';
+}
+
 function portaleCard(s){
   var st=PORTALE_STATI[s.stato]||PORTALE_STATI.NUOVO;
   var m=s.mittente||{};
@@ -2465,7 +2499,7 @@ function portaleCard(s){
     var a=arts[i];
     art+='<div style="font-size:11.5px;color:var(--txt2)"><b style="color:var(--txt)">'+
       xe((a.marca?a.marca+' ':'')+a.cod)+'</b> × '+(a.qty||1)+
-      (a.forn?' · '+xe(a.forn):'')+'</div>';
+      (a.descr?' · '+xe(a.descr):'')+'</div>';
   }
   if(arts.length>4) art+='<div style="font-size:11px;color:#666">+ altri '+(arts.length-4)+'</div>';
 
@@ -2482,7 +2516,12 @@ function portaleCard(s){
         '<span style="background:'+st.col+'22;color:'+st.col+';border:1px solid '+st.col+'55;'+
           'padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:800;white-space:nowrap">'+st.label+'</span>'+
       '</div>'+
-      '<div style="margin-top:8px;font-size:12px;color:var(--txt2)"><b>Motivo:</b> '+xe(s.causale||'—')+'</div>'+
+      '<div style="margin-top:8px;font-size:12px;color:var(--txt2)"><b>Causale:</b> '+xe(s.causale||'—')+'</div>'+
+      // Sezione 1 del modulo cartaceo: senza DDT e documento d'acquisto la
+      // pratica non si lavora, quindi vanno letti senza aprire nulla.
+      portaleDocumento(s.documento)+
+      // Sezione 4: se c'e', questa e' una garanzia e le date contano.
+      portaleGaranzia(s.garanzia)+
       '<div style="margin-top:6px">'+art+'</div>'+
       (s.note?'<div style="margin-top:8px;padding:7px 10px;background:var(--bg2);border-radius:7px;font-size:11.5px;white-space:pre-wrap">'+xe(s.note)+'</div>':'')+
       (s.esito?'<div style="margin-top:8px;padding:7px 10px;background:'+(s.stato==='RIFIUTATO'?'rgba(224,85,85,.1)':'rgba(46,204,113,.1)')+';border-radius:7px;font-size:11.5px"><b>Risposta:</b> '+xe(s.esito)+'</div>':'')+
@@ -7625,7 +7664,7 @@ function fbDiagnose(){
   // sta girando la build aggiornata o una copia vecchia rimasta nella cache del
   // service worker — e si finisce a cercare un guasto in un codice che su quel
   // dispositivo non è mai arrivato.
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">🩺 Diagnostica Firebase <span style="font-size:10px;color:#666;font-weight:600">v39</span></div><button onclick="document.getElementById(\'fbDiagBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">🩺 Diagnostica Firebase <span style="font-size:10px;color:#666;font-weight:600">v40</span></div><button onclick="document.getElementById(\'fbDiagBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>';
   var allOk=true;
   checks.forEach(function(c){
     if(!c.ok) allOk=false;

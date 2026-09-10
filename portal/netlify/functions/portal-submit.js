@@ -14,13 +14,38 @@
 
 const { getAdmin, corsHeaders, json } = require('./lib/admin');
 
+// Le stesse voci del MODULO ACCETTAZIONE RESI cartaceo (proposta v3), cosi'
+// che i due canali producano dati confrontabili. Vedi js/costanti.js: se una
+// lista cambia, vanno cambiate entrambe — il server non si fida del client.
 const CAUSALI = [
-  'ERRATO ORDINE', 'ERRATA SPEDIZIONE', 'ORDINE DISDETTO CLIENTE', 'ORDINE MULTIPLO',
-  'DIVERSO DA OE / INCOMPATIBILE', 'ERRATO CONFEZIONAMENTO', 'INCOMPLETO - MANCA UN PEZZO',
-  'CARCASSA', 'GARANZIA', 'DANNEGGIATO', 'PERVENUTO MONTATO / SPORCO', 'ALTRO'
+  'ERRATO ORDINE CLIENTE', 'CARCASSA', 'GARANZIA', 'GARANZIA MANODOPERA E DANNI',
+  'ORDINE DISDETTO', 'GARANZIA MANODOPERA', 'ERRATO CONFEZIONAMENTO', 'DANNEGGIATO',
+  'INCOMPLETO', 'DIVERSO DA OE / INCOMPATIBILE', 'PERVENUTO MONTATO',
+  'ERRATA SPEDIZIONE', 'ALTRO'
 ];
 
 const TIPI = ['CLIENTE', 'AGENTE', 'CORRIERE', 'FILIALE', 'ALTRO'];
+
+const TIPI_DOCUMENTO = ['VENDITA', 'FATTURA', 'FLOTTA', 'CORRISPETTIVO', 'VISIONE', 'NOLEGGIO'];
+
+const MAX_KM = 9999999;
+
+// Una data che arriva da un campo <input type="date"> e' sempre AAAA-MM-GG.
+// Qualunque altra cosa non e' una data: viene scartata invece di finire nel
+// database come stringa libera, dove nessuno potrebbe piu' ordinarla.
+function dataIso(v) {
+  const s = String(v == null ? '' : v).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';
+  const d = new Date(s + 'T00:00:00Z');
+  if (isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s) return '';
+  return s;
+}
+
+function km(v) {
+  const n = parseInt(v, 10);
+  if (!isFinite(n) || n < 0 || n > MAX_KM) return null;
+  return n;
+}
 
 const MAX_FOTO = 3;
 const MAX_FOTO_BYTES = 1600 * 1024;   // per singola foto, dopo compressione client
@@ -155,9 +180,11 @@ function valida(body) {
     const qty = Math.min(9999, Math.max(1, parseInt(a && a.qty, 10) || 1));
     const riga = { cod, qty };
     const marca = testo(a && a.marca, 20).toUpperCase();
-    const forn = testo(a && a.forn, 120);
+    // Niente fornitore: il cliente non lo conosce, e un campo che non si sa
+    // compilare produce solo dati sbagliati. Lo assegna l'ufficio resi.
+    const descr = testo(a && a.descr, 200);
     if (marca) riga.marca = marca;
-    if (forn) riga.forn = forn;
+    if (descr) riga.descr = descr;
     articoli.push(riga);
   }
   if (!articoli.length) errori.push('Serve almeno un articolo con il codice.');
@@ -193,6 +220,37 @@ function valida(body) {
   const codiceCliente = testo(body.codiceCliente, 40).toUpperCase();
   if (codiceCliente) dati.codiceCliente = codiceCliente;
 
+  // Sezione 1 del modulo — documento di reso e documento di acquisto.
+  const doc = body.documento || {};
+  const documento = {};
+  const ddtNumero = testo(doc.ddtNumero, 60).toUpperCase();
+  const ddtData = dataIso(doc.ddtData);
+  const docTipo = testo(doc.tipo, 40).toUpperCase();
+  const docNumero = testo(doc.numero, 60).toUpperCase();
+  const docData = dataIso(doc.data);
+  if (ddtNumero) documento.ddtNumero = ddtNumero;
+  if (ddtData) documento.ddtData = ddtData;
+  if (TIPI_DOCUMENTO.indexOf(docTipo) >= 0) documento.tipo = docTipo;
+  if (docNumero) documento.numero = docNumero;
+  if (docData) documento.data = docData;
+  if (Object.keys(documento).length) dati.documento = documento;
+
+  // Sezione 4 — reso in garanzia. Si salva solo se la causale la prevede:
+  // date e chilometri di un reso che non e' in garanzia sono rumore.
+  if (causale.indexOf('GARANZIA') >= 0) {
+    const g = body.garanzia || {};
+    const garanzia = {};
+    const dInst = dataIso(g.dataInst);
+    const dDisinst = dataIso(g.dataDisinst);
+    const kInst = km(g.kmInst);
+    const kDisinst = km(g.kmDisinst);
+    if (dInst) garanzia.dataInst = dInst;
+    if (dDisinst) garanzia.dataDisinst = dDisinst;
+    if (kInst !== null) garanzia.kmInst = kInst;
+    if (kDisinst !== null) garanzia.kmDisinst = kDisinst;
+    if (Object.keys(garanzia).length) dati.garanzia = garanzia;
+  }
+
   const note = testo(body.note, 2000);
   if (note) dati.note = note;
 
@@ -226,4 +284,4 @@ async function aggiornaContatori(db) {
   }
 }
 
-exports.__test__ = { valida, generaRiferimento, CAUSALI, TIPI };
+exports.__test__ = { valida, generaRiferimento, dataIso, km, CAUSALI, TIPI, TIPI_DOCUMENTO };
