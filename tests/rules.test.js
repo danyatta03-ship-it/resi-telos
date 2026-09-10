@@ -19,7 +19,7 @@
 // silenzio.
 
 import { describe, it, assert, eq } from './run.js';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -199,13 +199,28 @@ export async function runRulesTests() {
     assert(html.indexOf('firebase-app') < 0);
   });
 
-  it('nessun modulo dell\'app pubblica nomina Firebase', () => {
-    const files = ['app.js', 'api.js', 'form.js', 'stato.js', 'photos.js', 'dom.js', 'costanti.js'];
-    for (const f of files) {
-      const src = readFileSync(join(root, 'portal/js', f), 'utf8');
-      assert(!/firebase/i.test(src.replace(/^\s*\/\/.*$/gm, '')),
-        f + ' fa riferimento a Firebase fuori dai commenti');
+  it('nessun modulo dell\'app pubblica carica o chiama l\'SDK Firebase', () => {
+    // Due correzioni rispetto a prima.
+    //
+    // L'elenco dei moduli era scritto a mano, quindi verifica.js — aggiunto
+    // dopo — non veniva controllato affatto: un test che si allarga da solo
+    // vale piu' di uno che va aggiornato a mano e nessuno aggiorna.
+    //
+    // E cerco l'USO, non la parola: verifica.js nomina FIREBASE_DB_URL nei
+    // testi che spiegano come configurare il sito, ed e' giusto cosi'.
+    // Quello che non deve esistere e' un import, un require o una chiamata
+    // all'SDK.
+    const dir = join(root, 'portal/js');
+    const colpevoli = [];
+    for (const f of readdirSync(dir).filter((x) => x.endsWith('.js'))) {
+      const src = readFileSync(join(dir, f), 'utf8')
+        .replace(/^\s*\/\/.*$/gm, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '');
+      if (/from\s+['"][^'"]*firebase|require\(\s*['"][^'"]*firebase|\bfirebase\s*\.|firebasejs/i.test(src)) {
+        colpevoli.push(f);
+      }
     }
+    eq(colpevoli.length, 0, 'moduli che usano l\'SDK Firebase: ' + colpevoli.join(', '));
   });
 
   it('l\'app pubblica parla solo con i due endpoint previsti', () => {
