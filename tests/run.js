@@ -11,6 +11,7 @@ import { runEscapingTests } from './escaping.test.js';
 import { runVersioneTests } from './versione.test.js';
 import { runSyncTests } from './sync.test.js';
 import { runRestTests } from './rest.test.js';
+import { runSintassiTests } from './sintassi.test.js';
 
 let passed = 0;
 let failed = 0;
@@ -95,6 +96,7 @@ await runEscapingTests(); await attendi();
 await runVersioneTests(); await attendi();
 await runSyncTests(); await attendi();
 await runRestTests(); await attendi();
+await runSintassiTests(); await attendi();
 
 console.log('\n' + '─'.repeat(48));
 if (failed === 0) {

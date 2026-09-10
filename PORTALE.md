@@ -83,6 +83,25 @@ Se l'interfaccia di Netlify rovina gli a-capo della chiave privata (capita),
 converti il file in base64 e incolla quello: il codice accetta entrambe le
 forme.
 
+### Verificare che il Sito 2 sia collegato
+
+Appena creato il sito, apri **`<indirizzo-del-sito>/#/verifica`**.
+
+È una pagina di servizio: non è in nessun menu, non scrive niente, non
+espone niente. Interroga un riferimento di forma valida che non può
+esistere e legge il codice di risposta, così distingue i tre casi:
+
+| Cosa dice | Cosa fare |
+|---|---|
+| ✓ Il sito è collegato | Nient'altro. Manda un reso di prova per chiudere il cerchio. |
+| ✕ Non raggiunge il database | Mancano `FIREBASE_DB_URL` / `FIREBASE_SERVICE_ACCOUNT`, o serve un nuovo deploy dopo averle messe. |
+| ✕ Le function non rispondono | La *Base directory* non è `portal`: Netlify non trova né `netlify.toml` né le function. |
+
+Serve nei primi cinque minuti di vita del sito. Senza, il primo ad
+accorgersi di una configurazione sbagliata sarebbe un cliente che invia un
+reso e lo vede sparire — e in Telos nessuno saprebbe che quel reso non è
+mai arrivato.
+
 ### Collegare il gestionale al Sito 2
 
 Nel gestionale, scheda **PORTALE**, il pulsante **⚙** accanto a "Link
@@ -193,7 +212,7 @@ precedenti, e l'app sta rifacendo lo stesso lavoro N volte.
 node tests/run.js
 ```
 
-108 test, nessuna dipendenza esterna. Coprono la validazione degli invii,
+121 test, nessuna dipendenza esterna. Coprono la validazione degli invii,
 cosa esce davvero dagli endpoint pubblici, le regole del database, la
 separazione dei due siti, il trasporto https di riserva (eseguito davvero
 contro un finto Firebase in memoria) e la coerenza delle versioni fra

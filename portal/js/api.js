@@ -60,6 +60,42 @@ export function loadStato(ref) {
   return call(STATUS_URL + '?ref=' + encodeURIComponent(ref), { method: 'GET' });
 }
 
+// Verifica che il sito sia collegato al database, senza scrivere niente.
+//
+// Serve subito dopo aver creato il sito: se le variabili d'ambiente non
+// sono a posto, il primo a scoprirlo sarebbe un cliente che invia un reso
+// e lo vede sparire. Interroga un riferimento di forma valida che non puo'
+// esistere, e legge la risposta:
+//
+//   404  → tutto collegato: il server ha cercato davvero e non ha trovato
+//   503  → le credenziali Firebase mancano o sono sbagliate
+//   altro→ le function non sono state costruite, o manca l'instradamento
+export async function verificaCollegamento() {
+  let res;
+  try {
+    res = await fetch(STATUS_URL + '?ref=RS-000000', { method: 'GET', cache: 'no-store' });
+  } catch (e) {
+    return { ok: false, causa: 'rete', dettaglio: 'Il sito non risponde.' };
+  }
+
+  let corpo = null;
+  try { corpo = await res.json(); } catch (e) { /* non JSON: gestito sotto */ }
+
+  if (res.status === 404) return { ok: true, stato: 404 };
+  if (res.status === 503) {
+    return { ok: false, causa: 'credenziali', stato: 503,
+      dettaglio: (corpo && corpo.error) || 'Servizio non configurato.' };
+  }
+  if (!corpo) {
+    // Il server ha risposto con una pagina, non con JSON: quasi sempre vuol
+    // dire che /api/... non e' instradato e siamo finiti sull'index.
+    return { ok: false, causa: 'instradamento', stato: res.status,
+      dettaglio: 'La risposta non e\' quella di una function.' };
+  }
+  return { ok: false, causa: 'inatteso', stato: res.status,
+    dettaglio: (corpo && corpo.error) || ('HTTP ' + res.status) };
+}
+
 export function inviaMessaggio(ref, testo, autore) {
   return call(STATUS_URL, {
     method: 'POST',

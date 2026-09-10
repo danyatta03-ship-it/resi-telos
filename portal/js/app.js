@@ -7,6 +7,7 @@
 import { h, mount, clear } from './dom.js';
 import { renderForm } from './form.js';
 import { renderConferma, renderStato, renderCerca, leggiRiferimenti } from './stato.js';
+import { renderVerifica } from './verifica.js';
 
 const app = document.getElementById('app');
 const vista = h('div.vista');
@@ -44,6 +45,12 @@ function instrada() {
 
   if (parti[0] === 'stato' && parti[1]) {
     renderStato(vista, decodeURIComponent(parti[1]));
+    return;
+  }
+  // Pagina di servizio: non e' in nessun menu, ci si arriva solo
+  // scrivendo l'indirizzo. Serve a chi installa il sito, non a chi lo usa.
+  if (parti[0] === 'verifica') {
+    renderVerifica(vista);
     return;
   }
   if (parti[0] === 'cerca') {
