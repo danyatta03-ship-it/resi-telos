@@ -3,10 +3,20 @@
 // Non eseguono le regole (servirebbe l'emulatore Firebase): verificano
 // proprieta' strutturali che, se violate, aprono un buco o rompono il
 // gestionale. In particolare:
-//   1. le regole del gestionale devono restare IDENTICHE alla v1
-//   2. i nodi nuovi devono richiedere autenticazione
-//   3. i campi che decide il server non devono essere scrivibili a piacere
-//   4. non devono esistere nodi avanzati dalla versione precedente
+//   1. ogni nodo che il gestionale tocca deve avere una regola, o le sue
+//      scritture cadono sul ".write": false della radice
+//   2. niente puo' essere letto senza autenticazione
+//   3. nessuna regola puo' rifiutare una scrittura per motivi suoi
+//
+// Il punto 3 e' nuovo. Le regole precedenti validavano campo per campo, e
+// una validazione fallita non e' un avviso: e' un rifiuto silenzioso. Con
+// una scrittura multipla — la prima sincronizzazione lo e' — bastava una
+// riga fuori norma per far rifiutare l'intero blocco.
+//
+// La validazione dei dati che arrivano da fuori resta, ma nel posto giusto:
+// portal-submit.js la fa campo per campo, sul server, prima di scrivere.
+// Lì un dato sbagliato produce un errore che si legge; qui produceva
+// silenzio.
 
 import { describe, it, assert, eq } from './run.js';
 import { readFileSync, existsSync } from 'node:fs';
@@ -16,50 +26,97 @@ import { dirname, join } from 'node:path';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 export async function runRulesTests() {
-  const v1 = JSON.parse(readFileSync(join(root, 'firebase-rules.json'), 'utf8')).rules;
-  const v2 = JSON.parse(readFileSync(join(root, 'firebase-rules-v2.json'), 'utf8')).rules;
+  const regole = JSON.parse(readFileSync(join(root, 'firebase-rules.json'), 'utf8'));
+  const r = regole.rules;
 
-  describe('Regole — il gestionale non deve accorgersi di niente');
+  describe('Regole — un solo file, incollabile cosi\' com\'e\'');
 
-  const LEGACY = [
-    'returns', 'chat', 'presence', 'admin', 'security_log',
-    'notifEvents', 'notif', 'ocrLive', 'mailFollowups',
-    'pkgphotos', '_backups', 'codeMem', '_killswitch'
-  ];
-
-  it('tutti i nodi del gestionale sono ancora presenti', () => {
-    for (const n of LEGACY) assert(v2[n] !== undefined, 'nodo mancante: ' + n);
+  it('esiste un unico file di regole', () => {
+    // Prima ce n'erano due (firebase-rules.json e -v2.json) e non era
+    // ovvio quale fosse quello da incollare. Un file solo, nessun dubbio.
+    assert(!existsSync(join(root, 'firebase-rules-v2.json')),
+      'firebase-rules-v2.json e\' tornato: due file di regole si finisce per incollare quello sbagliato');
   });
 
-  it('le loro regole sono identiche byte per byte alla v1', () => {
-    for (const n of LEGACY) {
-      eq(JSON.stringify(v2[n]), JSON.stringify(v1[n]),
-        'le regole di "' + n + '" sono cambiate: il gestionale potrebbe rompersi');
-    }
-  });
-
-  it('la radice resta chiusa', () => {
-    eq(v2['.read'], false);
-    eq(v2['.write'], false);
-  });
-
-  it('returns/ resta scrivibile con l\'auth anonima del gestionale', () => {
-    eq(v2.returns['.read'], 'auth != null');
-    eq(v2.returns.$key['.write'], 'auth != null');
-  });
-
-  it('il file contiene SOLO la chiave "rules"', () => {
+  it('contiene SOLO la chiave "rules"', () => {
     // La Console Firebase rifiuta qualsiasi altra chiave di primo livello.
-    // Un file con dentro una sezione di commenti sembra valido — e' JSON
+    // Un file con dentro una sezione di commenti sembra valido — e\' JSON
     // corretto — ma non si riesce a incollare: la Console risponde con un
     // errore di parsing e le regole vecchie restano attive.
-    for (const f of ['firebase-rules.json', 'firebase-rules-v2.json']) {
-      const chiavi = Object.keys(JSON.parse(readFileSync(join(root, f), 'utf8')));
-      eq(chiavi.join(','), 'rules', f + ' ha chiavi extra: ' + chiavi.join(', '));
-    }
+    const chiavi = Object.keys(regole);
+    eq(chiavi.join(','), 'rules', 'chiavi extra: ' + chiavi.join(', '));
   });
 
-  describe('Regole — copertura di quello che il gestionale usa davvero');
+  it('sta in poche righe', () => {
+    // Non e\' vezzo: le regole precedenti erano 300 righe di validazione
+    // per campo, e nessuno poteva piu\' dire a colpo d\'occhio cosa
+    // permettessero. Se tornano a crescere, e\' il momento di chiedersi
+    // perche\'.
+    const righe = readFileSync(join(root, 'firebase-rules.json'), 'utf8').split('\n').length;
+    assert(righe < 60, 'le regole sono tornate a ' + righe + ' righe');
+  });
+
+  describe('Regole — niente piu\' rifiuti silenziosi');
+
+  it('nessun .validate da nessuna parte', () => {
+    // E\' il motivo della semplificazione. Le regole precedenti avevano
+    // forme come:
+    //     "!newData.exists() || newData.child('dataUrl').val().length < 4000000"
+    // Se il record non ha dataUrl, .val() e\' null, .length su null non
+    // esiste, la regola vale FALSO e la scrittura viene rifiutata. Stessa
+    // trappola in codeMem (pretendeva sempre 'pre') e in returns
+    // (pretendeva sempre 'cod').
+    //
+    // Il caso peggiore era la prima sincronizzazione: FB_REF.update(local)
+    // e\' una scrittura multipla e ATOMICA, quindi una sola riga senza
+    // 'cod' faceva rifiutare l'intero blocco. Non quella riga: tutte.
+    const trovati = [];
+    (function cerca(nodo, path) {
+      if (!nodo || typeof nodo !== 'object') return;
+      for (const k of Object.keys(nodo)) {
+        if (k === '.validate') trovati.push(path || '(radice)');
+        else cerca(nodo[k], path ? path + '/' + k : k);
+      }
+    })(r, '');
+    eq(trovati.length, 0,
+      'una regola di validazione fallita rifiuta la scrittura senza dire perche\':\n      ' + trovati.join('\n      '));
+  });
+
+  it('nessuna condizione oltre "auth != null"', () => {
+    // Regole come "auth != null && !data.exists()" (append-only) o
+    // "data.child('who').val() == newData.child('who').val()" producono lo
+    // stesso guasto: una scrittura legittima rifiutata, in silenzio.
+    const strane = [];
+    (function cerca(nodo, path) {
+      if (!nodo || typeof nodo !== 'object') return;
+      for (const k of Object.keys(nodo)) {
+        if (k === '.read' || k === '.write') {
+          const v = nodo[k];
+          if (v !== false && v !== 'auth != null') strane.push((path || '(radice)') + ' ' + k + ': ' + JSON.stringify(v));
+        } else cerca(nodo[k], path ? path + '/' + k : k);
+      }
+    })(r, '');
+    eq(strane.length, 0, 'condizioni non uniformi:\n      ' + strane.join('\n      '));
+  });
+
+  describe('Regole — quello che deve restare vero');
+
+  it('la radice resta chiusa', () => {
+    // Senza questo, chi conosce l'URL del database si scarica tutto.
+    eq(r['.read'], false);
+    eq(r['.write'], false);
+  });
+
+  it('nessun nodo e\' leggibile senza accesso', () => {
+    // _killswitch prima aveva ".read": true. Veniva letto solo dopo il
+    // login in entrambi i trasporti, quindi chiuderlo non toglie niente.
+    const aperti = [];
+    for (const k of Object.keys(r)) {
+      if (k.startsWith('.')) continue;
+      if (r[k]['.read'] !== 'auth != null') aperti.push(k + ': ' + JSON.stringify(r[k]['.read']));
+    }
+    eq(aperti.length, 0, 'nodi leggibili senza autenticazione:\n      ' + aperti.join('\n      '));
+  });
 
   it('ogni nodo toccato da index.html ha una regola', () => {
     // Nasce da un bug reale: _diag (il nodo su cui il pulsante "Test
@@ -70,128 +127,52 @@ export async function runRulesTests() {
     // coordina il backup giornaliero fra i PC.
     const html = readFileSync(join(root, 'index.html'), 'utf8');
 
-    // Cerco solo i nodi di PRIMO livello: .ref('X') e root.child('X').
-    // Un .child('y') su un riferimento gia' annidato non e' un nodo radice.
+    // Cerco solo i nodi di PRIMO livello: .ref('X'), root.child('X') e
+    // fbRestRef('X'), che e\' la versione https dello stesso riferimento.
     const radice = new Set();
-    const re = /(?:\.ref\(|\broot\.child\()'([A-Za-z_][A-Za-z0-9_]*)/g;
+    const re = /(?:\.ref\(|\broot\.child\(|\bfbRestRef\()'([A-Za-z_][A-Za-z0-9_]*)/g;
     let m;
     while ((m = re.exec(html))) radice.add(m[1]);
+    radice.delete('info');   // '.info/connected' e\' un nodo di servizio dell'SDK
 
-    // '.info/connected' e' un nodo di servizio dell'SDK, non del database.
-    radice.delete('info');
-
-    const scoperti = Array.from(radice).filter((n) => v2[n] === undefined).sort();
+    const scoperti = Array.from(radice).filter((n) => r[n] === undefined).sort();
     eq(scoperti.length, 0,
       'nodi usati dal gestionale ma senza regole (verrebbero negati):\n      ' + scoperti.join('\n      '));
   });
 
-  it('_diag e _backups_meta sono scrivibili', () => {
-    assert(v2._diag, '_diag serve al pulsante "Test connessione"');
-    assert(v2._backups_meta, '_backups_meta coordina il backup automatico');
-    eq(v2._diag.$device['.write'], 'auth != null');
-    eq(v2._backups_meta['.write'], 'auth != null');
+  it('i nodi del gestionale ci sono tutti', () => {
+    const attesi = ['returns', 'chat', 'presence', 'admin', 'security_log',
+      'notifEvents', 'notif', 'ocrLive', 'mailFollowups',
+      'pkgphotos', '_backups', 'codeMem', '_killswitch'];
+    for (const n of attesi) assert(r[n] !== undefined, 'nodo mancante: ' + n);
   });
 
-  describe('Regole — nodi nuovi');
-
-  it('esistono solo i due nodi del portale, piu\' i due di servizio', () => {
-    const nuovi = Object.keys(v2).filter((k) => !k.startsWith('.') && LEGACY.indexOf(k) < 0);
-    eq(nuovi.sort().join(','), '_backups_meta,_diag,portal_counters,portal_submissions',
-      'nodi inattesi: ' + nuovi.join(', '));
+  it('i due nodi del portale ci sono, e non sono pubblici', () => {
+    // L'app pubblica non tocca mai il database: scrive solo tramite la
+    // function, che usa le credenziali del server. Nessuno di questi due
+    // nodi deve essere raggiungibile da un browser senza accesso.
+    for (const n of ['portal_submissions', 'portal_counters']) {
+      assert(r[n], 'nodo mancante: ' + n);
+      eq(r[n]['.read'], 'auth != null');
+    }
   });
 
-  it('non sono rimasti nodi della versione precedente', () => {
-    // portal_users, portal_view, portal_access, portal_timeline… appartenevano
-    // all'impianto con login e ruoli, che non esiste piu'. Se ricomparissero
-    // sarebbero superficie di attacco senza nessuno che la usa.
+  it('non sono rimasti nodi dell\'impianto con i ruoli', () => {
     const morti = ['portal_users', 'portal_view', 'portal_access', 'portal_timeline',
       'portal_messages', 'portal_documents', 'portal_requests', 'portal_config',
       'portal_notifications', 'portal_audit', 'portal_sync_meta'];
-    for (const n of morti) eq(v2[n], undefined, 'nodo obsoleto ancora presente: ' + n);
+    for (const n of morti) eq(r[n], undefined, 'nodo obsoleto ancora presente: ' + n);
   });
 
-  it('entrambi richiedono autenticazione in lettura', () => {
-    eq(v2.portal_submissions['.read'], 'auth != null');
-    eq(v2.portal_counters['.read'], 'auth != null');
-  });
-
-  it('nessuna lettura pubblica fra i nodi nuovi', () => {
-    for (const n of ['portal_submissions', 'portal_counters']) {
-      const branch = JSON.stringify(v2[n]);
-      assert(branch.indexOf('".read":true') < 0, 'lettura pubblica in ' + n);
-    }
-  });
-
-  describe('Regole — invii dal portale');
-
-  const sub = () => v2.portal_submissions.$ref;
-
-  it('la chiave deve avere il formato del riferimento', () => {
-    const rule = sub().ref['.validate'];
-    assert(rule.indexOf('RS-') >= 0, 'il campo ref deve essere vincolato al formato');
-  });
-
-  it('lo stato ammette solo i valori previsti', () => {
-    const rule = sub().stato['.validate'];
-    for (const s of ['NUOVO', 'IN_ESAME', 'ACCETTATO', 'RIFIUTATO', 'CHIUSO']) {
-      assert(rule.indexOf(s) >= 0, 'stato mancante nella regola: ' + s);
-    }
-  });
-
-  it('non si possono aggiungere campi inventati', () => {
-    eq(sub().$other['.validate'], false,
-      'campi arbitrari permetterebbero di scrivere dati non validati');
-    eq(sub().mittente.$other['.validate'], false);
-    eq(sub().articoli.$i.$other['.validate'], false);
-    eq(sub().messaggi.$mid.$other['.validate'], false);
-  });
-
-  it('le foto possono essere solo immagini in dataURL', () => {
-    const rule = sub().foto.$i['.validate'];
-    // Dentro la regex la barra e' sfuggita: cerco "data:image" e il gruppo
-    // dei formati, non la stringa letterale col separatore.
-    assert(/data:image/.test(rule), 'deve accettare solo dataURL immagine');
-    assert(/jpeg\|png\|webp/.test(rule), 'deve elencare i formati ammessi');
-    assert(rule.indexOf('svg') < 0, 'gli SVG non devono essere ammessi: possono contenere script');
-    assert(/length\s*<\s*\d+/.test(rule), 'manca il limite di peso');
-  });
-
-  it('il mittente di un messaggio ammette due soli valori', () => {
-    const rule = sub().messaggi.$mid.da['.validate'];
-    assert(rule.indexOf('TELOS') >= 0 && rule.indexOf('MITTENTE') >= 0);
-  });
-
-  it('i campi testuali hanno tutti un limite di lunghezza', () => {
-    const campi = [sub().causale, sub().note, sub().esito, sub().codiceCliente,
-      sub().mittente.nome, sub().mittente.azienda, sub().messaggi.$mid.testo];
-    for (const c of campi) {
-      assert(/length\s*<\s*\d+/.test(c['.validate']), 'manca un limite: ' + c['.validate']);
-    }
-  });
-
-  it('la quantita\' e\' un numero entro limiti sensati', () => {
-    const rule = sub().articoli.$i.qty['.validate'];
-    assert(rule.indexOf('isNumber') >= 0);
-    assert(rule.indexOf('> 0') >= 0, 'la quantita\' non puo\' essere zero o negativa');
-  });
-
-  describe('Regole — contatori del badge');
-
-  it('sono leggibili anche dall\'auth anonima del gestionale', () => {
-    // Il gestionale usa signInAnonymously: se servisse un ruolo, il badge
-    // non funzionerebbe mai.
-    eq(v2.portal_counters['.read'], 'auth != null');
-  });
-
-  it('contengono solo numeri, nessun dato di una pratica', () => {
-    const staff = v2.portal_counters.staff;
-    for (const campo of ['nuovi', 'inEsame', 'daLeggere', 'total']) {
-      const rule = staff[campo]['.validate'];
-      assert(rule.indexOf('isNumber') >= 0, campo + ' deve essere numerico');
-      assert(rule.indexOf('>= 0') >= 0, campo + ' non puo\' essere negativo');
-    }
-    eq(staff.$other['.validate'], false,
-      'il nodo e\' leggibile da chiunque sia autenticato: deve restare di soli numeri');
+  it('non ci sono nodi che nessuno usa', () => {
+    // Ogni nodo in piu\' e\' superficie scrivibile senza nessuno che la
+    // guardi.
+    const html = readFileSync(join(root, 'index.html'), 'utf8');
+    const inutili = Object.keys(r)
+      .filter((k) => !k.startsWith('.'))
+      .filter((k) => k !== 'portal_submissions' && k !== 'portal_counters')
+      .filter((k) => html.indexOf("'" + k) < 0);
+    eq(inutili.length, 0, 'nodi con regole ma mai usati: ' + inutili.join(', '));
   });
 
   describe('Pulizia — niente resti dell\'impianto precedente');

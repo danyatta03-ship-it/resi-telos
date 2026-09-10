@@ -99,18 +99,36 @@ impostazione "Copia link" consegnerebbe un indirizzo morto.
 ## Regole del database
 
 Le regole da incollare in *Firebase Console → Realtime Database → Regole*
-sono in **`firebase-rules-v2.json`**. Copiare **tutto** il file, compresa
-la riga `{ "rules": {`.
+sono in **`firebase-rules.json`** — un solo file, si copia tutto com'è.
 
-Rispetto alle regole precedenti aggiungono solo quattro nodi
-(`portal_submissions`, `portal_counters`, `_diag`, `_backups_meta`) e non
-toccano nessuno dei tredici del gestionale. Un test lo verifica confrontando
-i due file **byte per byte**: se una regola del gestionale cambiasse, i test
-fallirebbero prima del deploy.
+Sono venti righe: radice chiusa, e ogni nodo leggibile e scrivibile da chi
+ha fatto l'accesso. Nient'altro.
 
-> `_diag` e `_backups_meta` mancavano dalla versione precedente. È il motivo
-> per cui il pulsante "Test connessione" rispondeva sempre "Scrittura
-> rifiutata" anche quando la sincronizzazione funzionava benissimo.
+Le precedenti erano trecento righe che validavano campo per campo, e
+avevano forme come questa:
+
+```
+".validate": "!newData.exists() || newData.child('dataUrl').val().length < 4000000"
+```
+
+Se il record non ha `dataUrl`, `.val()` è `null`, `.length` su null non
+esiste, la regola vale **falso** e la scrittura viene **rifiutata senza
+dire perché**. La stessa trappola era in `codeMem` (pretendeva sempre
+`pre`) e in `returns` (pretendeva sempre `cod`).
+
+Il caso peggiore era la prima sincronizzazione: `update()` è una scrittura
+**multipla e atomica**, quindi una sola riga fuori norma faceva rifiutare
+l'intero blocco. Non quella riga: tutte.
+
+La validazione dei dati che arrivano da fuori non è sparita — si è spostata
+dove serve. `portal-submit.js` controlla ogni campo sul server, prima di
+scrivere, con trentotto test a coprirla. Lì un dato sbagliato produce un
+errore che si legge; nelle regole produceva silenzio.
+
+> `_diag` e `_backups_meta` mancavano del tutto. È il motivo per cui il
+> pulsante "Test connessione" rispondeva sempre "Scrittura rifiutata" anche
+> quando la sincronizzazione funzionava benissimo: senza una regola propria,
+> un nodo cade sul `".read": false` della radice.
 
 ---
 
@@ -156,7 +174,7 @@ precedenti, e l'app sta rifacendo lo stesso lavoro N volte.
 node tests/run.js
 ```
 
-112 test, nessuna dipendenza esterna. Coprono la validazione degli invii,
+105 test, nessuna dipendenza esterna. Coprono la validazione degli invii,
 cosa esce davvero dagli endpoint pubblici, le regole del database, la
 separazione dei due siti, il trasporto https di riserva (eseguito davvero
 contro un finto Firebase in memoria) e la coerenza delle versioni fra
