@@ -147,14 +147,33 @@ con una scadenza, e dice quale strato è caduto:
 | Esito | Significato |
 |---|---|
 | 1 ❌ | L'account anonimo non esiste più sul server. Si rinnova da solo. |
-| 2 ✅ 3 ❌ | https passa, il **websocket è bloccato dalla rete**. Non è Firebase. |
+| 2 ✅ 3 ❌ | https passa, il canale realtime no. Vedi sotto: quasi sempre è il CSP. |
 | 2 ❌ con 401/403 | Regole del database chiuse, oppure accesso Anonimo disattivato. |
 | 2 ❌ senza risposta | Il database non è raggiungibile: rete, o URL sbagliato. |
 
-Il caso **2 ✅ 3 ❌** è quello che il messaggio generico "URL errato o rete
-bloccata" non sapeva distinguere. Da confermare in trenta secondi collegando
-il dispositivo all'hotspot del telefono: se torna ONLINE, è la rete
-dell'ufficio, e va sbloccato `wss://` verso `*.firebasedatabase.app`.
+### Il caso 2 ✅ 3 ❌ — e perché sembrava un problema di rete
+
+Il Realtime Database **non parte dal websocket**. Prima stabilisce una
+connessione in *long-polling*, e quel trasporto funziona **iniettando tag
+`<script>`** verso `<database>.firebasedatabase.app` — quindi passa da
+`script-src`, non da `connect-src`.
+
+Con quel dominio assente da `script-src`, il browser blocca il trasporto
+iniziale, la connessione non si stabilisce mai, e **il websocket non viene
+nemmeno tentato**. L'SDK non dà errore: tace. Da fuori è indistinguibile da
+un firewall — solo che succede su *qualunque* rete, telefono compreso.
+
+Era già stato affrontato a metà: un commento in `netlify.toml` diceva
+*"v35r — connect-src rilassato a https:/wss: dopo report Firebase non
+connette"*. Quella correzione apriva la strada al websocket ma lasciava
+chiuso il trasporto che viene prima.
+
+La diagnosi ora ascolta gli avvisi `securitypolicyviolation` del browser —
+che altrimenti finiscono solo nella console, dove da un telefono non li vede
+nessuno — e se il blocco riguarda il database lo dice esplicitamente.
+
+**Per distinguere CSP da rete in trenta secondi:** collega il dispositivo
+all'hotspot del telefono. Se il guasto resta identico, la rete non c'entra.
 
 **Il gestionale non si ferma comunque.** Quando il canale realtime non
 risponde, passa da solo allo stesso database via https (REST) e continua a
@@ -174,7 +193,7 @@ precedenti, e l'app sta rifacendo lo stesso lavoro N volte.
 node tests/run.js
 ```
 
-105 test, nessuna dipendenza esterna. Coprono la validazione degli invii,
+108 test, nessuna dipendenza esterna. Coprono la validazione degli invii,
 cosa esce davvero dagli endpoint pubblici, le regole del database, la
 separazione dei due siti, il trasporto https di riserva (eseguito davvero
 contro un finto Firebase in memoria) e la coerenza delle versioni fra

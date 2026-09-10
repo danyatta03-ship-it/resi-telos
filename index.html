@@ -1241,7 +1241,7 @@ html[data-theme="light"] .btn-anomalia{
 
   </div>
   <div id="scanStatus" style="font-size:12px;color:#aaa;text-align:center;margin-top:8px;min-height:16px">Avvio fotocamera...</div>
-  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v38 · aggiorna app</button>
+  <button onclick="forceAppUpdate()" style="background:none;border:none;color:#666;font-size:10px;text-decoration:underline;margin-top:2px;cursor:pointer;font-family:inherit;-webkit-appearance:none">v39 · aggiorna app</button>
 
   <div style="display:flex;gap:8px;margin-top:8px;width:100%;max-width:360px">
     <input id="scanManual" placeholder="Digita codice..." oninput="_upcase(this)" style="flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:10px 12px;font-size:14px;border-radius:8px;-webkit-appearance:none;outline:none;font-family:monospace">
@@ -1934,7 +1934,7 @@ html[data-theme="light"] .btn-anomalia{
   <div id="hPanExp" style="display:none">
     <!-- v34w: Versione app (spostata qui da LOGISTICA → Fornitori) -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:9px 11px;background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.2);border-radius:8px">
-      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v38</b></div>
+      <div style="font-size:11px;color:#3B9FD4">Versione app: <b id="appVersionLbl">v39</b></div>
       <button onclick="forceAppUpdate()" style="background:rgba(59,159,212,.15);color:#3B9FD4;border:1px solid rgba(59,159,212,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit">🔄 Aggiorna app</button>
     </div>
     <div style="background:rgba(59,159,212,.06);border:1px solid rgba(59,159,212,.25);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -7625,7 +7625,7 @@ function fbDiagnose(){
   // sta girando la build aggiornata o una copia vecchia rimasta nella cache del
   // service worker — e si finisce a cercare un guasto in un codice che su quel
   // dispositivo non è mai arrivato.
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">🩺 Diagnostica Firebase <span style="font-size:10px;color:#666;font-weight:600">v38</span></div><button onclick="document.getElementById(\'fbDiagBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#3B9FD4">🩺 Diagnostica Firebase <span style="font-size:10px;color:#666;font-weight:600">v39</span></div><button onclick="document.getElementById(\'fbDiagBox\').remove()" style="background:none;border:none;color:#777;font-size:20px;cursor:pointer">✕</button></div>';
   var allOk=true;
   checks.forEach(function(c){
     if(!c.ok) allOk=false;
@@ -7797,6 +7797,26 @@ window.fbDeepTest = function(){
   var base = String(cfg.dbUrl).replace(/\/+$/,'');
   var token='', rinnovato=false, restOk=false, restStato=0, wsOk=false;
 
+  // v39 — Il browser avvisa quando il CSP blocca qualcosa, ma l'avviso
+  // finisce solo nella console: da un telefono non lo vede nessuno. Qui lo
+  // raccolgo, perche' e' esattamente il guasto che sembrava un problema di
+  // rete — il trasporto iniziale del Realtime Database viaggia su tag
+  // <script>, quindi passa da script-src, e se quel dominio non e' ammesso
+  // l'SDK resta muto su QUALUNQUE rete.
+  var violazioni = [];
+  function _raccogliCsp(ev){
+    var u = (ev && (ev.blockedURI || ev.blockedURL)) || '';
+    var d = (ev && ev.violatedDirective) || '';
+    if(u || d) violazioni.push({uri:String(u), dir:String(d)});
+  }
+  try{ document.addEventListener('securitypolicyviolation', _raccogliCsp); }catch(e){}
+  function cspBloccaDatabase(){
+    for(var i=0;i<violazioni.length;i++){
+      if(/firebasedatabase\.app|firebaseio\.com/i.test(violazioni[i].uri)) return violazioni[i];
+    }
+    return null;
+  }
+
   var i1 = riga('go','1/4 · Account anonimo — chiedo un token nuovo al server');
 
   function accessoDaZero(){
@@ -7865,9 +7885,12 @@ window.fbDeepTest = function(){
           if(chiuso) return; chiuso = true;
           try{ ref.off(); }catch(e){}
           wsOk = v; testo.push('ws='+(v?'ok':'ko'));
-          if(v) agg(i3,'ok','3/4 · Canale realtime aperto','Il websocket verso Firebase è collegato.');
-          else  agg(i3,'ko','3/4 · Canale realtime non aperto',
-            'In 15 secondi il websocket non si è collegato: la rete di questo dispositivo lo sta bloccando, oppure l\'SDK non riesce a autenticarsi.');
+          if(v){ agg(i3,'ok','3/4 · Canale realtime aperto','Il canale verso Firebase è collegato.'); res(v); return; }
+          var csp = cspBloccaDatabase();
+          agg(i3,'ko','3/4 · Canale realtime non aperto',
+            csp
+              ? '<b style="color:#E0A055">Bloccato dal CSP dell\'app</b>, non dalla rete: '+xe(csp.uri)+' respinto da <code>'+xe(csp.dir)+'</code>.'
+              : 'In 15 secondi il canale non si è aperto. Il Realtime Database parte in long-polling (tag &lt;script&gt; verso il database) e solo dopo passa al websocket: se il primo trasporto non passa, non si arriva mai al secondo.');
           res(v);
         }
         var t = setTimeout(function(){ fine(false); }, 15000);
@@ -7893,11 +7916,19 @@ window.fbDeepTest = function(){
     })
     .then(function(){
       if(restOk && !wsOk){
+        var csp = cspBloccaDatabase();
+        try{ document.removeEventListener('securitypolicyviolation', _raccogliCsp); }catch(e){}
         verdetto('#E0A055',
-          '<b>Trovato.</b> Il database risponde perfettamente via https, ma il <b>canale realtime (websocket) è bloccato su questo dispositivo</b>.<br><br>'+
-          'Non sono le regole di Firebase, non è l\'URL, non è l\'account: è la rete.<br><br>'+
-          '<b>Conferma in 30 secondi:</b> collega il dispositivo all\'hotspot del telefono e riapri l\'app. Se torna ONLINE, è la rete dell\'ufficio.<br><br>'+
-          '<b>Da far sbloccare a chi gestisce la rete:</b> connessioni <b>WebSocket (wss://)</b> verso <code>*.firebasedatabase.app</code> e <code>*.firebaseio.com</code>, porta 443. Spesso è l\'antivirus con ispezione TLS, o un proxy che accetta https ma non l\'upgrade a websocket.');
+          '<b>Trovato.</b> Il database risponde perfettamente via https, ma il <b>canale realtime non si apre</b>.<br><br>'+
+          (csp
+            ? 'Il browser lo ha <b>bloccato per via del CSP di questa app</b>: <code>'+xe(csp.uri)+'</code> respinto da <code>'+xe(csp.dir)+'</code>.<br><br>'+
+              'Non e\' la rete e non e\' Firebase: e\' una regola di sicurezza della pagina. Si corregge nel deploy, non sul dispositivo — segnalalo e basta.'
+            : 'Il Realtime Database non parte dal websocket: prima stabilisce una connessione in <b>long-polling</b>, che funziona iniettando tag <code>&lt;script&gt;</code> verso il database, e solo dopo passa al websocket. Se il primo trasporto non passa, il secondo non viene mai tentato.<br><br>'+
+              '<b>Due cause possibili, in quest\'ordine:</b><br>'+
+              '1. il <b>CSP dell\'app</b> non ammette il dominio del database in <code>script-src</code> — succede su qualunque rete, anche col telefono;<br>'+
+              '2. la <b>rete</b> blocca <code>wss://</code> verso <code>*.firebasedatabase.app</code>.<br><br>'+
+              '<b>Come distinguerle in 30 secondi:</b> collega il dispositivo all\'hotspot del telefono. Se il guasto resta identico, non e\' la rete.')+
+          '<br><br>Intanto il gestionale <b>continua a lavorare via https</b>: non stai perdendo niente, solo l\'aggiornamento istantaneo.');
       } else if(restOk && wsOk){
         verdetto('#5ce080',
           '<b>Adesso funziona.</b> Token, https, websocket e lettura sono tutti a posto.'+

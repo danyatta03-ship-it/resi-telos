@@ -130,6 +130,60 @@ export async function runSyncTests() {
       'il conteggio deve avere una soglia, altrimenti e\' solo un numero');
   });
 
+  describe('Sync — il CSP non deve strozzare il trasporto di Firebase');
+
+  it('script-src ammette il dominio del database', () => {
+    // La causa vera di mesi di "Timeout: nessuna risposta dal database".
+    //
+    // Il Realtime Database NON apre il websocket per primo: stabilisce una
+    // connessione in long-polling e poi la promuove. Il long-polling
+    // funziona iniettando tag <script> verso <database>.firebasedatabase.app
+    // — quindi passa da script-src, non da connect-src. Con quel dominio
+    // assente da script-src il browser blocca il trasporto iniziale, la
+    // connessione non si stabilisce mai, e il websocket non viene nemmeno
+    // tentato: l'SDK resta muto. Nessun errore, solo silenzio, su
+    // QUALUNQUE rete — anche sotto 5G, dove nessun firewall aziendale puo'
+    // entrarci.
+    //
+    // Era gia' stato affrontato a meta': "v35r — connect-src rilassato a
+    // https:/wss: dopo report Firebase non connette". Quella correzione
+    // apriva la strada al websocket ma lasciava chiuso il trasporto che
+    // viene prima, e per mesi ha fatto sembrare il guasto un problema di
+    // rete.
+    const toml = readFileSync(join(root, 'netlify.toml'), 'utf8');
+    const riga = toml.split('\n').find((l) => /^\s*Content-Security-Policy\s*=/.test(l));
+    assert(riga, 'manca la Content-Security-Policy');
+    const m = /script-src ([^;]+);/.exec(riga);
+    assert(m, 'manca script-src nella CSP');
+    assert(/firebasedatabase\.app/.test(m[1]),
+      'script-src non ammette *.firebasedatabase.app: il long-polling di Firebase viene bloccato e il database resta muto\n      script-src attuale: ' + m[1].trim());
+  });
+
+  it('la diagnosi sa riconoscere un blocco del CSP', () => {
+    // Senza questo, un blocco del CSP viene attribuito alla rete — ed e'
+    // esattamente l'errore che ha mandato fuori strada la diagnosi finora.
+    const html = readFileSync(join(root, 'index.html'), 'utf8');
+    assert(html.indexOf("'securitypolicyviolation'") > 0,
+      'la diagnosi deve ascoltare gli avvisi del browser: in console non li vede nessuno da un telefono');
+    assert(html.indexOf('function cspBloccaDatabase(') > 0,
+      'manca il riconoscimento delle violazioni che riguardano il database');
+  });
+
+  it('il verdetto non dà piu\' la colpa alla rete a priori', () => {
+    const html = readFileSync(join(root, 'index.html'), 'utf8');
+    const i = html.indexOf('if(restOk && !wsOk){');
+    assert(i > 0, 'manca il verdetto per https-ok/realtime-ko');
+    const corpo = html.slice(i, i + 2200);
+    // La vecchia conclusione dava la rete dell'ufficio per certa. Era
+    // sbagliata: lo stesso guasto si presenta identico sotto rete mobile.
+    assert(corpo.indexOf('rete dell\\\'ufficio') < 0,
+      'il verdetto accusa ancora la rete dell\'ufficio, che con il telefono non c\'entra');
+    assert(corpo.indexOf('CSP') > 0,
+      'il verdetto deve nominare il CSP: e\' la causa che si presenta su qualunque rete');
+    assert(corpo.indexOf('long-polling') > 0,
+      'il verdetto deve spiegare che il trasporto iniziale non e\' il websocket');
+  });
+
   it('il service worker non intercetta le chiamate al database', () => {
     // Il ripiego https parla con *.firebasedatabase.app, un'origine diversa
     // da quella del sito. Il service worker la lascia passare solo grazie
