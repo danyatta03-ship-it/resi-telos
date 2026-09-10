@@ -9,7 +9,7 @@
  * qualcuno di aver mandato un reso che non e' partito.
  */
 
-var CACHE = 'reso-telos-v1';
+var CACHE = 'reso-telos-v2';
 
 var PRECACHE = [
   './',
@@ -23,8 +23,8 @@ var PRECACHE = [
   './js/stato.js',
   './js/photos.js',
   './js/costanti.js',
-  '../icon-192.png',
-  '../icon-512.png'
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', function (event) {

@@ -272,6 +272,32 @@ export async function runRulesTests() {
     assert(fn.indexOf('portaleUrlPubblico()') > 0, 'deve usare l\'indirizzo configurato');
   });
 
+  it('l\'app pubblica non esce mai dalla propria cartella', () => {
+    // Finche' il portale stava sotto /portal/ del gestionale, "../icon.png"
+    // funzionava: risaliva alla radice del sito. Sul sito separato la
+    // cartella portal/ E' la radice, quindi ".." esce dal sito e da' 404.
+    // Icone e favicon sparivano, e l'app installata sul telefono restava
+    // senza icona — un guasto che non si nota finche' qualcuno non prova a
+    // installarla.
+    const files = ['index.html', 'manifest.json', 'sw.js',
+      'js/app.js', 'js/api.js', 'js/form.js', 'js/stato.js',
+      'js/photos.js', 'js/dom.js', 'js/costanti.js', 'css/app.css'];
+    const fuori = [];
+    for (const f of files) {
+      const src = readFileSync(join(root, 'portal', f), 'utf8');
+      const re = /["'(]\.\.\//g;
+      if (re.test(src)) fuori.push(f);
+    }
+    eq(fuori.length, 0, 'risalgono sopra la radice del sito: ' + fuori.join(', '));
+  });
+
+  it('le icone dell\'app pubblica sono nella sua cartella', () => {
+    for (const f of ['icon-192.png', 'icon-512.png']) {
+      assert(existsSync(join(root, 'portal', f)),
+        'manca portal/' + f + ': il manifest lo cerca e non lo trova');
+    }
+  });
+
   it('l\'app pubblica non puo\' parlare con nessuno tranne le sue function', () => {
     // La CSP del portale e' piu' stretta di quella del gestionale: se un
     // giorno qualcuno ci aggiungesse una chiamata a Firebase, il browser la
