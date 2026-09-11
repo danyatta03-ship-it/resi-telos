@@ -57,7 +57,7 @@ const MIN_SAME_PITCH_GAP = 10;
  */
 function dedupeEvents(events: ScheduledEvent[]): ScheduledEvent[] {
   const lastByTrack = new Map<TrackId, number>();
-  const lastByPitch = new Map<string, number>();
+  const lastByPitch = new Map<string, ScheduledEvent>();
   const out: ScheduledEvent[] = [];
 
   for (const event of events) {
@@ -66,10 +66,17 @@ function dedupeEvents(events: ScheduledEvent[]): ScheduledEvent[] {
       if (last !== undefined && event.tick - last < MIN_GAP_TICKS) continue;
       lastByTrack.set(event.track, event.tick);
     }
+
     const pitchKey = `${event.track}:${event.pitch}`;
-    const lastSame = lastByPitch.get(pitchKey);
-    if (lastSame !== undefined && event.tick - lastSame < MIN_SAME_PITCH_GAP) continue;
-    lastByPitch.set(pitchKey, event.tick);
+    const previous = lastByPitch.get(pitchKey);
+    if (previous) {
+      if (event.tick - previous.tick < MIN_SAME_PITCH_GAP) continue;
+      // La stessa nota non puo' ripartire mentre la precedente suona ancora:
+      // accade con pad e accordi tenuti, e in MIDI renderebbe ambiguo il note-off.
+      const maxDuration = event.tick - previous.tick - 2;
+      if (previous.durTicks > maxDuration) previous.durTicks = Math.max(10, maxDuration);
+    }
+    lastByPitch.set(pitchKey, event);
     out.push(event);
   }
   return out;

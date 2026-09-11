@@ -45,6 +45,17 @@ for (const mood of ['dark', 'aggressive', 'ambient'] as const) {
       schedule.events.every((e) => e.velocity > 0 && e.velocity <= 1 && e.durTicks > 0 && e.tick >= 0),
       `${mood}/h${humanize}: valori fuori range`,
     );
+    // Due note identiche non devono mai sovrapporsi sulla stessa traccia.
+    const held = new Map<string, { tick: number; dur: number }>();
+    let overlaps = 0;
+    for (const event of schedule.events) {
+      const key = `${event.track}:${event.pitch}`;
+      const previous = held.get(key);
+      if (previous && event.tick < previous.tick + previous.dur) overlaps++;
+      held.set(key, { tick: event.tick, dur: event.durTicks });
+    }
+    check(overlaps === 0, `${mood}/h${humanize}: ${overlaps} sovrapposizioni sulla stessa nota`);
+
     // Gli slide puntano sempre a una nota diversa.
     check(
       schedule.events.every((e) => e.slideTo === undefined || e.slideTo !== e.pitch),

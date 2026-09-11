@@ -3,7 +3,7 @@ import { TICKS_PER_BAR } from '../types';
 import type { Beat, ChannelState, MoodId, NoteEvent, ScaleId, Section, SectionKind, TrackId } from '../types';
 import { createSection, defaultMixer, generateBeat, regenerateBeat, regenerateSection, resizeSection } from '../generator';
 import type { RegenTarget } from '../generator';
-import { snapToScale } from '../music/theory';
+import { diatonicQuality, romanFor, snapToScale } from '../music/theory';
 import { uid } from '../utils/id';
 import * as storage from './persistence';
 
@@ -160,7 +160,16 @@ export const useBeatStore = create<BeatState>((set, get) => ({
       return { ...section, clips };
     });
 
-    set({ beat: touch({ ...beat, meta: { ...beat.meta, rootPc, scaleId }, sections }) });
+    // Con una scala nuova cambiano anche le qualita' degli accordi della progressione.
+    const progression = scaleChanged
+      ? beat.meta.progression.map((chord) => {
+          const seventh = chord.quality.includes('7') || chord.quality.includes('9');
+          const quality = diatonicQuality(scaleId, chord.degree, seventh);
+          return { ...chord, quality, roman: romanFor(scaleId, chord.degree, quality) };
+        })
+      : beat.meta.progression;
+
+    set({ beat: touch({ ...beat, meta: { ...beat.meta, rootPc, scaleId, progression }, sections }) });
   },
 
   regenerate: (target) => {

@@ -1,10 +1,10 @@
 import { ALL_TRACK_IDS, TICKS_PER_BAR } from '../types';
-import type { Beat, BeatMeta, ChannelState, Clips, MoodId, Section, TrackId } from '../types';
+import type { Beat, BeatMeta, ChannelState, Clips, MoodId, NoteEvent, Section, TrackId } from '../types';
 import { blendMoods } from '../music/moods';
 import type { MoodProfile } from '../music/moods';
-import { pickProgression } from '../music/progressions';
+import { chordAtBar, pickProgression } from '../music/progressions';
 import { Rng, randomSeed } from '../music/rng';
-import { keyLabel } from '../music/theory';
+import { chordPitchClasses, chordRootMidi, keyLabel, pitchClass } from '../music/theory';
 import { hashString, uid } from '../utils/id';
 import { SECTION_PROFILES, trackActive } from './context';
 import type { GenContext } from './context';
@@ -137,6 +137,43 @@ function buildSectionClips(
 
 const ALL_PARTS: PartOptions['parts'] = new Set(['drums', '808', 'melody', 'chords']);
 
+/**
+ * Riporta l'808 esistente sulla nuova progressione mantenendo il suo ritmo:
+ * cambiare gli accordi non deve lasciare il basso su note fuori armonia.
+ */
+function realign808(
+  notes: NoteEvent[],
+  meta: BeatMeta,
+  previous: BeatMeta,
+  startBar: number,
+): NoteEvent[] {
+  return notes.map((note) => {
+    const bar = startBar + Math.floor(note.t / TICKS_PER_BAR);
+    const oldChord = chordAtBar(previous.progression, bar);
+    const newChord = chordAtBar(meta.progression, bar);
+    const oldRoot = chordRootMidi(previous.rootPc, previous.scaleId, oldChord, 1);
+    const newRoot = chordRootMidi(meta.rootPc, meta.scaleId, newChord, 1);
+    const interval = note.p - oldRoot;
+    let pitch = newRoot + interval;
+    const tones = chordPitchClasses(meta.rootPc, meta.scaleId, newChord);
+    if (!tones.includes(pitchClass(pitch))) {
+      for (let delta = 1; delta <= 3; delta++) {
+        if (tones.includes(pitchClass(pitch - delta))) {
+          pitch -= delta;
+          break;
+        }
+        if (tones.includes(pitchClass(pitch + delta))) {
+          pitch += delta;
+          break;
+        }
+      }
+    }
+    while (pitch > 47) pitch -= 12;
+    while (pitch < 24) pitch += 12;
+    return { ...note, p: pitch };
+  });
+}
+
 function buildMeta(opts: GenerateOptions, seed: number): { meta: BeatMeta; profile: MoodProfile } {
   const rng = new Rng(seed);
   const profile = blendMoods(opts.moods);
@@ -253,6 +290,10 @@ export function regenerateBeat(beat: Beat, target: RegenTarget): Beat {
 
   let startBar = 0;
   const sections = beat.sections.map((section, index) => {
+    const source =
+      target === 'chords' && section.clips['808']?.length
+        ? { ...section.clips, '808': realign808(section.clips['808']!, meta, beat.meta, startBar) }
+        : section.clips;
     const clips = buildSectionClips(
       meta,
       profile,
@@ -261,7 +302,7 @@ export function regenerateBeat(beat: Beat, target: RegenTarget): Beat {
       `${index}:${section.kind}`,
       seed,
       { parts, chordStyle },
-      section.clips,
+      source,
     );
     startBar += section.bars;
     return { ...section, clips };

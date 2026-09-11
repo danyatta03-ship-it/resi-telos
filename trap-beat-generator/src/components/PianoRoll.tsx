@@ -46,6 +46,8 @@ export function PianoRoll() {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Su touch la griglia deve restare scorrevole: la nota si crea solo con un tap breve.
+  const tapRef = useRef<{ x: number; y: number; time: number; touch: boolean } | null>(null);
 
   const playing = useTransportState() === 'playing';
   const ticks = usePlayhead(playing);
@@ -129,16 +131,28 @@ export function PianoRoll() {
   const localTicks = range ? ticks - range.startTick : -1;
   const playheadX = localTicks >= 0 && localTicks <= section.bars * TICKS_PER_BAR ? tickToX(localTicks) : -1;
 
+  const createNoteAt = (clientX: number, clientY: number, rect: DOMRect) => {
+    const t = snap(xToTick(clientX - rect.left));
+    const p = yToPitch(clientY - rect.top);
+    addNote(section.id, selectedTrack, { t, d: gridTicks, p, v: 96 });
+    void audioEngine.preview(selectedTrack, p, 0.3);
+  };
+
   const onGridPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button === 2) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const t = snap(xToTick(x));
-    const p = yToPitch(y);
-    const note = { t, d: gridTicks, p, v: 96 };
-    addNote(section.id, selectedTrack, note);
-    void audioEngine.preview(selectedTrack, p, 0.3);
+    const touch = event.pointerType !== 'mouse';
+    tapRef.current = { x: event.clientX, y: event.clientY, time: performance.now(), touch };
+    // Con il mouse la nota nasce subito, col dito si aspetta di capire se e' uno scroll.
+    if (!touch) createNoteAt(event.clientX, event.clientY, event.currentTarget.getBoundingClientRect());
+  };
+
+  const onGridPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    const tap = tapRef.current;
+    tapRef.current = null;
+    if (!tap || !tap.touch) return;
+    const moved = Math.hypot(event.clientX - tap.x, event.clientY - tap.y);
+    if (moved > 10 || performance.now() - tap.time > 400) return;
+    createNoteAt(event.clientX, event.clientY, event.currentTarget.getBoundingClientRect());
   };
 
   const onNotePointerDown = (event: React.PointerEvent<HTMLDivElement>, note: NoteEvent) => {
@@ -227,10 +241,13 @@ export function PianoRoll() {
             </button>
           </>
         ) : (
-          <span className="text-[11px] text-ink-400">
-            Click sulla griglia per aggiungere, trascina per spostare, bordo destro per la durata, click destro per
-            eliminare.
-          </span>
+          <>
+            <span className="hidden flex-1 text-[11px] text-ink-400 sm:inline">
+              Click sulla griglia per aggiungere, trascina per spostare, bordo destro per la durata, click destro per
+              eliminare.
+            </span>
+            <span className="flex-1 text-[11px] text-ink-400 sm:hidden">Tocca per aggiungere una nota.</span>
+          </>
         )}
         <button className="btn btn-xs" onClick={() => clearTrack(section.id, selectedTrack)}>
           Svuota
@@ -278,8 +295,9 @@ export function PianoRoll() {
           {/* Griglia note */}
           <div
             className="relative cursor-crosshair"
-            style={{ width, height: gridHeight }}
+            style={{ width, height: gridHeight, touchAction: 'pan-x pan-y' }}
             onPointerDown={onGridPointerDown}
+            onPointerUp={onGridPointerUp}
             onContextMenu={(e) => e.preventDefault()}
           >
             {Array.from({ length: rows }, (_, i) => {
@@ -323,6 +341,7 @@ export function PianoRoll() {
                   background: TRACK_MAP[selectedTrack].color,
                   opacity: 0.45 + (note.v / 127) * 0.55,
                   cursor: 'grab',
+                  touchAction: 'none',
                 }}
                 title={`${noteName(note.p)} · vel ${note.v}`}
               >
@@ -360,6 +379,7 @@ export function PianoRoll() {
                 }}
                 className="absolute bottom-0 w-1.5 cursor-ns-resize rounded-t-sm"
                 style={{
+                  touchAction: 'none',
                   left: tickToX(note.t),
                   height: (note.v / 127) * VELOCITY_LANE,
                   background: selectedNoteId === note.id ? '#ffffff' : TRACK_MAP[selectedTrack].color,

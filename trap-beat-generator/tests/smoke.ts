@@ -1,6 +1,6 @@
 import { generateBeat, regenerateBeat } from '../src/generator';
-import { keyLabel } from '../src/music/theory';
-import { progressionLabel } from '../src/music/progressions';
+import { chordPitchClasses, keyLabel } from '../src/music/theory';
+import { chordAtBar, progressionLabel } from '../src/music/progressions';
 import { MOOD_LIST } from '../src/music/moods';
 import type { TrackId } from '../src/types';
 import { TICKS_PER_BAR } from '../src/types';
@@ -83,6 +83,32 @@ check(dHigh > dLow * 1.05, 'variation non aumenta la densita');
 
 const trackList: TrackId[] = ['kick', 'snare', 'hat', '808', 'melody', 'chords', 'pad'];
 console.log('tracce presenti nel primo hook:', trackList.filter((t) => (base.sections.find((s) => s.kind === 'HOOK')?.clips[t]?.length ?? 0) > 0).join(', '));
+
+
+// Rigenerando gli accordi l'808 deve restare dentro la nuova armonia.
+{
+  const start = generateBeat({ moods: ['dark'], bpm: 140, variation: 50, humanize: 20, seed: 5150 });
+  const rechorded = regenerateBeat(start, 'chords');
+  let outside = 0;
+  let total = 0;
+  let startBar = 0;
+  for (const section of rechorded.sections) {
+    for (const note of section.clips['808'] ?? []) {
+      const bar = startBar + Math.floor(note.t / 1920);
+      const chord = chordAtBar(rechorded.meta.progression, bar);
+      const tones = chordPitchClasses(rechorded.meta.rootPc, rechorded.meta.scaleId, chord);
+      total++;
+      if (!tones.includes(((note.p % 12) + 12) % 12)) outside++;
+    }
+  }
+  startBar = 0;
+  const rhythmKept =
+    JSON.stringify(start.sections.map((s) => (s.clips['808'] ?? []).map((n) => n.t))) ===
+    JSON.stringify(rechorded.sections.map((s) => (s.clips['808'] ?? []).map((n) => n.t)));
+  console.log(`\nregenerate chords: 808 con ${total} note, ${outside} fuori accordo, ritmo invariato: ${rhythmKept}`);
+  check(outside === 0, `regenerate chords lascia ${outside} note di 808 fuori armonia`);
+  check(rhythmKept, 'regenerate chords ha cambiato il ritmo dell’808');
+}
 
 if (failures > 0) throw new Error(`${failures} controlli falliti`);
 console.log('\nOK: tutti i controlli passati');
