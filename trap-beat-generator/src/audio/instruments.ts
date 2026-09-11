@@ -23,12 +23,12 @@ const mtof = (pitch: number) => 440 * Math.pow(2, (pitch - 69) / 12);
  * Le voci monofoniche di Tone rifiutano due attacchi nello stesso istante:
  * questa guardia sposta in avanti di pochi millisecondi gli eventi sovrapposti.
  */
-function monoGuard() {
+function monoGuard(minGap = 0.004) {
   let last = -Infinity;
   return (time: number): number => {
     // Un salto indietro significa loop o seek: si riparte da capo senza correzioni.
-    const overlapping = time <= last && last - time < 0.05;
-    const safe = overlapping ? last + 0.004 : time;
+    const overlapping = time < last + minGap && last - time < 0.05;
+    const safe = overlapping ? last + minGap : time;
     last = safe;
     return safe;
   };
@@ -118,10 +118,15 @@ function snareVoice(): Voice {
 function clapVoice(): Voice {
   const out = new Tone.Gain(1);
   const filter = new Tone.Filter({ type: 'bandpass', frequency: 1400, Q: 1.4 }).connect(out);
-  const noise = new Tone.NoiseSynth({
-    noise: { type: 'white' },
-    envelope: { attack: 0.001, decay: 0.055, sustain: 0, release: 0.02 },
-  }).connect(filter);
+  // Il clap e' fatto di micro ripetizioni: ognuna ha il suo generatore, cosi' due clap
+  // ravvicinati non si scavalcano mai sulla stessa linea temporale.
+  const offsets = [0, 0.011, 0.022];
+  const bursts = offsets.map(() =>
+    new Tone.NoiseSynth({
+      noise: { type: 'white' },
+      envelope: { attack: 0.001, decay: 0.055, sustain: 0, release: 0.02 },
+    }).connect(filter),
+  );
   const tail = new Tone.NoiseSynth({
     noise: { type: 'pink' },
     envelope: { attack: 0.002, decay: 0.22, sustain: 0, release: 0.05 },
@@ -132,15 +137,14 @@ function clapVoice(): Voice {
   return {
     output: out,
     trigger(time, _pitch, _dur, velocity) {
-      // Il clap e' fatto di micro ripetizioni ravvicinate.
       const at = guard(time);
-      noise.triggerAttackRelease(0.05, at, velocity);
-      noise.triggerAttackRelease(0.05, at + 0.011, velocity * 0.85);
-      noise.triggerAttackRelease(0.05, at + 0.022, velocity * 0.7);
+      bursts.forEach((burst, i) => {
+        burst.triggerAttackRelease(0.05, at + offsets[i], velocity * (1 - i * 0.15));
+      });
       tail.triggerAttackRelease(0.2, at + 0.03, velocity * 0.6);
     },
     dispose() {
-      noise.dispose();
+      for (const burst of bursts) burst.dispose();
       tail.dispose();
       filter.dispose();
       out.dispose();
@@ -262,7 +266,7 @@ const VOICE_FACTORIES: Record<TrackId, () => Voice> = {
           modulationEnvelope: { attack: 0.002, decay: 0.22, sustain: 0, release: 0.2 },
         }),
       0.9,
-      6,
+      10,
     ),
   counter: () =>
     polyVoice(
@@ -272,7 +276,7 @@ const VOICE_FACTORIES: Record<TrackId, () => Voice> = {
           envelope: { attack: 0.006, decay: 0.4, sustain: 0.08, release: 0.5 },
         }),
       0.8,
-      5,
+      8,
     ),
   chords: () =>
     polyVoice(
@@ -282,7 +286,7 @@ const VOICE_FACTORIES: Record<TrackId, () => Voice> = {
           envelope: { attack: 0.02, decay: 0.5, sustain: 0.35, release: 0.7 },
         }),
       0.55,
-      8,
+      12,
     ),
   pad: () =>
     polyVoice(
@@ -290,12 +294,12 @@ const VOICE_FACTORIES: Record<TrackId, () => Voice> = {
         new Tone.PolySynth(Tone.AMSynth, {
           harmonicity: 2,
           oscillator: { type: 'sine' },
-          envelope: { attack: 0.7, decay: 1.2, sustain: 0.7, release: 2.6 },
+          envelope: { attack: 0.7, decay: 1.2, sustain: 0.7, release: 2.1 },
           modulation: { type: 'sine' },
-          modulationEnvelope: { attack: 1.2, decay: 0.6, sustain: 0.6, release: 2 },
+          modulationEnvelope: { attack: 1.2, decay: 0.6, sustain: 0.6, release: 1.8 },
         }),
       0.5,
-      8,
+      14,
     ),
   lead: () =>
     polyVoice(
@@ -305,7 +309,7 @@ const VOICE_FACTORIES: Record<TrackId, () => Voice> = {
           envelope: { attack: 0.004, decay: 0.3, sustain: 0.05, release: 0.35 },
         }),
       0.35,
-      5,
+      8,
     ),
 };
 

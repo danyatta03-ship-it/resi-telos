@@ -107,10 +107,15 @@ export function generateHarmony(ctx: GenContext, style: ChordStyle): HarmonyResu
       }
     }
 
-    // Pad: voicing largo e tenuto, sotto gli accordi.
+    // Pad: voicing largo e tenuto, sotto gli accordi. Massimo cinque voci,
+    // altrimenti con le code lunghe si superano le voci disponibili.
     const padVoicing = Array.from(
       new Set([voicing[0] - 12, ...voicing, (voicing[voicing.length - 1] ?? root) + 12]),
-    ).filter((p) => p >= 36 && p <= 92);
+    )
+      .filter((p) => p >= 36 && p <= 92)
+      .sort((a, b) => a - b)
+      .filter((_, i, arr) => arr.length <= 5 || i === 0 || i === arr.length - 1 || i % 2 === 1)
+      .slice(0, 5);
     for (const p of padVoicing) {
       pad.push({
         id: uid('p'),
