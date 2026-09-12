@@ -58,6 +58,7 @@ export interface Section {
 }
 
 export type MoodId =
+  | 'hard'
   | 'dark'
   | 'aggressive'
   | 'melodic'
@@ -85,7 +86,9 @@ export type ChordQuality =
   | 'sus2'
   | 'sus4'
   | 'min6'
-  | 'halfdim7';
+  | 'halfdim7'
+  | 'add9'
+  | 'power';
 
 export interface ChordDef {
   /** Grado della scala 0-6 (0 = tonica). */
@@ -108,7 +111,17 @@ export interface BeatMeta {
   variation: number;
   /** 0-100, micro imperfezioni umane. */
   humanize: number;
+  /** 0-100: cattiveria del beat (kick, 808, velocity, sincopi). */
+  hardness: number;
+  /** 0-100: quanto e' cupa la tavolozza armonica e melodica. */
+  darkness: number;
+  /** 0-100: quanto silenzio lascia il generatore. */
+  space: number;
   seed: number;
+  /** Seed del motivo melodico: cambia solo rigenerando la melodia. */
+  motifSeed: number;
+  /** Seed del groove condiviso fra 808 e cassa. */
+  grooveSeed: number;
 }
 
 export interface ChannelState {

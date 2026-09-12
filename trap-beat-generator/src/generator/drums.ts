@@ -3,186 +3,166 @@ import type { Clips, NoteEvent, TrackId } from '../types';
 import { uid } from '../utils/id';
 import { STEP, STEPS_PER_BAR, trackActive, velocityFor } from './context';
 import type { GenContext } from './context';
+import { GROOVE_STEPS } from './groove';
+import type { Groove } from './groove';
+import { inSilence } from './space';
+import type { SilenceWindow } from './space';
 
-/** Pesi tipici di un kick trap sui 16 step della battuta. */
-const KICK_WEIGHTS = [
-  1.0, 0.02, 0.07, 0.2, 0.05, 0.09, 0.36, 0.13, 0.24, 0.05, 0.44, 0.17, 0.07, 0.11, 0.26, 0.1,
-];
+/**
+ * Batteria costruita intorno al groove di 808 e cassa.
+ *
+ * La cassa arriva gia' decisa dal groove condiviso: qui si aggiungono solo
+ * rullante, hi-hat, open hat e percussioni, con la regola che il silenzio
+ * conta quanto i colpi.
+ */
 
-/** Posizioni tipiche delle percussioni (off-beat). */
-const PERC_STEPS = [2, 3, 6, 7, 10, 11, 13, 14, 15];
+/** Posizioni possibili per le percussioni: sempre fuori dai tempi forti. */
+const PERC_STEPS = [3, 6, 7, 11, 14, 15];
 
 function note(track: TrackId, tick: number, velocity: number, dur = STEP / 2, pitchOffset = 0): NoteEvent {
   const base = TRACK_MAP[track].drumPitch ?? 36;
   return { id: uid('d'), t: Math.round(tick), d: Math.round(dur), p: base + pitchOffset, v: velocity };
 }
 
-/** Un ciclo di kick su una battuta: array di step attivi. */
-function buildKickBar(ctx: GenContext, energy: number): number[] {
-  const { rng, profile, variation } = ctx;
-  const density = profile.kickDensity * (0.65 + energy * 0.5) * (0.7 + variation * 0.7);
-  const steps: number[] = [];
-  for (let s = 0; s < STEPS_PER_BAR; s++) {
-    const weight = KICK_WEIGHTS[s] * (s % 2 === 1 ? 0.6 + profile.syncopation * 0.9 : 1);
-    if (s === 0) {
-      if (rng.chance(0.93)) steps.push(s);
-      continue;
-    }
-    const p = Math.min(0.92, weight * (0.5 + density * 1.25));
-    if (!rng.chance(p)) continue;
-    // Evita grappoli illeggibili: niente due kick a distanza di uno step se non voluto.
-    if (steps.length && s - steps[steps.length - 1] < 2 && !rng.chance(variation * 0.35)) continue;
-    steps.push(s);
-  }
-  if (steps.length < 2) steps.push(rng.pick([6, 10, 14]));
-  return Array.from(new Set(steps)).sort((a, b) => a - b);
-}
-
-function mutateSteps(ctx: GenContext, steps: number[], amount: number): number[] {
-  const { rng } = ctx;
-  const out = steps.slice();
-  if (rng.chance(amount)) {
-    const extra = rng.pick([3, 6, 7, 10, 11, 14, 15]);
-    if (!out.includes(extra)) out.push(extra);
-  }
-  if (out.length > 2 && rng.chance(amount * 0.7)) {
-    const idx = rng.int(1, out.length - 1);
-    out.splice(idx, 1);
-  }
-  return out.sort((a, b) => a - b);
-}
-
-/** Hi-hat di una battuta: ritmo base + accenti + roll occasionali. */
-function buildHatBar(
+/** Hi-hat: presenti ma non un tappeto continuo, con i roll usati come accento. */
+function buildHats(
   ctx: GenContext,
-  barIndex: number,
-  isPhraseEnd: boolean,
+  bar: number,
   rateSteps: number,
+  isPhraseEnd: boolean,
+  windows: SilenceWindow[],
 ): NoteEvent[] {
-  const { rng, profile, variation } = ctx;
+  const { rng, params } = ctx;
   const out: NoteEvent[] = [];
-  const barTick = barIndex * TICKS_PER_BAR;
-  const skipChance = 0.05 + variation * 0.05;
+  const barTick = bar * TICKS_PER_BAR;
 
   for (let pos = 0; pos < STEPS_PER_BAR; pos += rateSteps) {
-    if (pos > 0 && rng.chance(skipChance)) continue;
+    const tick = barTick + pos * STEP;
+    if (inSilence(windows, tick)) continue;
+    if (pos > 0 && rng.chance(params.hatSkip)) continue;
     const onBeat = pos % 4 === 0;
-    const accent = onBeat ? 0.82 : pos % 2 === 0 ? 0.55 : 0.4;
-    out.push(note('hat', barTick + pos * STEP, velocityFor(ctx, accent), STEP * 0.45));
+    const accent = onBeat ? 0.85 : pos % 2 === 0 ? 0.58 : 0.44;
+    out.push(note('hat', tick, velocityFor(ctx, accent), STEP * 0.45));
   }
 
-  // Roll: raddoppio o terzine su un movimento, piu' probabile a fine frase.
-  const rollChance = profile.hatRolls * (0.35 + variation * 0.8) * (isPhraseEnd ? 1.6 : 0.7);
-  if (rng.chance(Math.min(0.9, rollChance))) {
-    const beat = isPhraseEnd ? rng.weighted([[3, 5], [2, 2], [1, 1]] as const) : rng.int(0, 3);
+  // Roll: un accento, non un riempitivo. Quasi sempre a fine frase.
+  const rollChance = params.hatRollChance * (isPhraseEnd ? 1.5 : 0.35);
+  if (rng.chance(Math.min(0.75, rollChance))) {
+    const beat = isPhraseEnd ? rng.weighted([[3, 5], [2, 1.5]] as const) : rng.int(1, 3);
     const beatTick = barTick + beat * PPQ;
-    const style = rng.weighted([
-      ['32', 3 + variation * 3],
-      ['triplet', 2 + profile.hatRolls * 3],
-      ['sixtuplet', 1 + variation * 2],
-      ['16', 2],
-    ] as const);
-    const divisions = style === '32' ? 8 : style === 'triplet' ? 3 : style === 'sixtuplet' ? 6 : 4;
-    const span = PPQ / (style === 'triplet' ? 1 : 1);
-    // Rimuove gli hat che cadono nel movimento occupato dal roll.
-    for (let i = out.length - 1; i >= 0; i--) {
-      if (out[i].t >= beatTick && out[i].t < beatTick + span) out.splice(i, 1);
-    }
-    for (let i = 0; i < divisions; i++) {
-      const t = beatTick + (i * span) / divisions;
-      const ramp = 0.42 + (i / Math.max(1, divisions - 1)) * 0.45;
-      out.push(note('hat', t, velocityFor(ctx, ramp), span / divisions / 1.6));
+    if (!inSilence(windows, beatTick)) {
+      const divisions = rng.weighted([
+        [3, 2 + params.hardness],
+        [4, 2],
+        [6, 1 + params.hardness * 2],
+        [8, params.hardness * 2],
+      ] as const);
+      for (let i = out.length - 1; i >= 0; i--) {
+        if (out[i].t >= beatTick && out[i].t < beatTick + PPQ) out.splice(i, 1);
+      }
+      for (let i = 0; i < divisions; i++) {
+        const ramp = 0.45 + (i / Math.max(1, divisions - 1)) * 0.45;
+        out.push(note('hat', beatTick + (i * PPQ) / divisions, velocityFor(ctx, ramp), PPQ / divisions / 1.7));
+      }
     }
   }
 
   return out;
 }
 
-export function generateDrums(ctx: GenContext): Clips {
-  const { rng, profile, variation, bars, section, meta } = ctx;
+export function generateDrums(ctx: GenContext, groove: Groove, windows: SilenceWindow[]): Clips {
+  const { rng, params, bars, section, meta } = ctx;
   const clips: Clips = { kick: [], snare: [], clap: [], hat: [], openhat: [], perc: [] };
-  const energy = section.energy;
 
-  const useKick = trackActive(ctx, 'kick', 1.2);
-  const useSnare = trackActive(ctx, 'snare', 1.2);
-  const useClap = trackActive(ctx, 'clap', 1.1);
-  const useHat = trackActive(ctx, 'hat', 1.3);
-  const useOpen = trackActive(ctx, 'openhat', 0.6 + profile.openHat);
-  const usePerc = trackActive(ctx, 'perc', 0.6 + profile.perc);
+  const useKick = trackActive(ctx, 'kick', 1.15);
+  const useSnare = trackActive(ctx, 'snare', 1.15);
+  const useClap = trackActive(ctx, 'clap', params.clapChance + 0.35);
+  const useHat = trackActive(ctx, 'hat', 1.2);
+  const useOpen = trackActive(ctx, 'openhat', params.openHatChance + 0.35);
+  const usePerc = trackActive(ctx, 'perc', params.percChance + 0.2);
 
-  // Loop di due battute, come farebbe un producer.
-  const coreKick = [buildKickBar(ctx, energy), buildKickBar(ctx, energy)];
-  const halfTime = meta.bpm >= 126;
-  const backbeats = halfTime ? [8] : [4, 12];
+  // Sopra i 126 BPM il rullante sta sul terzo movimento: e' il feel half-time della trap.
+  const backbeats = meta.bpm >= 126 ? [8] : [4, 12];
   const hatRate = rng.weighted([
-    [4, profile.hatRateWeights[0]],
-    [2, profile.hatRateWeights[1]],
-    [1, profile.hatRateWeights[2]],
-    [1, profile.hatRateWeights[3] * 0.5],
+    [4, params.hatRateWeights[0]],
+    [2, params.hatRateWeights[1]],
+    [1, params.hatRateWeights[2]],
+    [1, params.hatRateWeights[3] * 0.6],
   ] as const);
 
   for (let bar = 0; bar < bars; bar++) {
     const barTick = bar * TICKS_PER_BAR;
     const isPhraseEnd = (bar + 1) % 4 === 0;
     const isLastBar = bar === bars - 1;
+    const grooveBar = bar % 2;
 
-    // --- KICK ---
+    // --- KICK: arriva dal groove condiviso con l'808 ---
     if (useKick) {
-      let steps = coreKick[bar % 2];
-      if (isPhraseEnd) steps = mutateSteps(ctx, steps, 0.45 + variation * 0.45);
-      else if (rng.chance(variation * 0.25)) steps = mutateSteps(ctx, steps, 0.3);
-      for (const s of steps) {
-        const accent = s === 0 ? 0.95 : s % 4 === 0 ? 0.8 : 0.62;
-        clips.kick!.push(note('kick', barTick + s * STEP, velocityFor(ctx, accent), STEP));
+      for (const step of groove.kick) {
+        if (Math.floor(step / STEPS_PER_BAR) !== grooveBar) continue;
+        const local = step % STEPS_PER_BAR;
+        const tick = barTick + local * STEP;
+        if (inSilence(windows, tick)) continue;
+        if (!rng.chance(section.drumDensity)) continue;
+        const accent = local === 0 ? 1 : local % 4 === 0 ? 0.82 : 0.68;
+        clips.kick!.push(note('kick', tick, velocityFor(ctx, accent), STEP));
+      }
+      // Piccola variazione a fine frase, una nota sola.
+      if (isPhraseEnd && rng.chance(params.variation * 0.5 + 0.15)) {
+        const extra = rng.pick([11, 14, 15]);
+        clips.kick!.push(note('kick', barTick + extra * STEP, velocityFor(ctx, 0.7), STEP));
       }
     }
 
-    // --- SNARE / CLAP ---
-    for (const s of backbeats) {
-      if (useSnare) clips.snare!.push(note('snare', barTick + s * STEP, velocityFor(ctx, 0.9), STEP));
-      if (useClap && rng.chance(0.85)) clips.clap!.push(note('clap', barTick + s * STEP, velocityFor(ctx, 0.82), STEP));
+    // --- SNARE / CLAP: semplici e solidi ---
+    for (const step of backbeats) {
+      const tick = barTick + step * STEP;
+      if (inSilence(windows, tick) && rng.chance(0.5)) continue;
+      if (useSnare) clips.snare!.push(note('snare', tick, velocityFor(ctx, 0.95), STEP));
+      if (useClap && rng.chance(params.clapChance)) {
+        clips.clap!.push(note('clap', tick, velocityFor(ctx, 0.85), STEP));
+      }
     }
-    if (useSnare && rng.chance(profile.snareGhost * (0.5 + variation))) {
+    if (useSnare && rng.chance(params.ghostSnare * section.drumDensity)) {
       const ghost = rng.pick([7, 11, 14, 15]);
-      clips.snare!.push(note('snare', barTick + ghost * STEP, velocityFor(ctx, 0.32), STEP / 2));
+      clips.snare!.push(note('snare', barTick + ghost * STEP, velocityFor(ctx, 0.3), STEP / 2));
     }
-    // Fill di fine frase: rullata di snare sull'ultimo movimento.
-    if (useSnare && section.fill && (isLastBar || (isPhraseEnd && rng.chance(0.35 + variation * 0.4)))) {
-      const div = rng.pick([3, 4, 6, 8]);
+
+    // --- FILL: solo dove serve una transizione ---
+    if (useSnare && section.fill && isLastBar && rng.chance(0.55 + params.variation * 0.35)) {
+      const div = rng.pick([3, 4, 6]);
       const start = barTick + 3 * PPQ;
       for (let i = 0; i < div; i++) {
         clips.snare!.push(
-          note('snare', start + (i * PPQ) / div, velocityFor(ctx, 0.4 + (i / div) * 0.5), PPQ / div / 1.5),
+          note('snare', start + (i * PPQ) / div, velocityFor(ctx, 0.42 + (i / div) * 0.5), PPQ / div / 1.6),
         );
       }
     }
 
-    // --- HAT ---
+    // --- HI-HAT ---
     if (useHat) {
-      const rate = rng.chance(variation * 0.4) ? Math.max(1, hatRate / 2) : hatRate;
-      clips.hat!.push(...buildHatBar(ctx, bar, isPhraseEnd || isLastBar, rate));
+      // Nelle strofe gli hat sono piu' semplici: il ritornello deve sembrare piu' pieno.
+      const sectionRate = Math.min(4, hatRate * section.hatRateScale);
+      const rate = isPhraseEnd && rng.chance(params.variation * 0.3) ? Math.max(1, sectionRate / 2) : sectionRate;
+      clips.hat!.push(...buildHats(ctx, bar, rate, isPhraseEnd || isLastBar, windows));
     }
 
-    // --- OPEN HAT ---
-    if (useOpen) {
-      const count = rng.chance(0.55 + profile.openHat * 0.4) ? 1 : 2;
-      for (let i = 0; i < count; i++) {
-        const s = rng.pick([2, 6, 7, 10, 14, 15]);
-        const t = barTick + s * STEP;
-        // L'open hat sostituisce il closed hat sullo stesso step.
-        clips.hat = clips.hat!.filter((n) => Math.abs(n.t - t) > STEP * 0.4);
-        clips.openhat!.push(note('openhat', t, velocityFor(ctx, 0.62), STEP * 1.6));
+    // --- OPEN HAT: uno ogni due battute basta ---
+    if (useOpen && grooveBar === 1 && rng.chance(0.65)) {
+      const step = rng.pick([6, 10, 14, 15]);
+      const tick = barTick + step * STEP;
+      if (!inSilence(windows, tick)) {
+        clips.hat = clips.hat!.filter((n) => Math.abs(n.t - tick) > STEP * 0.4);
+        clips.openhat!.push(note('openhat', tick, velocityFor(ctx, 0.6), STEP * 1.6));
       }
     }
 
-    // --- PERC ---
-    if (usePerc) {
-      const hits = rng.int(1, 2 + Math.round(variation * 2));
-      for (let i = 0; i < hits; i++) {
-        const s = rng.pick(PERC_STEPS);
-        clips.perc!.push(
-          note('perc', barTick + s * STEP, velocityFor(ctx, 0.45), STEP / 2, rng.chance(0.35) ? 1 : 0),
-        );
+    // --- PERCUSSION: con il contagocce ---
+    if (usePerc && rng.chance(params.percChance * section.drumDensity)) {
+      const step = rng.pick(PERC_STEPS);
+      const tick = barTick + step * STEP;
+      if (!inSilence(windows, tick)) {
+        clips.perc!.push(note('perc', tick, velocityFor(ctx, 0.45), STEP / 2, rng.chance(0.3) ? 1 : 0));
       }
     }
   }
@@ -193,7 +173,4 @@ export function generateDrums(ctx: GenContext): Clips {
   return clips;
 }
 
-/** Onset di kick (in tick) usati dall'808 per restare agganciato alla cassa. */
-export function kickOnsets(clips: Clips): number[] {
-  return (clips.kick ?? []).map((n) => n.t);
-}
+export { GROOVE_STEPS };

@@ -1,5 +1,6 @@
-import type { ChordDef, MoodId, ScaleId } from '../types';
+import type { ChordDef, ChordQuality, MoodId, ScaleId } from '../types';
 import { SCALES, diatonicQuality, romanFor } from './theory';
+import type { GenParams } from './params';
 import type { Rng } from './rng';
 
 export interface ProgressionTemplate {
@@ -21,6 +22,17 @@ export interface ProgressionTemplate {
  * in minore naturale il grado 6 e' gia' il VII maggiore, il 5 il VI, ecc.
  */
 export const PROGRESSIONS: ProgressionTemplate[] = [
+  // --- Progressioni minimali: due o tre accordi, il linguaggio della trap moderna ---
+  { id: 'i-VI', degrees: [0, 5], bars: [2, 2], moods: ['hard', 'dark', 'street', 'melodic'], minorish: true, weight: 4 },
+  { id: 'i-VII-min', degrees: [0, 6], bars: [2, 2], moods: ['hard', 'dark', 'street', 'aggressive'], minorish: true, weight: 4 },
+  { id: 'i-iv-min', degrees: [0, 3], bars: [2, 2], moods: ['hard', 'ominous', 'dark'], minorish: true, weight: 3 },
+  { id: 'i-III-min', degrees: [0, 2], bars: [2, 2], moods: ['melodic', 'dark', 'luxury'], minorish: true, weight: 2.5 },
+  { id: 'i-hold', degrees: [0], bars: [4], moods: ['hard', 'aggressive', 'street', 'ambient'], minorish: true, weight: 3 },
+  { id: 'i-VI-VII-min', degrees: [0, 5, 6], bars: [2, 1, 1], moods: ['hard', 'dark', 'energetic'], minorish: true, weight: 3 },
+  { id: 'i-VII-VI-min', degrees: [0, 6, 5], bars: [2, 1, 1], moods: ['dark', 'street', 'emotional'], minorish: true, weight: 3 },
+  { id: 'VI-i', degrees: [5, 0], bars: [2, 2], moods: ['dark', 'sad', 'emotional'], minorish: true, weight: 2.5 },
+  { id: 'i-v-min', degrees: [0, 4], bars: [2, 2], moods: ['ominous', 'hard', 'dark'], minorish: true, weight: 2 },
+  { id: 'i-ii-min', degrees: [0, 1], bars: [2, 2], moods: ['ominous', 'futuristic', 'dark'], minorish: true, weight: 1.8 },
   { id: 'i-VI-III-VII', degrees: [0, 5, 2, 6], moods: ['dark', 'melodic', 'sad', 'street', 'emotional'], minorish: true, weight: 3 },
   { id: 'i-VII-VI-VII', degrees: [0, 6, 5, 6], moods: ['dark', 'street', 'aggressive', 'energetic'], minorish: true, weight: 3 },
   { id: 'i-iv-VI-v', degrees: [0, 3, 5, 4], moods: ['sad', 'emotional', 'melodic'], minorish: true, weight: 2 },
@@ -53,37 +65,61 @@ export const PROGRESSIONS: ProgressionTemplate[] = [
   { id: 'I-vamp', degrees: [0], bars: [4], moods: ['ambient', 'atmospheric'], minorish: false, weight: 1 },
 ];
 
-/** Estrae una progressione coerente con scala e mood, applicando le estensioni. */
+/**
+ * Sceglie la progressione.
+ *
+ * Regola del nuovo motore: pochi accordi. Con hardness alta si resta su due
+ * accordi e voicing spogli, con darkness alta entrano settime, sus e add9.
+ */
 export function pickProgression(
   rng: Rng,
   scaleId: ScaleId,
   moods: MoodId[],
-  extensionChance: number,
+  params: Pick<GenParams, 'hardness' | 'darkness' | 'chordCount' | 'chordExtensions'>,
 ): ChordDef[] {
   const scale = SCALES[scaleId];
   const degreesAvailable = scale.steps.length;
+  const [minChords, maxChords] = params.chordCount;
+
   const candidates = PROGRESSIONS.filter((p) => {
     if (p.minorish !== scale.minorish) return false;
-    return p.degrees.every((d) => d < degreesAvailable);
+    if (!p.degrees.every((d) => d < degreesAvailable)) return false;
+    return p.degrees.length <= maxChords + 1;
   });
 
-  const pool = candidates.length ? candidates : PROGRESSIONS.filter((p) => p.degrees.every((d) => d < degreesAvailable));
+  const pool = candidates.length
+    ? candidates
+    : PROGRESSIONS.filter((p) => p.degrees.every((d) => d < degreesAvailable));
+
   const weighted = pool.map((p) => {
     const affinity = p.moods.filter((m) => moods.includes(m)).length;
-    return [p, (p.weight ?? 1) * (1 + affinity * 2)] as const;
+    // Meno accordi ci sono, piu' sono adatti a questo stile.
+    const sizeFit = p.degrees.length <= maxChords ? 1.6 : 0.5;
+    const shortBonus = p.degrees.length <= minChords ? 1 + params.hardness : 1;
+    return [p, (p.weight ?? 1) * (1 + affinity * 2) * sizeFit * shortBonus] as const;
   });
 
   const template = rng.weighted(weighted);
+
   return template.degrees.map((degree, i) => {
-    const useSeventh = rng.chance(extensionChance);
-    let quality = diatonicQuality(scaleId, degree, useSeventh);
-    // Le triadi diminuite in posizione forte suonano male: le addolciamo.
-    if (quality === 'dim' && rng.chance(0.6)) quality = 'min';
-    if (useSeventh && rng.chance(extensionChance * 0.45)) {
-      if (quality === 'min7') quality = 'min9';
-      else if (quality === 'maj7') quality = 'maj9';
+    let quality: ChordQuality = diatonicQuality(scaleId, degree, false);
+    // Le diminuite non appartengono a questo linguaggio.
+    if (quality === 'dim' || quality === 'aug') quality = 'min';
+
+    const colour = rng.next();
+    if (params.hardness > 0.6 && colour < 0.3) {
+      quality = 'power';
+    } else if (colour < params.chordExtensions) {
+      const seventh = diatonicQuality(scaleId, degree, true);
+      quality = rng.weighted([
+        [seventh, 3],
+        ['sus2' as ChordQuality, 1.5 + params.darkness],
+        ['sus4' as ChordQuality, 1 + params.darkness],
+        ['add9' as ChordQuality, quality === 'min' ? 1.5 + params.darkness * 1.5 : 0],
+      ] as const);
+      if (quality === 'dim' || quality === 'aug' || quality === 'halfdim7') quality = 'min7';
     }
-    if (rng.chance(0.06)) quality = rng.pick(['sus2', 'sus4'] as const);
+
     return {
       degree,
       quality,

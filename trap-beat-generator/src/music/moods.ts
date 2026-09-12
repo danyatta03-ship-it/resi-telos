@@ -69,9 +69,30 @@ export interface MoodProfile {
   velocitySpread: number;
   /** 0-1: swing applicato in playback/export. */
   swing: number;
+
+  // --- Assi del motore (0-100) ---
+  /** Cattiveria: kick, 808, velocity, sincopi. */
+  hardness: number;
+  /** Cupezza: scale, intervalli, registro, tensione armonica. */
+  darkness: number;
+  /** Quanto silenzio lascia il beat. */
+  space: number;
+  /** 0-1: quanto il motivo deve risultare immediato e ripetuto. */
+  catchiness: number;
 }
 
 export const MOODS: Record<MoodId, MoodProfile> = {
+  hard: {
+    id: 'hard', label: 'Hard', blurb: 'Impatto subito: 808 pesante, kick bouncy, poche note', accent: '#ff4d4d',
+    scales: [['minorPentatonic', 4], ['minor', 3], ['phrygian', 2], ['harmonicMinor', 1]],
+    bpmRange: [135, 150],
+    kickDensity: 0.62, snareGhost: 0.22, hatRateWeights: [0, 2, 4, 1], hatRolls: 0.45, openHat: 0.4, perc: 0.25,
+    syncopation: 0.8, bassDensity: 0.45, slide: 0.3, octaveJump: 0.45, bassSustain: 0.45,
+    melodyOctave: 5, melodyDensity: 0.35, rest: 0.5, leap: 0.35, motifRepeat: 0.85, melodySustain: 0.45,
+    extensions: 0.2, chordStyleWeights: [3, 2, 1], pad: 0.35, lead: 0.4, counter: 0.2,
+    velocity: 108, velocitySpread: 16, swing: 0.01,
+    hardness: 90, darkness: 65, space: 55, catchiness: 0.9,
+  },
   dark: {
     id: 'dark', label: 'Dark', blurb: 'Minore cupo, 808 pesante, hat serrati', accent: '#8b5cf6',
     scales: [['minor', 4], ['phrygian', 3], ['harmonicMinor', 2], ['minorPentatonic', 1]],
@@ -81,6 +102,7 @@ export const MOODS: Record<MoodId, MoodProfile> = {
     melodyOctave: 5, melodyDensity: 0.45, rest: 0.4, leap: 0.35, motifRepeat: 0.6, melodySustain: 0.55,
     extensions: 0.35, chordStyleWeights: [3, 2, 2], pad: 0.6, lead: 0.25, counter: 0.4,
     velocity: 96, velocitySpread: 22, swing: 0.04,
+    hardness: 70, darkness: 90, space: 55, catchiness: 0.8,
   },
   aggressive: {
     id: 'aggressive', label: 'Aggressive', blurb: 'Kick fitti, 808 in movimento, hat intensi', accent: '#ff6b35',
@@ -91,6 +113,7 @@ export const MOODS: Record<MoodId, MoodProfile> = {
     melodyOctave: 5, melodyDensity: 0.6, rest: 0.25, leap: 0.5, motifRepeat: 0.7, melodySustain: 0.3,
     extensions: 0.2, chordStyleWeights: [1, 4, 2], pad: 0.3, lead: 0.45, counter: 0.35,
     velocity: 108, velocitySpread: 18, swing: 0,
+    hardness: 95, darkness: 60, space: 35, catchiness: 0.75,
   },
   melodic: {
     id: 'melodic', label: 'Melodic', blurb: 'Melodie cantabili e armonie ricche', accent: '#5ab0ff',
@@ -101,6 +124,7 @@ export const MOODS: Record<MoodId, MoodProfile> = {
     melodyOctave: 5, melodyDensity: 0.6, rest: 0.3, leap: 0.3, motifRepeat: 0.55, melodySustain: 0.6,
     extensions: 0.55, chordStyleWeights: [3, 1, 3], pad: 0.65, lead: 0.4, counter: 0.6,
     velocity: 94, velocitySpread: 20, swing: 0.05,
+    hardness: 55, darkness: 55, space: 45, catchiness: 0.95,
   },
   sad: {
     id: 'sad', label: 'Sad', blurb: 'Minore malinconico, tanto spazio, velocity morbide', accent: '#6ee7ff',
@@ -111,6 +135,7 @@ export const MOODS: Record<MoodId, MoodProfile> = {
     melodyOctave: 5, melodyDensity: 0.4, rest: 0.55, leap: 0.2, motifRepeat: 0.65, melodySustain: 0.8,
     extensions: 0.5, chordStyleWeights: [4, 0, 2], pad: 0.8, lead: 0.15, counter: 0.35,
     velocity: 78, velocitySpread: 16, swing: 0.06,
+    hardness: 35, darkness: 85, space: 65, catchiness: 0.8,
   },
   emotional: {
     id: 'emotional', label: 'Emotional', blurb: 'Accordi espressivi, dinamiche ampie', accent: '#f472b6',
@@ -121,6 +146,7 @@ export const MOODS: Record<MoodId, MoodProfile> = {
     melodyOctave: 5, melodyDensity: 0.5, rest: 0.45, leap: 0.3, motifRepeat: 0.5, melodySustain: 0.75,
     extensions: 0.65, chordStyleWeights: [4, 1, 3], pad: 0.8, lead: 0.3, counter: 0.55,
     velocity: 86, velocitySpread: 26, swing: 0.05,
+    hardness: 45, darkness: 75, space: 55, catchiness: 0.85,
   },
   chill: {
     id: 'chill', label: 'Chill', blurb: 'Pattern semplici, meno kick, tanto respiro', accent: '#39dfa0',
@@ -131,6 +157,7 @@ export const MOODS: Record<MoodId, MoodProfile> = {
     melodyOctave: 5, melodyDensity: 0.38, rest: 0.55, leap: 0.2, motifRepeat: 0.6, melodySustain: 0.75,
     extensions: 0.6, chordStyleWeights: [4, 1, 2], pad: 0.7, lead: 0.2, counter: 0.4,
     velocity: 74, velocitySpread: 14, swing: 0.1,
+    hardness: 25, darkness: 45, space: 80, catchiness: 0.8,
   },
   atmospheric: {
     id: 'atmospheric', label: 'Atmospheric', blurb: 'Pad in primo piano, note lunghe, poche percussioni', accent: '#7df0c2',
@@ -141,6 +168,7 @@ export const MOODS: Record<MoodId, MoodProfile> = {
     melodyOctave: 6, melodyDensity: 0.32, rest: 0.6, leap: 0.25, motifRepeat: 0.5, melodySustain: 0.9,
     extensions: 0.6, chordStyleWeights: [5, 0, 2], pad: 0.95, lead: 0.2, counter: 0.3,
     velocity: 72, velocitySpread: 18, swing: 0.03,
+    hardness: 35, darkness: 75, space: 80, catchiness: 0.7,
   },
   energetic: {
     id: 'energetic', label: 'Energetic', blurb: 'Groove spinto, fill frequenti, hat brillanti', accent: '#ffd166',
@@ -151,6 +179,7 @@ export const MOODS: Record<MoodId, MoodProfile> = {
     melodyOctave: 5, melodyDensity: 0.6, rest: 0.28, leap: 0.4, motifRepeat: 0.6, melodySustain: 0.4,
     extensions: 0.35, chordStyleWeights: [2, 3, 3], pad: 0.45, lead: 0.5, counter: 0.5,
     velocity: 104, velocitySpread: 18, swing: 0.02,
+    hardness: 80, darkness: 45, space: 35, catchiness: 0.8,
   },
   street: {
     id: 'street', label: 'Street', blurb: 'Trap classico, 808 secco, groove diretto', accent: '#ff9d6b',
@@ -161,6 +190,7 @@ export const MOODS: Record<MoodId, MoodProfile> = {
     melodyOctave: 5, melodyDensity: 0.45, rest: 0.4, leap: 0.35, motifRepeat: 0.75, melodySustain: 0.4,
     extensions: 0.2, chordStyleWeights: [2, 3, 2], pad: 0.35, lead: 0.35, counter: 0.3,
     velocity: 100, velocitySpread: 20, swing: 0.03,
+    hardness: 80, darkness: 70, space: 50, catchiness: 0.9,
   },
   ominous: {
     id: 'ominous', label: 'Ominous', blurb: 'Tensione, dissonanze controllate, spazi vuoti', accent: '#b18cff',
@@ -171,6 +201,7 @@ export const MOODS: Record<MoodId, MoodProfile> = {
     melodyOctave: 5, melodyDensity: 0.35, rest: 0.55, leap: 0.4, motifRepeat: 0.55, melodySustain: 0.7,
     extensions: 0.45, chordStyleWeights: [4, 1, 2], pad: 0.75, lead: 0.2, counter: 0.35,
     velocity: 88, velocitySpread: 24, swing: 0.02,
+    hardness: 60, darkness: 95, space: 65, catchiness: 0.7,
   },
   futuristic: {
     id: 'futuristic', label: 'Futuristic', blurb: 'Intervalli inusuali, ritmi non convenzionali', accent: '#4dd0e1',
@@ -181,6 +212,7 @@ export const MOODS: Record<MoodId, MoodProfile> = {
     melodyOctave: 6, melodyDensity: 0.5, rest: 0.4, leap: 0.55, motifRepeat: 0.4, melodySustain: 0.45,
     extensions: 0.7, chordStyleWeights: [2, 2, 4], pad: 0.7, lead: 0.55, counter: 0.5,
     velocity: 92, velocitySpread: 22, swing: 0,
+    hardness: 70, darkness: 60, space: 50, catchiness: 0.75,
   },
   luxury: {
     id: 'luxury', label: 'Luxury', blurb: 'Armonie eleganti, groove pulito, arpeggi', accent: '#ffb347',
@@ -191,6 +223,7 @@ export const MOODS: Record<MoodId, MoodProfile> = {
     melodyOctave: 6, melodyDensity: 0.55, rest: 0.35, leap: 0.3, motifRepeat: 0.5, melodySustain: 0.55,
     extensions: 0.75, chordStyleWeights: [2, 1, 4], pad: 0.6, lead: 0.45, counter: 0.6,
     velocity: 90, velocitySpread: 18, swing: 0.06,
+    hardness: 50, darkness: 50, space: 50, catchiness: 0.85,
   },
   ambient: {
     id: 'ambient', label: 'Ambient', blurb: 'Quasi solo texture, drum minimali', accent: '#8c98b6',
@@ -201,6 +234,7 @@ export const MOODS: Record<MoodId, MoodProfile> = {
     melodyOctave: 6, melodyDensity: 0.28, rest: 0.7, leap: 0.2, motifRepeat: 0.45, melodySustain: 0.95,
     extensions: 0.65, chordStyleWeights: [5, 0, 2], pad: 1, lead: 0.15, counter: 0.25,
     velocity: 66, velocitySpread: 14, swing: 0.05,
+    hardness: 15, darkness: 60, space: 95, catchiness: 0.6,
   },
 };
 
@@ -215,6 +249,7 @@ const NUMERIC_FIELDS: NumericKeys[] = [
   'bassDensity', 'slide', 'octaveJump', 'bassSustain',
   'melodyOctave', 'melodyDensity', 'rest', 'leap', 'motifRepeat', 'melodySustain',
   'extensions', 'pad', 'lead', 'counter', 'velocity', 'velocitySpread', 'swing',
+  'hardness', 'darkness', 'space', 'catchiness',
 ];
 
 /** Fonde uno o due mood in un unico profilo usato dal generatore. */

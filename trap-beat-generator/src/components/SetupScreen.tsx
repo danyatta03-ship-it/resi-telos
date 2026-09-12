@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { MoodId } from '../types';
-import { MOOD_LIST, MOODS } from '../music/moods';
+import { MOOD_LIST, MOODS, blendMoods } from '../music/moods';
 import { useBeatStore } from '../store/useBeatStore';
 import { readAutosave } from '../store/persistence';
+import { normalizeBeat } from '../generator';
 import type { Beat } from '../types';
 import { Slider } from './ui/Slider';
 
@@ -20,8 +21,10 @@ export function SetupScreen() {
   const [moods, setMoods] = useState<MoodId[]>([]);
   const [bpm, setBpm] = useState(140);
   const [bpmTouched, setBpmTouched] = useState(false);
-  const [variation, setVariation] = useState(50);
-  const [humanize, setHumanize] = useState(35);
+  const [variation, setVariation] = useState(45);
+  const [humanize, setHumanize] = useState(28);
+  const [axes, setAxes] = useState({ hardness: 80, darkness: 70, space: 55 });
+  const [axesTouched, setAxesTouched] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
@@ -37,6 +40,17 @@ export function SetupScreen() {
     const high = ranges.reduce((s, r) => s + r[1], 0) / ranges.length;
     setBpm(Math.round((low + high) / 2));
   }, [moods, bpmTouched]);
+
+  // Gli assi seguono il mood scelto finche' non li tocca l'utente.
+  useEffect(() => {
+    if (axesTouched || moods.length === 0) return;
+    const blended = blendMoods(moods);
+    setAxes({
+      hardness: Math.round(blended.hardness),
+      darkness: Math.round(blended.darkness),
+      space: Math.round(blended.space),
+    });
+  }, [moods, axesTouched]);
 
   const toggleMood = (id: MoodId) => {
     setMoods((current) => {
@@ -57,7 +71,7 @@ export function SetupScreen() {
             Sessione precedente: <span className="text-slate-100">{lastSession.name}</span>
             <span className="ml-2 font-mono text-[11px] text-ink-400">{lastSession.meta.bpm} BPM</span>
           </span>
-          <button className="btn btn-xs" onClick={() => adoptBeat(lastSession)}>
+          <button className="btn btn-xs" onClick={() => adoptBeat(normalizeBeat(lastSession))}>
             Riprendi
           </button>
         </div>
@@ -173,6 +187,46 @@ export function SetupScreen() {
           </button>
 
           {showAdvanced ? (
+            <>
+            <div className="mt-3 grid gap-4 sm:grid-cols-3">
+              <Slider
+                label="Hardness"
+                value={axes.hardness}
+                min={0}
+                max={100}
+                unit="%"
+                hint="cattiveria di kick e 808"
+                onChange={(v) => {
+                  setAxesTouched(true);
+                  setAxes((a) => ({ ...a, hardness: v }));
+                }}
+              />
+              <Slider
+                label="Darkness"
+                value={axes.darkness}
+                min={0}
+                max={100}
+                unit="%"
+                hint="scale e atmosfera piu' cupe"
+                onChange={(v) => {
+                  setAxesTouched(true);
+                  setAxes((a) => ({ ...a, darkness: v }));
+                }}
+              />
+              <Slider
+                label="Space"
+                value={axes.space}
+                min={0}
+                max={100}
+                unit="%"
+                hint="quanto silenzio lasciare"
+                onChange={(v) => {
+                  setAxesTouched(true);
+                  setAxes((a) => ({ ...a, space: v }));
+                }}
+              />
+            </div>
+
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               <Slider
                 label="Variation"
@@ -193,6 +247,7 @@ export function SetupScreen() {
                 onChange={setHumanize}
               />
             </div>
+            </>
           ) : null}
         </div>
       </section>
@@ -212,7 +267,7 @@ export function SetupScreen() {
           <button
             className="btn btn-primary w-full px-8 py-3 text-base font-semibold tracking-wide sm:w-auto"
             disabled={!ready}
-            onClick={() => generate({ moods, bpm, variation, humanize })}
+            onClick={() => generate({ moods, bpm, variation, humanize, ...axes })}
           >
             GENERATE BEAT
           </button>

@@ -40,6 +40,8 @@ export const CHORD_FORMULAS: Record<ChordQuality, number[]> = {
   sus4: [0, 5, 7],
   min6: [0, 3, 7, 9],
   halfdim7: [0, 3, 6, 10],
+  add9: [0, 3, 7, 14],
+  power: [0, 7, 12],
 };
 
 export const CHORD_LABEL: Record<ChordQuality, string> = {
@@ -56,6 +58,8 @@ export const CHORD_LABEL: Record<ChordQuality, string> = {
   sus4: 'sus4',
   min6: 'm6',
   halfdim7: 'm7b5',
+  add9: 'madd9',
+  power: '5',
 };
 
 export function pitchClass(midi: number): number {
@@ -101,8 +105,35 @@ export function snapToScale(midi: number, rootPc: number, scaleId: ScaleId): num
   return midi;
 }
 
+/**
+ * Qualita' dell'accordo sul grado indicato, per scale con meno di sette note.
+ *
+ * Su una pentatonica impilare "terze" per indice non da' triadi: il grado 2
+ * dista una quarta, non una terza. Qui l'accordo viene dedotto dalla distanza
+ * in semitoni dalla tonica, usando il repertorio della tonalita' minore o maggiore.
+ */
+function qualityFromSemitones(offset: number, minorish: boolean, seventh: boolean): ChordQuality {
+  const pc = ((offset % 12) + 12) % 12;
+  const minorMap: Record<number, ChordQuality> = {
+    0: 'min', 1: 'maj', 2: 'dim', 3: 'maj', 4: 'min', 5: 'min', 6: 'dim', 7: 'min', 8: 'maj', 9: 'min', 10: 'maj', 11: 'dim',
+  };
+  const majorMap: Record<number, ChordQuality> = {
+    0: 'maj', 1: 'maj', 2: 'min', 3: 'maj', 4: 'min', 5: 'maj', 6: 'dim', 7: 'maj', 8: 'maj', 9: 'min', 10: 'maj', 11: 'dim',
+  };
+  const triad = (minorish ? minorMap : majorMap)[pc] ?? (minorish ? 'min' : 'maj');
+  if (!seventh) return triad;
+  if (triad === 'min') return 'min7';
+  if (triad === 'maj') return pc === 7 && !minorish ? 'dom7' : 'maj7';
+  return 'halfdim7';
+}
+
 /** Qualita' diatonica della triade costruita sul grado indicato. */
 export function diatonicQuality(scaleId: ScaleId, degree: number, seventh = false): ChordQuality {
+  const scale = SCALES[scaleId];
+  if (scale.steps.length < 7) {
+    const offset = scalePitch(0, scaleId, degree);
+    return qualityFromSemitones(offset, scale.minorish, seventh);
+  }
   const root = scalePitch(0, scaleId, degree);
   const third = scalePitch(0, scaleId, degree + 2) - root;
   const fifth = scalePitch(0, scaleId, degree + 4) - root;
@@ -127,12 +158,17 @@ export function diatonicQuality(scaleId: ScaleId, degree: number, seventh = fals
 }
 
 const ROMAN_UPPER = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+/** Numerali per distanza in semitoni, usati sulle scale con meno di sette note. */
+const ROMAN_BY_SEMITONE = ['I', 'bII', 'II', 'bIII', 'III', 'IV', 'bV', 'V', 'bVI', 'VI', 'bVII', 'VII'];
 
 export function romanFor(scaleId: ScaleId, degree: number, quality: ChordQuality): string {
-  const len = SCALES[scaleId].steps.length;
+  const scale = SCALES[scaleId];
+  const len = scale.steps.length;
   const idx = ((degree % len) + len) % len;
-  const base = ROMAN_UPPER[Math.min(idx, 6)];
-  const minorish = quality === 'min' || quality === 'min7' || quality === 'min9' || quality === 'min6';
+  const base =
+    len < 7 ? ROMAN_BY_SEMITONE[((scalePitch(0, scaleId, degree) % 12) + 12) % 12] : ROMAN_UPPER[Math.min(idx, 6)];
+  const minorish =
+    quality === 'min' || quality === 'min7' || quality === 'min9' || quality === 'min6' || quality === 'add9';
   const dim = quality === 'dim' || quality === 'halfdim7';
   let roman = minorish || dim ? base.toLowerCase() : base;
   if (dim) roman += '°';
@@ -141,6 +177,8 @@ export function romanFor(scaleId: ScaleId, degree: number, quality: ChordQuality
   if (quality === 'min7' || quality === 'min9') roman += '7';
   if (quality === 'sus2') roman += 'sus2';
   if (quality === 'sus4') roman += 'sus4';
+  if (quality === 'add9') roman += 'add9';
+  if (quality === 'power') roman += '5';
   return roman;
 }
 

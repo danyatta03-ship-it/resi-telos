@@ -1,6 +1,12 @@
 import * as Tone from 'tone';
 import type { TrackId } from '../types';
 
+/** Come hardness e darkness modellano i timbri. */
+export interface ToneShape {
+  hardness: number;
+  darkness: number;
+}
+
 export interface Voice {
   /** Uscita audio della voce, gia' collegata al canale del mixer. */
   output: Tone.ToneAudioNode;
@@ -9,6 +15,8 @@ export interface Voice {
    * @param slideToFreq se presente, la voce scivola verso questa frequenza (808).
    */
   trigger(time: number, pitch: number, durationSec: number, velocity: number, slideToFreq?: number): void;
+  /** Adatta il timbro agli assi del beat. */
+  shape?(tone: ToneShape): void;
   dispose(): void;
 }
 
@@ -77,6 +85,12 @@ function kickVoice(): Voice {
     output: drive,
     trigger(time, _pitch, _dur, velocity) {
       synth.triggerAttackRelease('C1', 0.32, guard(time), velocity);
+    },
+    shape({ hardness }) {
+      // Piu' e' hard, piu' la cassa e' spinta e corta.
+      drive.distortion = 0.08 + hardness * 0.3;
+      synth.envelope.decay = 0.42 - hardness * 0.12;
+      synth.set({ pitchDecay: 0.05 - hardness * 0.018 });
     },
     dispose() {
       synth.dispose();
@@ -213,6 +227,12 @@ function bass808Voice(): Voice {
         synth.frequency.exponentialRampToValueAtTime(slideToFreq, at + durationSec * 0.99);
       }
     },
+    shape({ hardness, darkness }) {
+      // 808 hard: piu' saturo e con piu' armoniche; dark: piu' rotondo e lungo.
+      shaper.distortion = 0.1 + hardness * 0.32;
+      tone.frequency.value = 1800 + hardness * 2600 - darkness * 400;
+      synth.envelope.release = 0.22 + darkness * 0.3;
+    },
     dispose() {
       synth.dispose();
       tone.dispose();
@@ -222,7 +242,12 @@ function bass808Voice(): Voice {
   };
 }
 
-function polyVoice(create: () => Tone.PolySynth, postGain = 1, maxPolyphony = 8): Voice {
+function polyVoice(
+  create: () => Tone.PolySynth,
+  postGain = 1,
+  maxPolyphony = 8,
+  shape?: (set: (options: Record<string, unknown>) => void, tone: ToneShape) => void,
+): Voice {
   const out = new Tone.Gain(postGain);
   const synth = create().connect(out);
   // Poche voci tengono basso il numero di oscillatori sempre attivi:
@@ -239,6 +264,9 @@ function polyVoice(create: () => Tone.PolySynth, postGain = 1, maxPolyphony = 8)
       lastByPitch.set(pitch, at);
       synth.triggerAttackRelease(mtof(pitch), Math.max(0.05, durationSec), at, velocity);
     },
+    shape: shape
+      ? (tone) => shape((options) => (synth as unknown as { set: (o: unknown) => void }).set(options), tone)
+      : undefined,
     dispose() {
       synth.dispose();
       out.dispose();
@@ -267,6 +295,19 @@ const VOICE_FACTORIES: Record<TrackId, () => Voice> = {
         }),
       0.9,
       10,
+      (set, { hardness, darkness }) => {
+        // Hard: pluck metallico e corto. Dark: campana piu' lunga e sorda.
+        set({
+          harmonicity: 2 + hardness * 1.6,
+          modulationIndex: 3 + hardness * 7,
+          envelope: {
+            attack: 0.004,
+            decay: 0.95 - hardness * 0.45 + darkness * 0.25,
+            sustain: 0.05,
+            release: 0.7 + darkness * 0.6,
+          },
+        });
+      },
     ),
   counter: () =>
     polyVoice(
@@ -300,6 +341,11 @@ const VOICE_FACTORIES: Record<TrackId, () => Voice> = {
         }),
       0.5,
       14,
+      (set, { darkness }) => {
+        set({
+          envelope: { attack: 0.5 + darkness * 0.7, decay: 1.2, sustain: 0.7, release: 1.6 + darkness * 1.4 },
+        });
+      },
     ),
   lead: () =>
     polyVoice(
@@ -317,6 +363,8 @@ export interface InstrumentRack {
   strips: Record<TrackId, ChannelStrip>;
   master: Tone.Volume;
   analyser: Tone.Analyser;
+  /** Adatta tutti i timbri agli assi del beat. */
+  applyTone(tone: ToneShape): void;
   /** Risolve quando il riverbero ha generato la sua risposta all'impulso. */
   ready: Promise<void>;
   dispose(): void;
@@ -368,6 +416,11 @@ export function createRack(destination: Tone.InputNode, masterDb = -4): Instrume
     strips,
     master,
     analyser,
+    applyTone(tone: ToneShape) {
+      for (const strip of Object.values(strips)) strip.voice.shape?.(tone);
+      // Il riverbero segue la cupezza: piu' scuro, piu' coda.
+      reverb.decay = 1.6 + tone.darkness * 2.2;
+    },
     ready: reverb.ready,
     dispose() {
       for (const strip of Object.values(strips)) {

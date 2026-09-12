@@ -75,6 +75,10 @@ export async function renderWav(
         transport.bpm.value = bpm;
 
         const rack = createRack(Tone.getDestination(), beat.masterVolume);
+        rack.applyTone({
+          hardness: (beat.meta.hardness ?? 70) / 100,
+          darkness: (beat.meta.darkness ?? 70) / 100,
+        });
         for (const [id, state] of Object.entries(beat.mixer)) {
           const strip = rack.strips[id as keyof typeof rack.strips];
           if (!strip) continue;

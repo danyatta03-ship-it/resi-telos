@@ -113,33 +113,69 @@ sezione selezionata.
 
 ## Come funziona il motore musicale
 
+Il motore segue una grammatica precisa, ispirata alla trap italiana moderna nella sua
+variante hard, dark e minimale: **una sola idea forte, 808 protagonista, drum con bounce,
+e spazio**. Non imita nessun brano: applica le regole comuni di quel linguaggio.
+
 ```
 src/
-  music/       teoria: scale, accordi, voice leading, progressioni, mood profile, RNG con seed
-  generator/   struttura, drum, 808, melodie (motif engine), armonia, humanize
-  audio/       strumenti Tone.js, schedule, transport, rendering WAV offline
-  midi/        writer SMF formato 1 + bundle ZIP e beat-info
-  store/       stato globale (zustand) e persistenza IndexedDB
-  components/  interfaccia (timeline, step sequencer, piano roll, mixer, export)
+  music/       teoria, scale, accordi, progressioni minimali, profili dei mood, parametri
+  generator/   identita' del beat, groove condiviso, melodia con punteggio, drum, 808, armonia
+  audio/       strumenti Tone.js (timbri legati agli assi), schedule, transport, rendering WAV
+  midi/ flp/   export MIDI e progetto FL Studio
+  store/       stato globale e persistenza
+  components/  interfaccia
 ```
 
-- **Tonalita' e scala** vengono sorteggiate fra quelle compatibili con il mood
-  (minore naturale, armonica, melodica, dorica, frigia, pentatoniche, lidia, esatonale, hirajoshi).
-- **Progressione**: database di oltre 25 progressioni con affinita' per mood, con settime ed
-  estensioni applicate in modo probabilistico.
-- **Drum**: loop di due battute con variazioni a fine frase, roll di hi-hat (1/32, terzine,
-  sestine), ghost snare, fill, backbeat in half-time sopra i 126 BPM.
-- **808**: segue la cassa e la progressione, usa fondamentale, quinta, terza e settima
-  dell'accordo, con slide, salti di ottava e durate legate al mood.
-- **Melodia**: motivo generato da celle ritmiche trap e contorno melodico, poi sviluppato in
-  varianti (A - A' - B - A''): trasposizione, inversione, ornamentazione, spostamento ritmico.
-- **Armonia**: voicing con voice leading fra un accordo e il successivo, in stile sustain,
-  stab o arpeggio; il pad usa un voicing piu' largo.
-- **Variation** agisce sulle prossime generazioni (densita', fill, complessita' ritmica),
-  **Humanize** agisce subito su playback ed export (timing, velocity, durate).
-- Ogni beat ha un **seed**: con lo stesso seed la generazione e' identica.
+### I tre assi
 
----
+Oltre a Variation e Humanize il beat ha tre parametri, impostati dal mood e modificabili
+dai cursori nel pannello Generatore:
+
+| Asse | Cosa muove |
+| --- | --- |
+| **Hardness** | densita' e aggressivita' di cassa e 808, velocity, sincopi, timbri piu' saturi |
+| **Darkness** | scelta della scala, registro, tensione armonica, presenza di pad e atmosfera |
+| **Space** | quanto silenzio entra nel groove: finestre in cui gli strumenti tacciono insieme |
+
+Hard e Dark restano due cose diverse: un beat puo' essere durissimo e luminoso, cupo e
+rarefatto, oppure entrambe le cose (il territorio piu' vicino al target).
+
+### Le regole principali
+
+- **Una sola idea.** Il motivo melodico e il groove nascono una volta per tutto il beat.
+  Le sezioni ne cambiano la densita', non il materiale: l'hook e' la stessa frase con piu'
+  impatto, non un altro pezzo.
+- **Melodia valutata, non casuale.** Ogni motivo candidato riceve un punteggio di
+  catchiness, complessita' e groove (ripetizione, auto-somiglianza fra le battute, pause,
+  numero di suoni diversi, scale suonate di fila). Se il risultato e' troppo complicato o
+  sembra una scala a caso, viene rigenerato, fino a sedici tentativi.
+- **808 e cassa nascono insieme.** Un unico groove decide dove appoggia il basso e come la
+  cassa gli gira intorno: insieme, in anticipo, in risposta o in silenzio.
+- **Poche note.** Tavolozza di 3-5 suoni per la melodia, due o tre accordi, 808 fra una e
+  tre note per battuta.
+- **Il silenzio e' scritto.** Finestre condivise in cui batteria, 808 e a volte la melodia
+  tacciono insieme, e una transizione che svuota l'ultima battuta prima dell'hook.
+- **Passaggio di minimalismo.** Se una sezione supera la densita' prevista, il generatore
+  toglie elementi invece di aggiungerne: prima percussioni, counter melody e lead, poi,
+  a seconda del carattere, il tappeto armonico o gli hi-hat.
+- **Counter melody e lead solo se servono.** Probabilita' bassa, poche note, registro diverso.
+- **Seed.** Stessi mood, BPM e seed producono lo stesso beat. Melodia e groove hanno un seed
+  proprio, cosi' Rigenera Melody non tocca le drum e viceversa.
+
+### Numeri misurati dai test
+
+Media su decine di beat generati (`npm test` stampa la tabella completa):
+
+| Misura | Hard | Dark | Chill |
+| --- | --- | --- | --- |
+| Note di melodia per battuta | 2,4 | 2,5 | 2,3 |
+| Suoni diversi nel motivo | 2-6 | 3-7 | 2-4 |
+| Note di 808 per battuta | 1,4-2,9 | 1,4-2,9 | 1,4-2,9 |
+| 808 dentro all'accordo | 100% | 100% | 100% |
+| Colpi di 808 con la cassa agganciata | 95-100% | 95-100% | 100% |
+| Hi-hat per battuta | 8,3 | 8,0 | 4,7 |
+| Velocity media delle drum | 119 | 112 | 98 |
 
 ## PWA e salvataggi
 

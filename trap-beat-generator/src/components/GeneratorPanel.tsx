@@ -1,7 +1,10 @@
+import { useMemo } from 'react';
 import type { ScaleId } from '../types';
 import { NOTE_NAMES, SCALES, keyLabel } from '../music/theory';
 import { progressionLabel } from '../music/progressions';
-import { MOODS } from '../music/moods';
+import { MOODS, blendMoods } from '../music/moods';
+import { buildParams } from '../music/params';
+import { buildIdentity } from '../generator';
 import { useBeatStore } from '../store/useBeatStore';
 import { Panel } from './ui/Panel';
 import { Slider } from './ui/Slider';
@@ -21,6 +24,14 @@ export function GeneratorPanel() {
   const setVariation = useBeatStore((s) => s.setVariation);
   const setHumanize = useBeatStore((s) => s.setHumanize);
   const setKey = useBeatStore((s) => s.setKey);
+  const setAxis = useBeatStore((s) => s.setAxis);
+
+  // Scheda del motivo: quante note diverse usa e quanto e' risultato orecchiabile.
+  const identity = useMemo(() => {
+    if (!beat) return null;
+    const params = buildParams(beat.meta, blendMoods(beat.meta.moods));
+    return buildIdentity(beat.meta, params);
+  }, [beat]);
 
   if (!beat) return null;
   const { meta } = beat;
@@ -43,6 +54,42 @@ export function GeneratorPanel() {
           </div>
           <p className="mt-1.5 text-[11px] text-ink-400">
             Le parti che non rigeneri restano identiche: puoi tenere la melodia e cambiare solo le drums.
+          </p>
+        </div>
+
+        <div>
+          <p className="label mb-1.5">Carattere del beat</p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Slider
+              label="Hardness"
+              value={meta.hardness}
+              min={0}
+              max={100}
+              unit="%"
+              hint="kick, 808, velocity, sincopi"
+              onChange={(v) => setAxis('hardness', v)}
+            />
+            <Slider
+              label="Darkness"
+              value={meta.darkness}
+              min={0}
+              max={100}
+              unit="%"
+              hint="scale, registro, tensione"
+              onChange={(v) => setAxis('darkness', v)}
+            />
+            <Slider
+              label="Space"
+              value={meta.space}
+              min={0}
+              max={100}
+              unit="%"
+              hint="quanto silenzio lascia"
+              onChange={(v) => setAxis('space', v)}
+            />
+          </div>
+          <p className="mt-1.5 text-[11px] text-ink-400">
+            Gli assi valgono per le prossime generazioni: cambia un valore e premi Rigenera.
           </p>
         </div>
 
@@ -115,6 +162,16 @@ export function GeneratorPanel() {
           <div className="flex justify-between gap-2">
             <dt className="text-ink-500">Mood</dt>
             <dd>{meta.moods.map((m) => MOODS[m]?.label ?? m).join(' + ')}</dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt className="text-ink-500">Motivo</dt>
+            <dd>
+              {identity
+                ? `${identity.motif.notes.length} note, ${identity.motif.palette.length} suoni, catchy ${Math.round(
+                    identity.motif.scores.catchiness * 100,
+                  )}%`
+                : '—'}
+            </dd>
           </div>
           <div className="flex justify-between gap-2">
             <dt className="text-ink-500">Seed</dt>

@@ -1,7 +1,14 @@
 import { create } from 'zustand';
 import { TICKS_PER_BAR } from '../types';
 import type { Beat, ChannelState, MoodId, NoteEvent, ScaleId, Section, SectionKind, TrackId } from '../types';
-import { createSection, defaultMixer, generateBeat, regenerateBeat, regenerateSection, resizeSection } from '../generator';
+import {
+  createSection,
+  generateBeat,
+  normalizeBeat,
+  regenerateBeat,
+  regenerateSection,
+  resizeSection,
+} from '../generator';
 import type { RegenTarget } from '../generator';
 import { diatonicQuality, romanFor, snapToScale } from '../music/theory';
 import { uid } from '../utils/id';
@@ -27,13 +34,23 @@ interface BeatState {
 
   // setup
   setPhase: (phase: Phase) => void;
-  generate: (opts: { moods: MoodId[]; bpm: number; variation?: number; humanize?: number }) => void;
+  generate: (opts: {
+    moods: MoodId[];
+    bpm: number;
+    variation?: number;
+    humanize?: number;
+    hardness?: number;
+    darkness?: number;
+    space?: number;
+  }) => void;
   adoptBeat: (beat: Beat) => void;
 
   // meta
   setBpm: (bpm: number) => void;
   setVariation: (value: number) => void;
   setHumanize: (value: number) => void;
+  /** Assi del motore: cattiveria, cupezza, spazio. */
+  setAxis: (axis: 'hardness' | 'darkness' | 'space', value: number) => void;
   setName: (name: string) => void;
   setKey: (rootPc: number, scaleId: ScaleId) => void;
   regenerate: (target: RegenTarget) => void;
@@ -101,8 +118,8 @@ export const useBeatStore = create<BeatState>((set, get) => ({
 
   setPhase: (phase) => set({ phase }),
 
-  generate: ({ moods, bpm, variation = 50, humanize = 35 }) => {
-    const beat = generateBeat({ moods, bpm, variation, humanize });
+  generate: ({ moods, bpm, variation = 45, humanize = 28, hardness, darkness, space }) => {
+    const beat = generateBeat({ moods, bpm, variation, humanize, hardness, darkness, space });
     const hook = beat.sections.find((s) => s.kind === 'HOOK') ?? beat.sections[0];
     set({ beat, phase: 'studio', selectedSectionId: hook?.id ?? null, selectedTrack: 'melody' });
     storage.autosave(beat);
@@ -131,6 +148,13 @@ export const useBeatStore = create<BeatState>((set, get) => ({
     const beat = get().beat;
     if (!beat) return;
     set({ beat: touch({ ...beat, meta: { ...beat.meta, humanize: Math.round(value) } }) });
+  },
+
+  setAxis: (axis, value) => {
+    const beat = get().beat;
+    if (!beat) return;
+    const clamped = Math.max(0, Math.min(100, Math.round(value)));
+    set({ beat: touch({ ...beat, meta: { ...beat.meta, [axis]: clamped } }) });
   },
 
   setName: (name) => {
@@ -343,9 +367,8 @@ export const useBeatStore = create<BeatState>((set, get) => ({
       get().notify('Progetto non trovato', 'error');
       return;
     }
-    // I progetti salvati prima di un aggiornamento potrebbero non avere tutti i canali.
-    const mixer = { ...defaultMixer(), ...beat.mixer };
-    get().adoptBeat({ ...beat, mixer });
+    // I progetti salvati prima di un aggiornamento vengono completati qui.
+    get().adoptBeat(normalizeBeat(beat));
     get().notify(`"${beat.name}" caricato`, 'success');
   },
 

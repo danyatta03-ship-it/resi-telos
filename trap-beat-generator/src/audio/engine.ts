@@ -69,6 +69,11 @@ export class AudioEngine {
     const transport = Tone.getTransport();
     transport.bpm.value = beat.meta.bpm;
     this.applyMixer(beat.mixer, beat.masterVolume);
+    // I timbri seguono il carattere del beat.
+    this.rack.applyTone({
+      hardness: (beat.meta.hardness ?? 70) / 100,
+      darkness: (beat.meta.darkness ?? 70) / 100,
+    });
 
     const schedule = buildSchedule(beat);
     this.schedule = schedule;
