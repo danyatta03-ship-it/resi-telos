@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useBeatStore, sectionOffsets } from '../store/useBeatStore';
-import { beatFileBase, buildInfoText, buildMidiFiles, buildZip } from '../midi/export';
+import { buildMidiFiles } from '../midi/export';
+import { buildFlp } from '../flp/export';
+import { beatFileBase, buildInfoText } from '../export/info';
+import { buildZip } from '../export/bundle';
 import { renderWav, beatDurationSeconds } from '../audio/wav';
 import { downloadBlob } from '../utils/download';
 import { Panel } from './ui/Panel';
@@ -53,7 +56,7 @@ export function ExportPanel() {
           Scarica ZIP completo
         </button>
         <p className="-mt-2 font-mono text-[11px] text-ink-400">
-          {base}.zip → /midi ({files.length} file) + /text/beat-info.txt
+          {base}.zip → /midi ({files.length} file) + /flstudio/{base}.flp + /text/beat-info.txt
         </p>
 
         <div>
@@ -73,6 +76,32 @@ export function ExportPanel() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <p className="label mb-1.5">
+            Progetto FL Studio <span className="text-flame-400">sperimentale</span>
+          </p>
+          <button
+            className="btn w-full"
+            onClick={() => {
+              try {
+                downloadBlob(buildFlp(beat), `${base}.flp`, 'application/octet-stream');
+                notify('Progetto .flp esportato', 'success');
+              } catch (error) {
+                console.error(error);
+                notify('Generazione del .flp non riuscita', 'error');
+              }
+            }}
+          >
+            Scarica {base}.flp
+          </button>
+          <p className="mt-1.5 text-[11px] leading-snug text-ink-400">
+            Apre il beat direttamente in FL Studio con tempo, un pattern per sezione, la playlist
+            gia&#39; montata e un canale per strumento. I canali arrivano <span className="text-ink-300">vuoti</span>:
+            ci carichi i tuoi campioni e plugin. Il formato .flp non e&#39; documentato da Image-Line, quindi se
+            una versione di FL non lo aprisse, usa i MIDI qui sopra.
+          </p>
         </div>
 
         <div>

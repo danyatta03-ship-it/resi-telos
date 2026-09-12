@@ -57,8 +57,31 @@ Il pulsante *Scarica ZIP completo* produce `TrapBeat_<BPM>BPM_<Key>.zip`:
   chords.mid       progressione armonica
   pad.mid          pad / atmosfera
   full_beat.mid    tutte le tracce insieme
+/flstudio
+  TrapBeat_*.flp   progetto FL Studio (sperimentale)
 /text
   beat-info.txt    BPM, key, scala, mood, progressione, struttura
+```
+
+### Progetto .flp (sperimentale)
+
+Oltre ai MIDI viene generato un vero progetto FL Studio: tempo, un pattern per sezione,
+playlist gia' montata e un canale per strumento nel Channel Rack.
+
+Due avvertenze oneste:
+
+- I canali arrivano **vuoti** (sampler senza campione): ci carichi i tuoi suoni e plugin.
+  Le note, i pattern e l'arrangiamento ci sono gia'.
+- Il formato `.flp` **non e' documentato** da Image-Line. Il writer segue la struttura
+  ricostruita dalla community e il risultato viene validato in automatico rileggendolo con
+  [PyFLP](https://github.com/demberto/PyFLP), ma non e' stato provato dentro FL Studio.
+  Se la tua versione non lo aprisse, i MIDI restano la via garantita.
+
+Per eseguire anche il controllo incrociato con PyFLP:
+
+```bash
+pip install pyflp
+npm test            # se PyFLP c'e', il test lo usa da solo
 ```
 
 In FL Studio: **File > Import > MIDI file** (o trascina il file nella playlist), scegli

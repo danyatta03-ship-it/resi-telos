@@ -15,6 +15,16 @@ const TEMPLATES: SectionKind[][] = [
   ['INTRO', 'HOOK', 'VERSE', 'HOOK', 'BRIDGE', 'HOOK', 'OUTRO'],
 ];
 
+/** Colori delle sezioni, condivisi fra timeline ed export FL Studio. */
+export const KIND_COLOR: Record<SectionKind, string> = {
+  INTRO: '#5ab0ff',
+  HOOK: '#39dfa0',
+  VERSE: '#8b5cf6',
+  PRE: '#ffb347',
+  BRIDGE: '#f472b6',
+  OUTRO: '#6ee7ff',
+};
+
 const KIND_LABEL: Record<SectionKind, string> = {
   INTRO: 'Intro',
   HOOK: 'Hook',

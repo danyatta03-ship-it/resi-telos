@@ -1,6 +1,8 @@
 import { unzipSync } from 'fflate';
 import { generateBeat } from '../src/generator';
-import { buildMidiFiles, buildZip, buildInfoText, beatFileBase } from '../src/midi/export';
+import { buildMidiFiles } from '../src/midi/export';
+import { buildZip } from '../src/export/bundle';
+import { buildInfoText, beatFileBase } from '../src/export/info';
 import { PPQ } from '../src/types';
 
 let failures = 0;
@@ -110,6 +112,12 @@ for (const mood of ['dark', 'melodic', 'chill', 'futuristic'] as const) {
   const names = Object.keys(entries).sort();
   check(names.includes('text/beat-info.txt'), `${mood}: manca beat-info.txt`);
   check(names.some((n) => n.startsWith('midi/')), `${mood}: manca la cartella midi`);
+  check(names.some((n) => n.startsWith('flstudio/') && n.endsWith('.flp')), `${mood}: manca il progetto .flp`);
+  const flpEntry = Object.entries(entries).find(([n]) => n.endsWith('.flp'))?.[1];
+  check(
+    !!flpEntry && String.fromCharCode(...flpEntry.subarray(0, 4)) === 'FLhd',
+    `${mood}: il .flp nello ZIP non ha un header valido`,
+  );
   console.log(`${mood.padEnd(11)} ${beatFileBase(beat)}.zip  ${(zip.length / 1024).toFixed(1)} KB  ${names.length} file: ${names.join(', ')}`);
 }
 

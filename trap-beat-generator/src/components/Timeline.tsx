@@ -2,21 +2,13 @@ import { useMemo, useRef, useState } from 'react';
 import { TICKS_PER_BAR, TRACKS } from '../types';
 import type { SectionKind, TrackId } from '../types';
 import { audioEngine } from '../audio/engine';
+import { KIND_COLOR } from '../generator/structure';
 import { useBeatStore, sectionOffsets } from '../store/useBeatStore';
 import { usePlayhead, useTransportState } from '../hooks/useAudio';
 import { Panel } from './ui/Panel';
 
 const PX_PER_BAR = 28;
 const SECTION_KINDS: SectionKind[] = ['INTRO', 'HOOK', 'VERSE', 'PRE', 'BRIDGE', 'OUTRO'];
-
-const KIND_COLOR: Record<SectionKind, string> = {
-  INTRO: '#5ab0ff',
-  HOOK: '#39dfa0',
-  VERSE: '#8b5cf6',
-  PRE: '#ffb347',
-  BRIDGE: '#f472b6',
-  OUTRO: '#6ee7ff',
-};
 
 export function Timeline() {
   const beat = useBeatStore((s) => s.beat);
@@ -180,5 +172,4 @@ export function Timeline() {
   );
 }
 
-export { KIND_COLOR };
 export type { TrackId };
