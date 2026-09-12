@@ -55,6 +55,28 @@ const GROUPS: { file: string; tracks: TrackId[] }[] = [
 ];
 
 /** Costruisce tutti i file MIDI del beat (per gruppo + full_beat). */
+/**
+ * Un file MIDI per ogni strumento: si trascina direttamente sul canale
+ * corrispondente del Channel Rack di FL Studio.
+ */
+export function buildPerTrackMidiFiles(beat: Beat): MidiBundleFile[] {
+  const byTrack = notesByTrack(beat);
+  const options = { bpm: beat.meta.bpm, ppq: PPQ, name: beat.name };
+  const files: MidiBundleFile[] = [];
+
+  TRACKS.forEach((track, index) => {
+    const notes = byTrack.get(track.id);
+    if (!notes?.length) return;
+    const slug = track.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    files.push({
+      name: `${String(index + 1).padStart(2, '0')}_${slug}.mid`,
+      data: writeMidiFile([trackSpec(track.id, notes)], options),
+    });
+  });
+
+  return files;
+}
+
 export function buildMidiFiles(beat: Beat): MidiBundleFile[] {
   const byTrack = notesByTrack(beat);
   const files: MidiBundleFile[] = [];

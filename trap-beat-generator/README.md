@@ -57,11 +57,28 @@ Il pulsante *Scarica ZIP completo* produce `TrapBeat_<BPM>BPM_<Key>.zip`:
   chords.mid       progressione armonica
   pad.mid          pad / atmosfera
   full_beat.mid    tutte le tracce insieme
+  /strumenti
+    01_kick.mid    un file per ogni strumento, da trascinare sul singolo canale
+    02_snare.mid
+    ...
 /flstudio
   TrapBeat_*.flp   progetto FL Studio (sperimentale)
 /text
   beat-info.txt    BPM, key, scala, mood, progressione, struttura
+  struttura.txt    scaletta, accordi per battuta, griglia drum, note di 808 e melodia
 ```
+
+### Tre modi per portarlo in FL Studio
+
+1. **Tutto in una volta**: trascina `full_beat.mid` nella playlist e scegli
+   *import to new channels*. Il Channel Rack si riempie con un canale per strumento.
+2. **Uno strumento alla volta**: i file in `/midi/strumenti` si trascinano sul singolo
+   canale, comodo per sostituire solo la batteria o solo l'808.
+3. **Progetto gia' montato**: apri il `.flp` (sperimentale) e trovi tempo, pattern e playlist.
+
+Il pulsante *Copia struttura* mette negli appunti una scheda di testo con scaletta,
+accordi battuta per battuta, griglia delle drum e note di 808 e melodia. Serve come
+riferimento mentre lavori: FL Studio non accetta testo incollato nel piano roll.
 
 ### Progetto .flp (sperimentale)
 

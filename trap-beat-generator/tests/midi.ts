@@ -1,8 +1,9 @@
 import { unzipSync } from 'fflate';
 import { generateBeat } from '../src/generator';
-import { buildMidiFiles } from '../src/midi/export';
+import { buildMidiFiles, buildPerTrackMidiFiles } from '../src/midi/export';
 import { buildZip } from '../src/export/bundle';
 import { buildInfoText, beatFileBase } from '../src/export/info';
+import { buildStructureText } from '../src/export/summary';
 import { PPQ } from '../src/types';
 
 let failures = 0;
@@ -107,12 +108,30 @@ for (const mood of ['dark', 'melodic', 'chill', 'futuristic'] as const) {
       console.log(`  ${mood}/808.mid: ${notes} note, ${bends} eventi di pitch bend`);
     }
   }
+  // Un file per strumento, ognuno con una sola traccia dentro.
+  const perTrack = buildPerTrackMidiFiles(beat);
+  check(perTrack.length >= 5, `${mood}: pochi file per strumento (${perTrack.length})`);
+  for (const file of perTrack) {
+    const parsed = parseMidi(file.data);
+    check(parsed.ntrks === 2, `${mood}/${file.name}: attese 2 tracce (tempo + strumento), trovate ${parsed.ntrks}`);
+    check(parsed.tracks.reduce((s, t) => s + t.notes, 0) > 0, `${mood}/${file.name}: nessuna nota`);
+  }
+
+  // La scheda testuale deve contenere le informazioni chiave.
+  const summary = buildStructureText(beat);
+  for (const needle of ['STRUTTURA', 'ACCORDI', 'DRUM PATTERN', `${beat.meta.bpm} BPM`]) {
+    check(summary.includes(needle), `${mood}: la struttura testuale non contiene "${needle}"`);
+  }
+  check(summary.split('\n').length > 20, `${mood}: struttura testuale troppo corta`);
+
   const zip = buildZip(beat);
   const entries = unzipSync(zip);
   const names = Object.keys(entries).sort();
   check(names.includes('text/beat-info.txt'), `${mood}: manca beat-info.txt`);
   check(names.some((n) => n.startsWith('midi/')), `${mood}: manca la cartella midi`);
   check(names.some((n) => n.startsWith('flstudio/') && n.endsWith('.flp')), `${mood}: manca il progetto .flp`);
+  check(names.some((n) => n.startsWith('midi/strumenti/')), `${mood}: mancano i MIDI per strumento`);
+  check(names.includes('text/struttura.txt'), `${mood}: manca struttura.txt`);
   const flpEntry = Object.entries(entries).find(([n]) => n.endsWith('.flp'))?.[1];
   check(
     !!flpEntry && String.fromCharCode(...flpEntry.subarray(0, 4)) === 'FLhd',

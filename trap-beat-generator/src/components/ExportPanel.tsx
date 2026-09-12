@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useBeatStore, sectionOffsets } from '../store/useBeatStore';
-import { buildMidiFiles } from '../midi/export';
+import { buildMidiFiles, buildPerTrackMidiFiles } from '../midi/export';
 import { buildFlp } from '../flp/export';
 import { beatFileBase, buildInfoText } from '../export/info';
 import { buildZip } from '../export/bundle';
 import { renderWav, beatDurationSeconds } from '../audio/wav';
+import { buildStructureText } from '../export/summary';
 import { downloadBlob } from '../utils/download';
+import { copyToClipboard } from '../utils/clipboard';
 import { Panel } from './ui/Panel';
 
 export function ExportPanel() {
@@ -20,6 +22,7 @@ export function ExportPanel() {
   const selectedSection = beat.sections.find((s) => s.id === selectedSectionId) ?? null;
   const base = beatFileBase(beat);
   const files = buildMidiFiles(beat);
+  const trackFiles = buildPerTrackMidiFiles(beat);
 
   const exportZip = () => {
     try {
@@ -76,6 +79,60 @@ export function ExportPanel() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <p className="label mb-1.5">Un MIDI per strumento</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {trackFiles.map((file) => (
+              <button
+                key={file.name}
+                className="btn btn-xs justify-between font-mono"
+                onClick={() => {
+                  downloadBlob(file.data, `${base}_${file.name}`, 'audio/midi');
+                  notify(`${file.name} scaricato`, 'success');
+                }}
+              >
+                <span className="truncate">{file.name.replace(/^\d+_/, '')}</span>
+                <span className="text-[10px] text-ink-400">{(file.data.length / 1024).toFixed(1)}k</span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[11px] leading-snug text-ink-400">
+            Trascina un file su un singolo canale del Channel Rack per lavorare uno strumento alla volta.
+          </p>
+        </div>
+
+        <div>
+          <p className="label mb-1.5">Struttura da consultare</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              className="btn btn-xs"
+              onClick={() => {
+                void copyToClipboard(buildStructureText(beat, selectedSectionId ?? undefined)).then((ok) =>
+                  notify(ok ? 'Struttura copiata negli appunti' : 'Copia non riuscita', ok ? 'success' : 'error'),
+                );
+              }}
+            >
+              Copia struttura
+            </button>
+            <button
+              className="btn btn-xs"
+              onClick={() => {
+                downloadBlob(
+                  buildStructureText(beat, selectedSectionId ?? undefined),
+                  `${base}_struttura.txt`,
+                  'text/plain',
+                );
+              }}
+            >
+              Scarica .txt
+            </button>
+          </div>
+          <p className="mt-1.5 text-[11px] leading-snug text-ink-400">
+            Scaletta, accordi battuta per battuta, griglia delle drum e note di 808 e melodia della sezione
+            selezionata. FL non accetta testo incollato nel piano roll: serve come riferimento mentre lavori.
+          </p>
         </div>
 
         <div>
