@@ -119,7 +119,8 @@ export function generateDrums(ctx: GenContext, groove: Groove, windows: SilenceW
       const tick = barTick + step * STEP;
       if (inSilence(windows, tick) && rng.chance(0.5)) continue;
       if (useSnare) clips.snare!.push(note('snare', tick, velocityFor(ctx, 0.95), STEP));
-      if (useClap && rng.chance(params.clapChance)) {
+      // Clap e rullante insieme sul backbeat: e' il colpo che regge tutto il pezzo.
+      if (useClap && (params.hardness > 0.6 || rng.chance(params.clapChance))) {
         clips.clap!.push(note('clap', tick, velocityFor(ctx, 0.85), STEP));
       }
     }

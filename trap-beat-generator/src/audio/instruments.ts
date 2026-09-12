@@ -370,6 +370,16 @@ export interface InstrumentRack {
   dispose(): void;
 }
 
+/**
+ * Mandate al delay puntato (un ottavo col punto): e' il tratto piu' riconoscibile
+ * delle melodie di questa scena, il motivo che si ripete in coda da solo.
+ */
+const DELAY_SENDS: Partial<Record<TrackId, number>> = {
+  melody: -13,
+  lead: -16,
+  counter: -18,
+};
+
 /** Tracce che ricevono un po' di riverbero. */
 const REVERB_SENDS: Partial<Record<TrackId, number>> = {
   snare: -14,
@@ -394,6 +404,9 @@ export function createRack(destination: Tone.InputNode, masterDb = -4): Instrume
   master.connect(analyser);
 
   const reverb = new Tone.Reverb({ decay: 2.4, preDelay: 0.02, wet: 1 }).connect(master);
+  // Il delay passa da un passa-alto: deve restare dietro, non impastare.
+  const delayFilter = new Tone.Filter({ type: 'highpass', frequency: 420 }).connect(master);
+  const delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.3, wet: 1 }).connect(delayFilter);
   const sends: Tone.Gain[] = [];
 
   const strips = {} as Record<TrackId, ChannelStrip>;
@@ -409,6 +422,13 @@ export function createRack(destination: Tone.InputNode, masterDb = -4): Instrume
       send.connect(reverb);
       sends.push(send);
     }
+    const delayDb = DELAY_SENDS[id];
+    if (delayDb !== undefined) {
+      const send = new Tone.Gain(Tone.dbToGain(delayDb));
+      channel.connect(send);
+      send.connect(delay);
+      sends.push(send);
+    }
     strips[id] = { channel, voice };
   }
 
@@ -420,6 +440,8 @@ export function createRack(destination: Tone.InputNode, masterDb = -4): Instrume
       for (const strip of Object.values(strips)) strip.voice.shape?.(tone);
       // Il riverbero segue la cupezza: piu' scuro, piu' coda.
       reverb.decay = 1.6 + tone.darkness * 2.2;
+      // Il delay resta corto e controllato quando il beat e' duro.
+      delay.feedback.value = 0.18 + tone.darkness * 0.22 - tone.hardness * 0.06;
     },
     ready: reverb.ready,
     dispose() {
@@ -428,6 +450,8 @@ export function createRack(destination: Tone.InputNode, masterDb = -4): Instrume
         strip.channel.dispose();
       }
       for (const send of sends) send.dispose();
+      delay.dispose();
+      delayFilter.dispose();
       reverb.dispose();
       analyser.dispose();
       master.dispose();

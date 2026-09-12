@@ -195,6 +195,65 @@ check(
   'dark non porta piu' + "' atmosfera di hard",
 );
 
+// --- Forma da singolo: l'hook deve arrivare presto e chiudere piu' in alto ---
+console.log('\n--- forma del pezzo ---');
+let hookLateCount = 0;
+let introWithDrums = 0;
+let liftedHooks = 0;
+let entryAccents = 0;
+const formRuns = 24;
+
+for (let seed = 0; seed < formRuns; seed++) {
+  const beat = generateBeat({ moods: ['hard', 'dark'], bpm: 142, seed: seed * 1531 });
+  const secondsPerBar = (4 * 60) / beat.meta.bpm;
+
+  let bar = 0;
+  let hookStart = -1;
+  const hooks: { avgPitch: number; hasEntry: boolean }[] = [];
+  for (const section of beat.sections) {
+    if (section.kind === 'HOOK') {
+      if (hookStart < 0) hookStart = bar;
+      const melody = section.clips.melody ?? [];
+      hooks.push({
+        avgPitch: melody.length ? melody.reduce((sum, n) => sum + n.p, 0) / melody.length : 0,
+        hasEntry: (section.clips.openhat ?? []).some((n) => n.t === 0),
+      });
+    }
+    if (section.kind === 'INTRO') {
+      const drums = (section.clips.kick?.length ?? 0) + (section.clips.snare?.length ?? 0);
+      if (drums > section.bars) introWithDrums++;
+    }
+    bar += section.bars;
+  }
+
+  if (hookStart * secondsPerBar > 14) hookLateCount++;
+  if (hooks.length > 1 && hooks[hooks.length - 1].avgPitch > hooks[0].avgPitch + 1) liftedHooks++;
+  if (hooks.some((h) => h.hasEntry)) entryAccents++;
+
+  if (seed === 0) {
+    let position = 0;
+    console.log(
+      '  scaletta di prova: ' +
+        beat.sections
+          .map((sec) => {
+            const label = `${sec.name} ${sec.bars}b @${Math.round(position * secondsPerBar)}s`;
+            position += sec.bars;
+            return label;
+          })
+          .join(' | '),
+    );
+  }
+}
+
+console.log(
+  `  hook oltre i 14 secondi: ${hookLateCount}/${formRuns} | intro con drum piena: ${introWithDrums}/${formRuns} | ` +
+    `ultimo hook piu' alto: ${liftedHooks}/${formRuns} | ingresso marcato: ${entryAccents}/${formRuns}`,
+);
+check(hookLateCount <= formRuns * 0.15, `l'hook arriva tardi in ${hookLateCount} beat su ${formRuns}`);
+check(introWithDrums <= formRuns * 0.25, `intro troppo piena in ${introWithDrums} beat su ${formRuns}`);
+check(liftedHooks >= formRuns * 0.6, `l'ultimo hook non sale quasi mai: ${liftedHooks}/${formRuns}`);
+check(entryAccents >= formRuns * 0.8, `ingresso dell'hook non marcato: ${entryAccents}/${formRuns}`);
+
 // Identita': lo stesso motivo deve tornare in tutte le sezioni.
 const identityBeat = generateBeat({ moods: ['hard', 'dark'], bpm: 142, seed: 99 });
 const pitchSets = identityBeat.sections

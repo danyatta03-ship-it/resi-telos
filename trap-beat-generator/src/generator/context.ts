@@ -34,11 +34,12 @@ export interface SectionProfile {
 export const SECTION_PROFILES: Record<SectionKind, SectionProfile> = {
   INTRO: {
     kind: 'INTRO',
-    energy: 0.3,
+    // Intro quasi sempre di sola melodia: e' il vuoto che fa pesare l'hook.
+    energy: 0.22,
     barOptions: [4, 4, 8],
-    presence: { kick: 0.35, snare: 0.12, clap: 0.08, hat: 0.45, openhat: 0.2, perc: 0.12, '808': 0.4, melody: 1, counter: 0.08, chords: 0.55, pad: 0.75, lead: 0.05 },
-    melodyDensity: 0.85,
-    drumDensity: 0.4,
+    presence: { kick: 0.18, snare: 0.05, clap: 0.03, hat: 0.25, openhat: 0.1, perc: 0.06, '808': 0.22, melody: 1, counter: 0.05, chords: 0.5, pad: 0.7, lead: 0.05 },
+    melodyDensity: 0.9,
+    drumDensity: 0.3,
     hatRateScale: 2,
     fill: true,
   },

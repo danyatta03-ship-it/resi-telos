@@ -1,4 +1,4 @@
-import { ALL_TRACK_IDS, TICKS_PER_BAR } from '../types';
+import { ALL_TRACK_IDS, TICKS_PER_BAR, TRACK_MAP } from '../types';
 import type { Beat, BeatMeta, ChannelState, Clips, MoodId, NoteEvent, Section, TrackId } from '../types';
 import { blendMoods } from '../music/moods';
 import type { MoodProfile } from '../music/moods';
@@ -156,6 +156,10 @@ function applyMinimalism(clips: Clips, bars: number, params: GenParams, energy: 
 
 interface PartOptions {
   parts: Set<'drums' | '808' | 'melody' | 'chords'>;
+  /** Ultimo ritornello: la stessa idea un'ottava sopra, con il lead. */
+  lift?: boolean;
+  /** Prima battuta della sezione marcata da un open hat, come l'ingresso di un hook. */
+  entry?: boolean;
 }
 
 function buildSectionClips(
@@ -207,7 +211,9 @@ function buildSectionClips(
     if (wantMelody) {
       const melody = renderMotif(ctx, identity.motif, {
         density: profile.melodyDensity,
-        velocityScale: 0.9 + profile.energy * 0.15,
+        // L'ultimo ritornello sale di un'ottava: stessa frase, piu' luce.
+        octaveOffset: options.lift && params.melodyOctave < 6 ? 1 : 0,
+        velocityScale: (0.9 + profile.energy * 0.15) * (options.lift ? 1.06 : 1),
         chordLock: 0.55 + params.catchiness * 0.2,
         windows,
       });
@@ -218,7 +224,7 @@ function buildSectionClips(
           ? generateCounter(ctx, melody)
           : [];
       clips.lead =
-        melody.length && profile.energy > 0.7 && trackActive(ctx, 'lead', params.leadChance + 0.3)
+        melody.length && (options.lift || (profile.energy > 0.7 && trackActive(ctx, 'lead', params.leadChance + 0.3)))
           ? generateLead(ctx, melody)
           : [];
     } else {
@@ -228,7 +234,18 @@ function buildSectionClips(
     }
   }
 
-  return applyMinimalism(clips, slot.bars, params, profile.energy);
+  const trimmed = applyMinimalism(clips, slot.bars, params, profile.energy);
+
+  // Ingresso del ritornello marcato da un open hat sul primo movimento.
+  if (options.entry && parts.has('drums')) {
+    const pitch = TRACK_MAP.openhat.drumPitch ?? 46;
+    trimmed.openhat = [
+      { id: uid('d'), t: 0, d: STEP * 3, p: pitch, v: 112 },
+      ...(trimmed.openhat ?? []).filter((n) => n.t > STEP),
+    ];
+  }
+
+  return trimmed;
 }
 
 const ALL_PARTS: PartOptions['parts'] = new Set(['drums', '808', 'melody', 'chords']);
@@ -303,6 +320,8 @@ function buildSections(
 ): Section[] {
   const counters: Partial<Record<Section['kind'], number>> = {};
   let startBar = 0;
+  // L'ultimo hook e' quello che deve restare in testa: sale di un'ottava.
+  const lastHook = slots.reduce((last, slot, i) => (slot.kind === 'HOOK' ? i : last), -1);
 
   return slots.map((slot, slotIndex) => {
     const index = (counters[slot.kind] = (counters[slot.kind] ?? 0) + 1);
@@ -320,7 +339,11 @@ function buildSections(
         startBar,
         `${slotIndex}:${slot.kind}`,
         meta.seed,
-        { parts: ALL_PARTS },
+        {
+          parts: ALL_PARTS,
+          lift: slotIndex === lastHook && slots.filter((s) => s.kind === 'HOOK').length > 1,
+          entry: slot.kind === 'HOOK',
+        },
       ),
     };
 

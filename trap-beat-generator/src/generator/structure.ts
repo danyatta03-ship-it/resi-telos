@@ -9,15 +9,18 @@ export interface StructureSlot {
 }
 
 /**
- * Arrangiamento semplice, come in un pezzo rap vero: si entra, arriva l'hook,
- * si lascia spazio alla strofa, torna l'hook. Niente strutture barocche.
+ * Forma da singolo, non da demo.
+ *
+ * Nella trap italiana da classifica il ritornello arriva quasi subito: intro
+ * corta con la sola melodia, hook entro i primi dieci secondi, poi strofa lunga
+ * per il rapper e ritorno dell'hook. L'ultimo ritornello alza di un'ottava.
  */
 const TEMPLATES: { kinds: SectionKind[]; weight: number }[] = [
+  { kinds: ['INTRO', 'HOOK', 'VERSE', 'HOOK', 'VERSE', 'HOOK', 'OUTRO'], weight: 5 },
   { kinds: ['INTRO', 'HOOK', 'VERSE', 'HOOK', 'OUTRO'], weight: 4 },
-  { kinds: ['INTRO', 'HOOK', 'VERSE', 'HOOK', 'VERSE', 'HOOK', 'OUTRO'], weight: 3 },
-  { kinds: ['INTRO', 'VERSE', 'HOOK', 'VERSE', 'HOOK', 'OUTRO'], weight: 2 },
-  { kinds: ['INTRO', 'HOOK', 'VERSE', 'PRE', 'HOOK', 'OUTRO'], weight: 2 },
-  { kinds: ['INTRO', 'HOOK', 'VERSE', 'HOOK', 'BRIDGE', 'HOOK', 'OUTRO'], weight: 1 },
+  { kinds: ['HOOK', 'VERSE', 'HOOK', 'VERSE', 'HOOK', 'OUTRO'], weight: 2 },
+  { kinds: ['INTRO', 'HOOK', 'VERSE', 'PRE', 'HOOK', 'VERSE', 'HOOK', 'OUTRO'], weight: 2 },
+  { kinds: ['INTRO', 'VERSE', 'HOOK', 'VERSE', 'HOOK', 'OUTRO'], weight: 1 },
 ];
 
 const KIND_LABEL: Record<SectionKind, string> = {
@@ -50,8 +53,9 @@ export function buildStructure(rng: Rng, params: GenParams): StructureSlot[] {
 
   return template.map((kind) => {
     const options = SECTION_PROFILES[kind].barOptions;
-    // Le strofe lunghe restano lunghe: e' li' che rappa chi ci canta sopra.
-    const bars = kind === 'VERSE' ? rng.pick([16, 16, 8]) : rng.pick(options);
+    // Intro corta, strofe lunghe: e' li' che rappa chi ci canta sopra.
+    const bars =
+      kind === 'VERSE' ? rng.pick([16, 16, 8]) : kind === 'INTRO' ? rng.pick([4, 4, 8]) : rng.pick(options);
     return { kind, bars };
   });
 }

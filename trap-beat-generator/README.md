@@ -163,6 +163,33 @@ rarefatto, oppure entrambe le cose (il territorio piu' vicino al target).
 - **Seed.** Stessi mood, BPM e seed producono lo stesso beat. Melodia e groove hanno un seed
   proprio, cosi' Rigenera Melody non tocca le drum e viceversa.
 
+### Forma da singolo
+
+L'arrangiamento segue la forma tipica dei singoli di questa scena, non quella di una demo:
+
+```
+Intro 4b (@0s, spesso sola melodia) | Hook 8b (@7s) | Verse 16b | Hook 8b | Verse | Hook 8b | Outro
+```
+
+- Il ritornello entra entro i primi dieci secondi: misurato, arriva dopo i 14 secondi solo
+  in 1 beat su 24.
+- L'intro resta quasi sempre senza batteria, cosi' l'ingresso dell'hook pesa.
+- L'ingresso di ogni hook e' marcato da un open hat sul primo movimento.
+- L'ultimo ritornello riprende la stessa frase un'ottava sopra: stessa idea, piu' luce.
+- Prima dell'hook l'ultima battuta si svuota (cassa e 808 tacciono sull'ultimo movimento).
+
+### Suoni
+
+I timbri sono sintetizzati, quindi non ci sono campioni da distribuire, ma la catena segue
+le abitudini del genere:
+
+- **Melodia** su un delay puntato (un ottavo col punto) piu' riverbero: e' il tratto che
+  fa "rispondere" il motivo da solo nelle pause.
+- **808** saturata, con glide fra le note e coda lunga quanto serve.
+- **Cassa** corta e spinta, tanto piu' satura quanto sale Hardness.
+- **Clap e rullante insieme** sul backbeat nei beat duri.
+- **Riverbero e code** si allungano con Darkness, il delay si accorcia con Hardness.
+
 ### Numeri misurati dai test
 
 Media su decine di beat generati (`npm test` stampa la tabella completa):
